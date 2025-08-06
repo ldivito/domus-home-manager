@@ -15,6 +15,7 @@ import {
   Settings
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
 
 export default function Navigation() {
@@ -36,39 +37,65 @@ export default function Navigation() {
   ]
 
   return (
-    <nav className="bg-white border-r border-gray-200 h-full w-64 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold text-gray-900">{tCommon('appName')}</h1>
-          <LanguageSelector />
+    <nav className="bg-card/50 backdrop-blur-xl border-r border-border/50 h-full w-72 flex flex-col shadow-modern">
+      {/* Header */}
+      <div className="p-6 border-b border-border/50">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Home className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">{tCommon('appName')}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSelector />
+          </div>
         </div>
-        <p className="text-sm text-gray-600 mt-1">{tCommon('appSubtitle')}</p>
+        <p className="text-sm text-muted-foreground">{tCommon('appSubtitle')}</p>
       </div>
       
-      <div className="flex-1 py-6">
-        <ul className="space-y-2 px-3">
+      {/* Navigation Items */}
+      <div className="flex-1 py-6 px-4">
+        <ul className="space-y-1">
           {navigationItems.map((item) => {
             const isActive = pathname === item.href
+            const Icon = item.icon
+            
             return (
               <li key={item.nameKey}>
                 <Link
                   href={item.href}
                   className={cn(
-                    'flex items-center px-4 py-4 text-lg font-medium rounded-lg transition-colors duration-200',
-                    'hover:bg-orange-50 hover:text-orange-700',
-                    'focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2',
+                    'group flex items-center gap-3 px-4 py-3.5 text-base font-medium rounded-xl transition-all duration-200',
+                    'hover:bg-muted/80 hover:scale-[1.02] active:scale-[0.98]',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                     isActive
-                      ? 'bg-orange-100 text-orange-700'
-                      : 'text-gray-700'
+                      ? 'bg-primary text-primary-foreground shadow-modern hover:bg-primary/90'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <item.icon className="mr-4 h-6 w-6" />
-                  {t(item.nameKey)}
+                  <Icon className={cn(
+                    "h-5 w-5 transition-colors duration-200",
+                    isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                  )} />
+                  <span className="truncate">{t(item.nameKey)}</span>
+                  {isActive && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground/60" />
+                  )}
                 </Link>
               </li>
             )
           })}
         </ul>
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-border/50">
+        <div className="text-xs text-muted-foreground text-center space-y-1">
+          <p>{tCommon('appName')} v1.0.0</p>
+          <p>Tablet-optimized home management</p>
+        </div>
       </div>
     </nav>
   )

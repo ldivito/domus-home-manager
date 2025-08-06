@@ -67,9 +67,11 @@ export function AddUserModal({ open, onOpenChange, onCreateUser }: AddUserModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{t('title')}</DialogTitle>
+      <DialogContent className="sm:max-w-[500px] glass-card shadow-modern-lg border-2">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            {t('title')}
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -117,25 +119,30 @@ export function AddUserModal({ open, onOpenChange, onCreateUser }: AddUserModalP
             <Label className="text-base font-medium">{t('selectColor')}</Label>
             
             {/* Avatar Preview */}
-            <div className="flex justify-center mb-4">
-              <Avatar className={`h-16 w-16 ${selectedColor}`}>
-                <AvatarFallback className="text-white text-xl font-bold">
-                  {name ? name.charAt(0).toUpperCase() : "?"}
-                </AvatarFallback>
-              </Avatar>
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <Avatar className={`h-20 w-20 ${selectedColor} ring-4 ring-background shadow-modern`}>
+                  <AvatarFallback className="text-white text-2xl font-bold">
+                    {name ? name.charAt(0).toUpperCase() : "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full border-2 border-background flex items-center justify-center">
+                  <div className="w-2 h-2 bg-primary-foreground rounded-full" />
+                </div>
+              </div>
             </div>
             
             {/* Color Selection */}
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-5 gap-4">
               {AVATAR_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => setSelectedColor(color)}
-                  className={`h-12 w-12 rounded-full border-4 transition-all ${color} ${
+                  className={`h-14 w-14 rounded-full border-4 transition-all duration-200 ${color} hover:scale-110 active:scale-95 ${
                     selectedColor === color 
-                      ? "border-gray-800 scale-110" 
-                      : "border-gray-300 hover:border-gray-500"
+                      ? "border-primary scale-110 shadow-modern ring-2 ring-primary/50" 
+                      : "border-border hover:border-primary/50"
                   }`}
                 />
               ))}
@@ -143,21 +150,25 @@ export function AddUserModal({ open, onOpenChange, onCreateUser }: AddUserModalP
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-4 pt-6">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1 h-12 text-base"
+              className="flex-1 h-14 text-base font-medium hover:bg-muted/80 transition-all duration-200"
             >
               {t('cancel')}
             </Button>
             <Button
               type="submit"
               disabled={!name.trim() || isSubmitting}
-              className="flex-1 h-12 text-base"
+              className="flex-1 h-14 text-base font-medium shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95 disabled:hover:scale-100"
             >
-              {isSubmitting ? "..." : t('create')}
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+              ) : (
+                t('create')
+              )}
             </Button>
           </div>
         </form>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, User, Settings, Award } from "lucide-react"
+import { Plus, User, Settings, Award, TrendingUp, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -82,10 +82,13 @@ export default function UsersPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-xl text-gray-600">Loading users...</div>
+      <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-center items-center h-96">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="text-lg font-medium text-muted-foreground">Loading users...</div>
+            </div>
           </div>
         </div>
       </div>
@@ -93,163 +96,215 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">{t('title')}</h1>
-            <p className="text-xl text-gray-600">{t('subtitle')}</p>
+    <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              {t('title')}
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl">
+              {t('subtitle')}
+            </p>
           </div>
-          <Button size="lg" className="h-14 px-8 text-lg" onClick={() => setIsModalOpen(true)}>
+          <Button 
+            size="lg" 
+            className="h-14 px-8 text-lg shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            onClick={() => setIsModalOpen(true)}
+          >
             <Plus className="mr-2 h-6 w-6" />
             {t('addUser')}
           </Button>
         </div>
         
         {users.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <User className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-              <h3 className="text-2xl font-semibold text-gray-900 mb-2">{t('noUsers')}</h3>
-              <p className="text-lg text-gray-600 mb-6">{t('addFirstUser')}</p>
-              <Button size="lg" onClick={() => setIsModalOpen(true)}>
-                <Plus className="mr-2 h-5 w-5" />
+          <Card className="glass-card border-2 border-dashed border-primary/30 shadow-modern-lg">
+            <CardContent className="text-center py-16">
+              <div className="w-20 h-20 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
+                <UserPlus className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-3xl font-bold text-foreground mb-3">{t('noUsers')}</h3>
+              <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
+                {t('addFirstUser')}
+              </p>
+              <Button 
+                size="lg" 
+                onClick={() => setIsModalOpen(true)}
+                className="h-14 px-8 text-lg shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              >
+                <Plus className="mr-2 h-6 w-6" />
                 {t('addUser')}
               </Button>
             </CardContent>
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Users Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {users.map((user) => {
                 const completionRate = user.id ? getCompletionRate(user.id) : 0
                 const stats = user.id ? userStats[user.id] : null
                 
                 return (
-                  <Card key={user.id} className="hover:shadow-lg transition-shadow">
+                  <Card key={user.id} className="glass-card shadow-modern hover:shadow-modern-lg transition-all duration-300 hover:scale-[1.02] group">
                     <CardHeader className="text-center pb-4">
-                      <div className="flex justify-center mb-3">
-                        <Avatar className={`h-16 w-16 ${user.color}`}>
-                          <AvatarFallback className="text-white text-xl font-bold">
-                            {user.avatar || user.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                      <div className="flex justify-center mb-4">
+                        <div className="relative">
+                          <Avatar className={`h-20 w-20 ${user.color} ring-4 ring-background shadow-modern`}>
+                            <AvatarFallback className="text-white text-2xl font-bold">
+                              {user.avatar || user.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full border-2 border-background flex items-center justify-center">
+                            <User className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        </div>
                       </div>
-                      <CardTitle className="text-2xl">{user.name}</CardTitle>
-                      <CardDescription className="text-base">
-                        {user.type === 'resident' ? t('familyMember') : t('guest')}
+                      <CardTitle className="text-2xl font-bold">{user.name}</CardTitle>
+                      <CardDescription className="text-base font-medium">
+                        <Badge variant={user.type === 'resident' ? 'default' : 'secondary'} className="font-medium">
+                          {user.type === 'resident' ? t('familyMember') : t('guest')}
+                        </Badge>
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-gray-800">{completionRate}%</p>
-                          <p className="text-sm text-gray-500">{t('completionRate')}</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-center">
-                          <div>
-                            <p className="text-lg font-semibold text-blue-600">
-                              {stats?.activeTasks || 0}
-                            </p>
-                            <p className="text-xs text-gray-500">{t('activeTasks')}</p>
-                          </div>
-                          <div>
-                            <p className="text-lg font-semibold text-green-600">
-                              {stats?.chores || 0}
-                            </p>
-                            <p className="text-xs text-gray-500">{t('chores')}</p>
+                    <CardContent className="space-y-6">
+                      <div className="text-center">
+                        <div className="relative w-16 h-16 mx-auto mb-3">
+                          <div className="absolute inset-0 bg-primary/20 rounded-full"></div>
+                          <div 
+                            className="absolute inset-0 bg-primary rounded-full transition-all duration-300"
+                            style={{
+                              clipPath: `circle(${completionRate/2}% at 50% 50%)`
+                            }}
+                          ></div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-2xl font-bold text-foreground">{completionRate}%</span>
                           </div>
                         </div>
-                        
-                        {completionRate >= 80 && (
-                          <Badge className="w-full justify-center bg-yellow-100 text-yellow-800">
-                            <Award className="mr-1 h-3 w-3" />
-                            {t('topPerformer')}
-                          </Badge>
-                        )}
-                        
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Settings className="mr-2 h-4 w-4" />
-                          {t('editProfile')}
-                        </Button>
+                        <p className="text-sm font-medium text-muted-foreground">{t('completionRate')}</p>
                       </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            {stats?.activeTasks || 0}
+                          </p>
+                          <p className="text-xs font-medium text-blue-600/70 dark:text-blue-400/70">{t('activeTasks')}</p>
+                        </div>
+                        <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                            {stats?.chores || 0}
+                          </p>
+                          <p className="text-xs font-medium text-green-600/70 dark:text-green-400/70">{t('chores')}</p>
+                        </div>
+                      </div>
+                      
+                      {completionRate >= 80 && (
+                        <Badge className="w-full justify-center bg-gradient-to-r from-yellow-400 to-orange-400 text-white border-0 font-medium py-2">
+                          <Award className="mr-2 h-4 w-4" />
+                          {t('topPerformer')}
+                        </Badge>
+                      )}
+                      
+                      <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
+                        <Settings className="mr-2 h-4 w-4" />
+                        {t('editProfile')}
+                      </Button>
                     </CardContent>
                   </Card>
                 )
               })}
             </div>
             
+            {/* Statistics Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card>
+              <Card className="glass-card shadow-modern">
                 <CardHeader>
                   <CardTitle className="text-2xl flex items-center">
-                    <User className="mr-2 h-6 w-6" />
+                    <TrendingUp className="mr-3 h-6 w-6 text-primary" />
                     {t('recentActivity')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-gray-500">
-                    Coming soon - Recent activity will be displayed here
+                  <div className="text-center py-12 space-y-4">
+                    <div className="w-16 h-16 mx-auto bg-muted/50 rounded-full flex items-center justify-center">
+                      <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-medium text-muted-foreground">Coming Soon</p>
+                      <p className="text-sm text-muted-foreground/70">Recent activity will be displayed here</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="glass-card shadow-modern">
                 <CardHeader>
                   <CardTitle className="text-2xl flex items-center">
-                    <Award className="mr-2 h-6 w-6" />
+                    <Award className="mr-3 h-6 w-6 text-primary" />
                     {t('familyStats')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    <div className="text-center">
-                      <p className="text-4xl font-bold text-gray-800">
+                    <div className="text-center p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                      <p className="text-5xl font-bold text-primary mb-2">
                         {Object.values(userStats).reduce((sum, stats) => sum + stats.completedTasks, 0)}
                       </p>
-                      <p className="text-lg text-gray-600">{t('totalTasksCompleted')}</p>
+                      <p className="text-lg font-medium text-muted-foreground">{t('totalTasksCompleted')}</p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-blue-600">
+                      <div className="text-center p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                           {Object.values(userStats).reduce((sum, stats) => sum + stats.activeTasks, 0)}
                         </p>
-                        <p className="text-sm text-blue-700">{t('activeTasks')}</p>
+                        <p className="text-sm font-medium text-blue-600/70 dark:text-blue-400/70">{t('activeTasks')}</p>
                       </div>
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <p className="text-2xl font-bold text-green-600">
+                      <div className="text-center p-4 bg-green-500/10 rounded-xl border border-green-500/20">
+                        <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
                           {Object.values(userStats).reduce((sum, stats) => sum + stats.chores, 0)}
                         </p>
-                        <p className="text-sm text-green-700">{t('assignedChores')}</p>
+                        <p className="text-sm font-medium text-green-600/70 dark:text-green-400/70">{t('assignedChores')}</p>
                       </div>
                     </div>
                     
                     {users.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-gray-700">{t('topContributors')}</h4>
-                        {users
-                          .filter(user => user.id)
-                          .sort((a, b) => getCompletionRate(b.id!) - getCompletionRate(a.id!))
-                          .slice(0, 3)
-                          .map((user, index) => (
-                            <div key={user.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <div className="flex items-center">
-                                <span className="text-lg font-bold text-gray-500 mr-2">#{index + 1}</span>
-                                <Avatar className={`h-6 w-6 ${user.color}`}>
-                                  <AvatarFallback className="text-white text-xs font-bold">
-                                    {user.avatar || user.name.charAt(0).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="ml-2 font-medium">{user.name}</span>
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-foreground flex items-center gap-2">
+                          <Award className="h-4 w-4 text-primary" />
+                          {t('topContributors')}
+                        </h4>
+                        <div className="space-y-2">
+                          {users
+                            .filter(user => user.id)
+                            .sort((a, b) => getCompletionRate(b.id!) - getCompletionRate(a.id!))
+                            .slice(0, 3)
+                            .map((user, index) => (
+                              <div key={user.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    index === 0 ? 'bg-yellow-400 text-white' :
+                                    index === 1 ? 'bg-gray-400 text-white' :
+                                    'bg-orange-400 text-white'
+                                  }`}>
+                                    {index + 1}
+                                  </div>
+                                  <Avatar className={`h-8 w-8 ${user.color}`}>
+                                    <AvatarFallback className="text-white text-sm font-bold">
+                                      {user.avatar || user.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </div>
+                                <span className="font-medium text-foreground flex-1">{user.name}</span>
+                                <Badge variant="secondary" className="font-semibold">
+                                  {user.id ? getCompletionRate(user.id) : 0}%
+                                </Badge>
                               </div>
-                              <span className="text-sm font-semibold text-gray-600">
-                                {user.id ? getCompletionRate(user.id) : 0}%
-                              </span>
-                            </div>
-                          ))
-                        }
+                            ))
+                          }
+                        </div>
                       </div>
                     )}
                   </div>

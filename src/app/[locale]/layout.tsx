@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "../globals.css";
 import Navigation from "@/components/Navigation";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -49,17 +50,19 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
-      <body className={`${inter.variable} font-sans antialiased bg-orange-50`}>
-        <NextIntlClientProvider messages={messages}>
-          <div className="flex h-screen">
-            <Navigation />
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
-          </div>
-          <Toaster />
-        </NextIntlClientProvider>
+    <html lang={locale} suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            <div className="flex h-screen bg-background">
+              <Navigation />
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
+            <Toaster />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

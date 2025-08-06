@@ -1,0 +1,58 @@
+{
+  "common": {
+    "appName": "Domus",
+    "appSubtitle": "Home Management",
+    "comingSoon": "Coming Soon",
+    "language": "Language"
+  },
+  "navigation": {
+    "home": "Home",
+    "chores": "Chores",
+    "grocery": "Grocery",
+    "planner": "Planner",
+    "tasks": "Tasks",
+    "projects": "Projects",
+    "meals": "Meals",
+    "reminders": "Reminders",
+    "users": "Users",
+    "settings": "Settings"
+  },
+  "home": {
+    "welcome": "Welcome to Domus",
+    "subtitle": "Your family home management dashboard",
+    "modules": {
+      "chores": {
+        "title": "Chores Manager",
+        "description": "Assign recurring tasks and track completion"
+      },
+      "grocery": {
+        "title": "Grocery List",
+        "description": "Shared shopping list for the family"
+      },
+      "planner": {
+        "title": "Daily Planner",
+        "description": "Calendar view with drag & drop tasks"
+      },
+      "tasks": {
+        "title": "Task List",
+        "description": "General to-do list for one-off things"
+      },
+      "projects": {
+        "title": "Home Projects",
+        "description": "Kanban board for improvement tasks"
+      },
+      "meals": {
+        "title": "Meal Planner",
+        "description": "Plan meals and connect to grocery list"
+      },
+      "reminders": {
+        "title": "Reminders",
+        "description": "Visual and audible notifications"
+      },
+      "users": {
+        "title": "User Profiles",
+        "description": "Manage family members and assignments"
+      }
+    }
+  }
+}

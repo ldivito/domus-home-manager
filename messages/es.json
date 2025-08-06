@@ -1,0 +1,58 @@
+{
+  "common": {
+    "appName": "Domus",
+    "appSubtitle": "Gestión del Hogar",
+    "comingSoon": "Próximamente",
+    "language": "Idioma"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "chores": "Tareas",
+    "grocery": "Compras",
+    "planner": "Planificador",
+    "tasks": "Pendientes",
+    "projects": "Proyectos",
+    "meals": "Comidas",
+    "reminders": "Recordatorios",
+    "users": "Usuarios",
+    "settings": "Configuración"
+  },
+  "home": {
+    "welcome": "Bienvenido a Domus",
+    "subtitle": "Tu panel de gestión del hogar familiar",
+    "modules": {
+      "chores": {
+        "title": "Gestor de Tareas",
+        "description": "Asigna tareas recurrentes y rastrea su completación"
+      },
+      "grocery": {
+        "title": "Lista de Compras",
+        "description": "Lista de compras compartida para la familia"
+      },
+      "planner": {
+        "title": "Planificador Diario",
+        "description": "Vista de calendario con tareas de arrastrar y soltar"
+      },
+      "tasks": {
+        "title": "Lista de Pendientes",
+        "description": "Lista general de tareas por hacer de una sola vez"
+      },
+      "projects": {
+        "title": "Proyectos del Hogar",
+        "description": "Tablero Kanban para tareas de mejora"
+      },
+      "meals": {
+        "title": "Planificador de Comidas",
+        "description": "Planifica comidas y conecta con la lista de compras"
+      },
+      "reminders": {
+        "title": "Recordatorios",
+        "description": "Notificaciones visuales y auditivas"
+      },
+      "users": {
+        "title": "Perfiles de Usuario",
+        "description": "Gestiona miembros de la familia y asignaciones"
+      }
+    }
+  }
+}

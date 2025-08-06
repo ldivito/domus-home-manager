@@ -5,6 +5,7 @@ export interface User {
   name: string
   avatar?: string
   color: string
+  type: 'resident' | 'guest'
   createdAt: Date
 }
 
@@ -97,7 +98,7 @@ export class DomusDatabase extends Dexie {
   constructor() {
     super('DomusDatabase')
     this.version(1).stores({
-      users: '++id, name, color',
+      users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
       groceryItems: '++id, name, category, isCompleted, addedBy',
       tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted',

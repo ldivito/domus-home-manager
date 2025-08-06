@@ -54,5 +54,40 @@
         "description": "Manage family members and assignments"
       }
     }
+  },
+  "users": {
+    "title": "User Profiles",
+    "subtitle": "Manage family members and track their contributions",
+    "addUser": "Add User",
+    "addUserModal": {
+      "title": "Add New User",
+      "name": "Name",
+      "namePlaceholder": "Enter user name",
+      "userType": "User Type",
+      "resident": "Resident",
+      "guest": "Guest",
+      "residentDescription": "Lives in the home permanently",
+      "guestDescription": "Temporary visitor or guest",
+      "avatar": "Profile Picture",
+      "selectColor": "Select Color",
+      "cancel": "Cancel",
+      "create": "Create User"
+    },
+    "editProfile": "Edit Profile",
+    "familyMember": "Family Member",
+    "guest": "Guest",
+    "completionRate": "Completion Rate",
+    "activeTasks": "Active Tasks",
+    "chores": "Chores",
+    "topPerformer": "Top Performer",
+    "recentActivity": "Recent Activity",
+    "familyStats": "Family Stats",
+    "totalTasksCompleted": "Total Tasks Completed",
+    "assignedChores": "Assigned Chores",
+    "topContributors": "Top Contributors",
+    "completed": "completed",
+    "started": "started",
+    "noUsers": "No users added yet",
+    "addFirstUser": "Add your first family member or guest to get started!"
   }
 }

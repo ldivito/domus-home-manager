@@ -54,5 +54,40 @@
         "description": "Gestiona miembros de la familia y asignaciones"
       }
     }
+  },
+  "users": {
+    "title": "Perfiles de Usuario",
+    "subtitle": "Gestiona miembros de la familia y rastrea sus contribuciones",
+    "addUser": "Agregar Usuario",
+    "addUserModal": {
+      "title": "Agregar Nuevo Usuario",
+      "name": "Nombre",
+      "namePlaceholder": "Ingresa el nombre del usuario",
+      "userType": "Tipo de Usuario",
+      "resident": "Residente",
+      "guest": "Invitado",
+      "residentDescription": "Vive en la casa permanentemente",
+      "guestDescription": "Visitante temporal o invitado",
+      "avatar": "Foto de Perfil",
+      "selectColor": "Seleccionar Color",
+      "cancel": "Cancelar",
+      "create": "Crear Usuario"
+    },
+    "editProfile": "Editar Perfil",
+    "familyMember": "Miembro de la Familia",
+    "guest": "Invitado",
+    "completionRate": "Tasa de Completación",
+    "activeTasks": "Tareas Activas",
+    "chores": "Tareas del Hogar",
+    "topPerformer": "Mejor Desempeño",
+    "recentActivity": "Actividad Reciente",
+    "familyStats": "Estadísticas Familiares",
+    "totalTasksCompleted": "Total de Tareas Completadas",
+    "assignedChores": "Tareas Asignadas",
+    "topContributors": "Principales Colaboradores",
+    "completed": "completó",
+    "started": "comenzó",
+    "noUsers": "Aún no hay usuarios agregados",
+    "addFirstUser": "¡Agrega tu primer miembro de la familia o invitado para comenzar!"
   }
 }

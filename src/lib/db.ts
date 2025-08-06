@@ -14,10 +14,18 @@ export interface Chore {
   title: string
   description?: string
   assignedUserId?: number
-  frequency: 'daily' | 'weekly' | 'monthly'
+  frequency: 'daily' | 'weekly' | 'monthly' | 'custom'
+  customFrequency?: {
+    type: 'times_per_day' | 'times_per_week' | 'times_per_month' | 'days_interval'
+    value: number
+    specificDays?: number[] // For weekly: 0=Sunday, 1=Monday, etc.
+  }
+  scheduledTime?: string // HH:MM format
   lastCompleted?: Date
+  lastCompletedBy?: number // User ID who completed it
   nextDue: Date
   isCompleted: boolean
+  completedAt?: Date // Timestamp when marked complete
   createdAt: Date
 }
 

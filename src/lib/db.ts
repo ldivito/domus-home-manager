@@ -32,9 +32,31 @@ export interface Chore {
 export interface GroceryItem {
   id?: number
   name: string
-  category?: string
-  isCompleted: boolean
+  category: string
+  amount: string
+  importance: 'low' | 'medium' | 'high'
   addedBy?: number
+  createdAt: Date
+}
+
+export interface GroceryCategory {
+  id?: number
+  name: string
+  color?: string
+  isDefault: boolean
+  locale?: string // For user-created categories, store the language they were created in
+  createdAt: Date
+}
+
+export interface SavedGroceryItem {
+  id?: number
+  name: string
+  category: string
+  amount?: string
+  importance?: 'low' | 'medium' | 'high'
+  addedBy?: number
+  timesUsed: number
+  lastUsed?: Date
   createdAt: Date
 }
 
@@ -97,6 +119,8 @@ export class DomusDatabase extends Dexie {
   users!: Table<User>
   chores!: Table<Chore>
   groceryItems!: Table<GroceryItem>
+  groceryCategories!: Table<GroceryCategory>
+  savedGroceryItems!: Table<SavedGroceryItem>
   tasks!: Table<Task>
   homeImprovements!: Table<HomeImprovement>
   meals!: Table<Meal>
@@ -105,15 +129,71 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
-    this.version(1).stores({
+    this.version(4).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: '++id, name, category, isCompleted, addedBy',
+      groceryItems: '++id, name, category, importance, addedBy, createdAt',
+      groceryCategories: '++id, name, isDefault, locale, createdAt',
+      savedGroceryItems: '++id, name, category, importance, timesUsed, lastUsed, createdAt',
       tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted',
       homeImprovements: '++id, title, status, assignedUserId, priority',
       meals: '++id, title, date, mealType, assignedUserId',
       reminders: '++id, title, reminderTime, isCompleted, userId, type',
       calendarEvents: '++id, title, date, type, userId'
+    })
+
+    // Migrate existing categories to use translation keys
+    this.version(3).upgrade(async (tx) => {
+      const categories = await tx.table('groceryCategories').toArray()
+      
+      // Migration mapping for old bilingual names to translation keys
+      const migrationMap: Record<string, string> = {
+        'Produce / Productos': 'defaultCategories.produce',
+        'Dairy / Lácteos': 'defaultCategories.dairy',
+        'Meat & Fish / Carnes y Pescado': 'defaultCategories.meatFish',
+        'Bakery / Panadería': 'defaultCategories.bakery',
+        'Pantry / Despensa': 'defaultCategories.pantry',
+        'Frozen / Congelados': 'defaultCategories.frozen',
+        'Beverages / Bebidas': 'defaultCategories.beverages',
+        'Snacks / Aperitivos': 'defaultCategories.snacks',
+        'Health & Beauty / Salud y Belleza': 'defaultCategories.healthBeauty',
+        'Household / Hogar': 'defaultCategories.household'
+      }
+
+      // Update existing categories
+      for (const category of categories) {
+        const newName = migrationMap[category.name]
+        if (newName) {
+          await tx.table('groceryCategories').update(category.id, { name: newName })
+          
+          // Also update grocery items that use this category
+          const itemsWithCategory = await tx.table('groceryItems')
+            .where('category').equals(category.name).toArray()
+          
+          for (const item of itemsWithCategory) {
+            await tx.table('groceryItems').update(item.id, { category: newName })
+          }
+        }
+      }
+    })
+
+    // Populate default categories
+    this.on('ready', async () => {
+      const count = await this.groceryCategories.count()
+      if (count === 0) {
+        await this.groceryCategories.bulkAdd([
+          { name: 'defaultCategories.produce', color: '#10b981', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultCategories.household', color: '#6b7280', isDefault: true, locale: undefined, createdAt: new Date() }
+        ])
+      }
     })
   }
 }

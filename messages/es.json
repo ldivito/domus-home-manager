@@ -55,6 +55,10 @@
       "users": {
         "title": "Perfiles de Usuario",
         "description": "Gestiona miembros de la familia y asignaciones"
+      },
+      "settings": {
+        "title": "Configuración",
+        "description": "Personaliza preferencias de la app y gestiona datos"
       }
     }
   },
@@ -529,6 +533,59 @@
       "regular": "Regular",
       "chores": "Quehaceres",
       "tasks": "Tareas"
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "subtitle": "Personaliza tu experiencia Domus y gestiona tus datos",
+    "saved": "Configuración guardada",
+    "languageAppearance": {
+      "title": "Idioma y Apariencia",
+      "description": "Elige tu idioma y personaliza la apariencia visual",
+      "language": "Idioma",
+      "theme": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "description": "Gestiona cuándo y cómo recibes notificaciones",
+      "choreReminders": "Recordatorios de Quehaceres",
+      "choreRemindersDesc": "Recibe notificaciones cuando vencen los quehaceres",
+      "taskReminders": "Recordatorios de Tareas",
+      "taskRemindersDesc": "Recibe notificaciones sobre fechas límite de tareas",
+      "dailySummary": "Resumen Diario",
+      "dailySummaryDesc": "Mostrar resumen diario al inicio"
+    },
+    "dataManagement": {
+      "title": "Gestión de Datos",
+      "description": "Exporta, importa o reinicia los datos de tu familia",
+      "totalRecords": "Total de Registros",
+      "localStorage": "Almacenamiento Local",
+      "exportData": "Exportar Datos",
+      "importData": "Importar Datos",
+      "dataExported": "Datos exportados exitosamente",
+      "dataImported": "Datos importados exitosamente",
+      "exportError": "Error al exportar datos",
+      "importError": "Error al importar datos",
+      "dangerZone": "Zona Peligrosa",
+      "resetWarning": "Esta acción no se puede deshacer. Eliminará permanentemente todos los datos de tu familia.",
+      "resetAllData": "Reiniciar Todos los Datos",
+      "confirmReset": "¿Estás seguro de que quieres reiniciar todos los datos? Esta acción no se puede deshacer.",
+      "dataReset": "Todos los datos han sido reiniciados",
+      "resetError": "Error al reiniciar datos"
+    },
+    "about": {
+      "title": "Acerca de Domus",
+      "description": "Información de la aplicación y detalles del sistema",
+      "version": "Versión",
+      "platform": "Plataforma",
+      "webApp": "Aplicación Web",
+      "storage": "Almacenamiento",
+      "indexedDB": "IndexedDB (Local)",
+      "lastUpdated": "Última Actualización",
+      "description": "Domus está diseñado para la gestión del hogar optimizada para tablets. Todos los datos se almacenan localmente para privacidad y acceso sin conexión."
     }
   },
   "planner": {

@@ -1,159 +1,434 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
+import { useTheme } from 'next-themes'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Settings, Palette, Download, Upload, Trash2, Moon, Sun } from "lucide-react"
+import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { db } from '@/lib/db'
+import { useRouter, usePathname } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function SettingsPage() {
+  const t = useTranslations('settings')
+  const { theme, setTheme } = useTheme()
+  const locale = useLocale()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
+  const [dbStats, setDbStats] = useState({ totalRecords: 0, storageSize: 'N/A' })
+  const [notifications, setNotifications] = useState({
+    sound: true,
+    visual: true,
+    dailySummary: true,
+    choreReminders: true,
+    taskReminders: true
+  })
+
+  useEffect(() => {
+    setMounted(true)
+    loadDatabaseStats()
+    loadNotificationSettings()
+  }, [])
+
+  const loadDatabaseStats = async () => {
+    try {
+      const [users, chores, tasks, groceryItems, meals, projects] = await Promise.all([
+        db.users.count(),
+        db.chores.count(),
+        db.tasks.count(),
+        db.groceryItems.count(),
+        db.meals.count(),
+        db.homeImprovements.count()
+      ])
+      
+      const totalRecords = users + chores + tasks + groceryItems + meals + projects
+      setDbStats({ totalRecords, storageSize: 'Local' })
+    } catch (error) {
+      console.error('Error loading database stats:', error)
+    }
+  }
+
+  const loadNotificationSettings = () => {
+    // Load from localStorage or use defaults
+    const saved = localStorage.getItem('domus-notifications')
+    if (saved) {
+      setNotifications(JSON.parse(saved))
+    }
+  }
+
+  const saveNotificationSettings = (newSettings: typeof notifications) => {
+    setNotifications(newSettings)
+    localStorage.setItem('domus-notifications', JSON.stringify(newSettings))
+    toast.success(t('saved'))
+  }
+
+  const handleLanguageChange = (newLocale: string) => {
+    const newPathname = pathname.replace(`/${locale}`, `/${newLocale}`)
+    router.push(newPathname)
+  }
+
+  const exportData = async () => {
+    try {
+      const [users, chores, tasks, groceryItems, savedGroceryItems, groceryCategories, meals, savedMeals, mealCategories, projects] = await Promise.all([
+        db.users.toArray(),
+        db.chores.toArray(),
+        db.tasks.toArray(),
+        db.groceryItems.toArray(),
+        db.savedGroceryItems.toArray(),
+        db.groceryCategories.toArray(),
+        db.meals.toArray(),
+        db.savedMeals.toArray(),
+        db.mealCategories.toArray(),
+        db.homeImprovements.toArray()
+      ])
+
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        data: {
+          users,
+          chores,
+          tasks,
+          groceryItems,
+          savedGroceryItems,
+          groceryCategories,
+          meals,
+          savedMeals,
+          mealCategories,
+          homeImprovements: projects
+        }
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `domus-backup-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      toast.success(t('dataExported'))
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error(t('exportError'))
+    }
+  }
+
+  const importData = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      try {
+        const text = await file.text()
+        const importData = JSON.parse(text)
+        
+        if (!importData.data) {
+          throw new Error('Invalid backup file format')
+        }
+
+        // Clear existing data and import
+        await db.transaction('rw', [db.users, db.chores, db.tasks, db.groceryItems, db.savedGroceryItems, db.groceryCategories, db.meals, db.savedMeals, db.mealCategories, db.homeImprovements], async () => {
+          await db.users.clear()
+          await db.chores.clear()
+          await db.tasks.clear()
+          await db.groceryItems.clear()
+          await db.savedGroceryItems.clear()
+          await db.groceryCategories.clear()
+          await db.meals.clear()
+          await db.savedMeals.clear()
+          await db.mealCategories.clear()
+          await db.homeImprovements.clear()
+
+          if (importData.data.users) await db.users.bulkAdd(importData.data.users)
+          if (importData.data.chores) await db.chores.bulkAdd(importData.data.chores)
+          if (importData.data.tasks) await db.tasks.bulkAdd(importData.data.tasks)
+          if (importData.data.groceryItems) await db.groceryItems.bulkAdd(importData.data.groceryItems)
+          if (importData.data.savedGroceryItems) await db.savedGroceryItems.bulkAdd(importData.data.savedGroceryItems)
+          if (importData.data.groceryCategories) await db.groceryCategories.bulkAdd(importData.data.groceryCategories)
+          if (importData.data.meals) await db.meals.bulkAdd(importData.data.meals)
+          if (importData.data.savedMeals) await db.savedMeals.bulkAdd(importData.data.savedMeals)
+          if (importData.data.mealCategories) await db.mealCategories.bulkAdd(importData.data.mealCategories)
+          if (importData.data.homeImprovements) await db.homeImprovements.bulkAdd(importData.data.homeImprovements)
+        })
+
+        await loadDatabaseStats()
+        toast.success(t('dataImported'))
+      } catch (error) {
+        console.error('Import error:', error)
+        toast.error(t('importError'))
+      }
+    }
+    input.click()
+  }
+
+  const resetAllData = async () => {
+    if (!confirm(t('confirmReset'))) return
+
+    try {
+      await db.transaction('rw', [db.users, db.chores, db.tasks, db.groceryItems, db.savedGroceryItems, db.groceryCategories, db.meals, db.savedMeals, db.mealCategories, db.homeImprovements], async () => {
+        await db.users.clear()
+        await db.chores.clear()
+        await db.tasks.clear()
+        await db.groceryItems.clear()
+        await db.savedGroceryItems.clear()
+        await db.groceryCategories.clear()
+        await db.meals.clear()
+        await db.savedMeals.clear()
+        await db.mealCategories.clear()
+        await db.homeImprovements.clear()
+      })
+
+      await loadDatabaseStats()
+      toast.success(t('dataReset'))
+    } catch (error) {
+      console.error('Reset error:', error)
+      toast.error(t('resetError'))
+    }
+  }
+
+  if (!mounted) {
+    return null
+  }
+
   return (
-    <div className="p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-xl text-gray-600">Customize your Domus experience</p>
+    <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            {t('title')}
+          </h1>
+          <p className="text-xl text-muted-foreground">
+            {t('subtitle')}
+          </p>
         </div>
         
-        <div className="space-y-6">
-          <Card>
+        <div className="space-y-8">
+          {/* Language & Appearance */}
+          <Card className="glass-card shadow-modern">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center">
-                <Palette className="mr-2 h-6 w-6" />
-                Appearance
+                <Globe className="mr-3 h-6 w-6 text-primary" />
+                {t('languageAppearance.title')}
               </CardTitle>
-              <CardDescription>Customize the look and feel of your app</CardDescription>
+              <CardDescription>{t('languageAppearance.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Dark Mode</Label>
-                  <p className="text-sm text-gray-500">Switch between light and dark themes</p>
+            <CardContent className="space-y-8">
+              {/* Language Selector */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Languages className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-medium">{t('languageAppearance.language')}</Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Sun className="h-4 w-4" />
-                  <Switch />
-                  <Moon className="h-4 w-4" />
-                </div>
+                <Select value={locale} onValueChange={handleLanguageChange}>
+                  <SelectTrigger className="max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">🇺🇸 English</SelectItem>
+                    <SelectItem value="es">🇪🇸 Español</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <div className="space-y-3">
-                <Label className="text-base font-medium">Theme Color</Label>
-                <div className="flex space-x-3">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full border-2 border-orange-600 cursor-pointer" />
-                  <div className="w-8 h-8 bg-blue-500 rounded-full border-2 border-transparent hover:border-blue-600 cursor-pointer" />
-                  <div className="w-8 h-8 bg-green-500 rounded-full border-2 border-transparent hover:border-green-600 cursor-pointer" />
-                  <div className="w-8 h-8 bg-purple-500 rounded-full border-2 border-transparent hover:border-purple-600 cursor-pointer" />
-                  <div className="w-8 h-8 bg-pink-500 rounded-full border-2 border-transparent hover:border-pink-600 cursor-pointer" />
+
+              <div className="border-t border-border"></div>
+
+              {/* Theme Selector */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Palette className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-medium">{t('languageAppearance.theme')}</Label>
                 </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Large Text Mode</Label>
-                  <p className="text-sm text-gray-500">Increase text size for better readability</p>
-                </div>
-                <Switch />
+                <Select value={theme} onValueChange={setTheme}>
+                  <SelectTrigger className="max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">
+                      <div className="flex items-center gap-2">
+                        <Sun className="h-4 w-4" />
+                        {t('languageAppearance.light')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="dark">
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-4 w-4" />
+                        {t('languageAppearance.dark')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="system">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="h-4 w-4" />
+                        {t('languageAppearance.system')}
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          {/* Notification Preferences */}
+          <Card className="glass-card shadow-modern">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center">
-                <Settings className="mr-2 h-6 w-6" />
-                Notifications
+                <Bell className="mr-3 h-6 w-6 text-primary" />
+                {t('notifications.title')}
               </CardTitle>
-              <CardDescription>Manage when and how you receive notifications</CardDescription>
+              <CardDescription>{t('notifications.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Sound Notifications</Label>
-                  <p className="text-sm text-gray-500">Play sound for reminders and alerts</p>
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">{t('notifications.choreReminders')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('notifications.choreRemindersDesc')}</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={notifications.choreReminders}
+                  onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, choreReminders: checked })}
+                />
               </div>
               
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Visual Notifications</Label>
-                  <p className="text-sm text-gray-500">Show popup notifications on screen</p>
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">{t('notifications.taskReminders')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('notifications.taskRemindersDesc')}</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={notifications.taskReminders}
+                  onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, taskReminders: checked })}
+                />
               </div>
-              
+
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Daily Summary</Label>
-                  <p className="text-sm text-gray-500">Show daily task summary at startup</p>
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">{t('notifications.dailySummary')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('notifications.dailySummaryDesc')}</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={notifications.dailySummary}
+                  onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, dailySummary: checked })}
+                />
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          {/* Data Management */}
+          <Card className="glass-card shadow-modern">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center">
-                <Download className="mr-2 h-6 w-6" />
-                Data Management
+                <Database className="mr-3 h-6 w-6 text-primary" />
+                {t('dataManagement.title')}
               </CardTitle>
-              <CardDescription>Export, import, or reset your family data</CardDescription>
+              <CardDescription>{t('dataManagement.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Database Stats */}
+              <div className="bg-muted/50 border border-border rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <HardDrive className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center justify-between w-full">
+                    <span>{t('dataManagement.totalRecords')}: <strong>{dbStats.totalRecords}</strong></span>
+                    <Badge variant="secondary">{t('dataManagement.localStorage')}</Badge>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button variant="outline" className="h-14 text-base">
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="h-14 text-base shadow-modern hover:shadow-modern-lg transition-all duration-200"
+                  onClick={exportData}
+                >
                   <Download className="mr-2 h-5 w-5" />
-                  Export Data (JSON)
+                  {t('dataManagement.exportData')}
                 </Button>
-                <Button variant="outline" className="h-14 text-base">
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="h-14 text-base shadow-modern hover:shadow-modern-lg transition-all duration-200"
+                  onClick={importData}
+                >
                   <Upload className="mr-2 h-5 w-5" />
-                  Import Data
+                  {t('dataManagement.importData')}
                 </Button>
               </div>
               
-              <div className="border-t pt-4">
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-red-800 mb-2">Danger Zone</h4>
-                  <p className="text-sm text-red-600 mb-4">
-                    This action cannot be undone. It will permanently delete all your family data.
-                  </p>
-                  <Button variant="destructive" className="h-12 text-base">
-                    <Trash2 className="mr-2 h-5 w-5" />
-                    Reset All Data
-                  </Button>
+              <div className="border-t border-border"></div>
+              
+              {/* Danger Zone */}
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-destructive" />
+                  <h4 className="font-semibold text-destructive">{t('dataManagement.dangerZone')}</h4>
                 </div>
+                <p className="text-sm text-destructive/80">
+                  {t('dataManagement.resetWarning')}
+                </p>
+                <Button 
+                  variant="destructive" 
+                  size="lg" 
+                  className="h-12 text-base"
+                  onClick={resetAllData}
+                >
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  {t('dataManagement.resetAllData')}
+                </Button>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          {/* About */}
+          <Card className="glass-card shadow-modern">
             <CardHeader>
-              <CardTitle className="text-2xl">About Domus</CardTitle>
-              <CardDescription>Application information and credits</CardDescription>
+              <CardTitle className="text-2xl flex items-center">
+                <Info className="mr-3 h-6 w-6 text-primary" />
+                {t('about.title')}
+              </CardTitle>
+              <CardDescription>{t('about.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">Version</h4>
-                  <p className="text-gray-600">1.0.0</p>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">{t('about.version')}</h4>
+                    <p className="text-muted-foreground">1.0.0</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">{t('about.platform')}</h4>
+                    <p className="text-muted-foreground">{t('about.webApp')}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">Last Updated</h4>
-                  <p className="text-gray-600">January 2024</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">Storage</h4>
-                  <p className="text-gray-600">Local IndexedDB</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">Platform</h4>
-                  <p className="text-gray-600">Web Application</p>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">{t('about.storage')}</h4>
+                    <p className="text-muted-foreground">{t('about.indexedDB')}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">{t('about.lastUpdated')}</h4>
+                    <p className="text-muted-foreground">{new Date().toLocaleDateString(locale)}</p>
+                  </div>
                 </div>
               </div>
               
-              <div className="pt-4 border-t">
-                <p className="text-sm text-gray-500">
-                  Domus is designed for tablet-first home management. All data is stored locally for privacy and offline access.
+              <div className="border-t border-border"></div>
+              
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t('about.description')}
                 </p>
               </div>
             </CardContent>

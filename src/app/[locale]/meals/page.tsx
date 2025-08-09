@@ -3,15 +3,16 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UtensilsCrossed, Plus, Settings2, Calendar, List, ChevronLeft, ChevronRight, ShoppingCart, Edit3, Trash2 } from "lucide-react"
+import { UtensilsCrossed, Plus, Settings2, Calendar, List, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db, MealIngredient } from '@/lib/db'
+import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddMealDialog } from './components/AddMealDialog'
 import { ManageMealCategoriesDialog } from './components/ManageMealCategoriesDialog'
 import { ManageSavedMealsDialog } from './components/ManageSavedMealsDialog'
+import { MealDetailsDialog } from './components/MealDetailsDialog'
 
 type ViewType = 'day' | 'week' | 'month'
 
@@ -23,6 +24,8 @@ export default function MealsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showCategoriesDialog, setShowCategoriesDialog] = useState(false)
   const [showSavedMealsDialog, setShowSavedMealsDialog] = useState(false)
+  const [showMealDetailsDialog, setShowMealDetailsDialog] = useState(false)
+  const [selectedMeal, setSelectedMeal] = useState<typeof meals[0] | null>(null)
   const [preSelectedDate, setPreSelectedDate] = useState<string | undefined>(undefined)
   const [preSelectedTemplate, setPreSelectedTemplate] = useState<{
     name: string
@@ -41,6 +44,19 @@ export default function MealsPage() {
     () => db.mealCategories.orderBy('name').toArray(),
     []
   ) || []
+
+  const savedGroceryItems = useLiveQuery(
+    () => db.savedGroceryItems.toArray(),
+    []
+  ) || []
+
+  // Helper function to get ingredients for a meal
+  const getMealIngredients = (meal: typeof meals[0]) => {
+    if (!meal.ingredientIds) return []
+    return meal.ingredientIds
+      .map(id => savedGroceryItems.find(item => item.id === id))
+      .filter(Boolean) as NonNullable<typeof savedGroceryItems[0]>[]
+  }
 
   const mealTypeColors = {
     breakfast: 'bg-yellow-100 text-yellow-800',
@@ -108,15 +124,26 @@ export default function MealsPage() {
     }
   }
 
-  const handleAddIngredientsToGrocery = async (ingredients: MealIngredient[]) => {
+  const handleAddIngredientsToGrocery = async (ingredientIds: number[]) => {
     try {
-      for (const ingredient of ingredients) {
+      for (const ingredientId of ingredientIds) {
+        // Get the saved grocery item
+        const savedItem = await db.savedGroceryItems.get(ingredientId)
+        if (!savedItem) continue
+
+        // Add to current grocery list
         await db.groceryItems.add({
-          name: ingredient.name,
-          category: ingredient.category || 'defaultGroceryCategories.pantry',
-          amount: ingredient.amount || '',
-          importance: ingredient.importance,
+          name: savedItem.name,
+          category: savedItem.category,
+          amount: savedItem.amount || '',
+          importance: savedItem.importance || 'medium',
           createdAt: new Date()
+        })
+
+        // Update usage stats in saved item
+        await db.savedGroceryItems.update(ingredientId, {
+          timesUsed: savedItem.timesUsed + 1,
+          lastUsed: new Date()
         })
       }
     } catch (error) {
@@ -125,19 +152,11 @@ export default function MealsPage() {
   }
 
   const filteredMeals = getFilteredMeals()
-  const mealsSummary = {
-    breakfast: filteredMeals.filter(m => m.mealType === 'breakfast').length,
-    lunch: filteredMeals.filter(m => m.mealType === 'lunch').length,
-    dinner: filteredMeals.filter(m => m.mealType === 'dinner').length,
-    totalIngredients: filteredMeals.reduce((acc, meal) => acc + (meal.ingredients?.length || 0), 0)
-  }
 
-  const handleDeleteMeal = async (mealId: number) => {
-    try {
-      await db.meals.delete(mealId)
-    } catch (error) {
-      console.error('Error deleting meal:', error)
-    }
+
+  const handleMealClick = (meal: typeof meals[0]) => {
+    setSelectedMeal(meal)
+    setShowMealDetailsDialog(true)
   }
 
   const handleAddMealForDate = (date: Date) => {
@@ -212,24 +231,24 @@ export default function MealsPage() {
               }`}>
                 <div className="flex-1 space-y-1 mb-2">
                   {dayMeals.map((meal) => (
-                    <div key={meal.id} className="bg-white rounded p-2 text-xs border shadow-sm">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-gray-900 line-clamp-2">{meal.title}</span>
-                        <div className="flex space-x-1 ml-1">
-                          <button className="text-blue-600 hover:text-blue-800">
-                            <Edit3 className="h-3 w-3" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteMeal(meal.id!)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                    <div 
+                      key={meal.id} 
+                      className="bg-white rounded-lg p-2 text-xs border shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                      onClick={() => handleMealClick(meal)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate text-sm mb-1">
+                            {meal.title}
+                          </div>
+                          <Badge className={`${mealTypeColors[meal.mealType as keyof typeof mealTypeColors]} text-xs py-0 px-2`}>
+                            {t(`mealTypes.${meal.mealType}`)}
+                          </Badge>
+                        </div>
+                        <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-2 h-2 rounded-full bg-gray-400"></div>
                         </div>
                       </div>
-                      <Badge className={`${mealTypeColors[meal.mealType as keyof typeof mealTypeColors]} text-xs py-0`}>
-                        {t(`mealTypes.${meal.mealType}`)}
-                      </Badge>
                     </div>
                   ))}
                   {dayMeals.length === 0 && (
@@ -294,7 +313,7 @@ export default function MealsPage() {
         </div>
         
         {/* Month Grid */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-2 auto-rows-min">
           {days.map((day, index) => {
             if (day === null) {
               return <div key={index} className="h-32 bg-gray-50 rounded opacity-50"></div>
@@ -308,51 +327,57 @@ export default function MealsPage() {
             
             const isToday = date.toDateString() === today.toDateString()
             
+            // Calculate minimum height based on content
+            const baseHeight = 8 // Base height for day number and add button (2rem each)
+            const mealHeight = dayMeals.length * 2.5 // Each meal ~2.5rem
+            const minHeight = Math.max(8, baseHeight + mealHeight) // Minimum 8rem (h-32 equivalent)
+            
             return (
-              <div key={index} className={`border rounded-lg h-32 p-2 flex flex-col ${
-                isToday 
-                  ? 'bg-blue-50 border-blue-200' 
-                  : 'bg-white border-gray-200'
-              }`}>
+              <div 
+                key={index} 
+                className={`border rounded-lg p-2 flex flex-col ${
+                  isToday 
+                    ? 'bg-blue-50 border-blue-200' 
+                    : 'bg-white border-gray-200'
+                }`}
+                style={{ minHeight: `${minHeight}rem` }}
+              >
                 {/* Day Number */}
-                <div className={`text-lg font-semibold mb-1 ${
+                <div className={`text-lg font-semibold mb-1 flex-shrink-0 ${
                   isToday ? 'text-blue-800' : 'text-gray-700'
                 }`}>
                   {day}
                 </div>
                 
                 {/* Meals */}
-                <div className="flex-1 space-y-1 overflow-hidden mb-2">
-                  {dayMeals.slice(0, 2).map((meal) => (
-                    <div key={meal.id} className="text-xs bg-gray-100 rounded px-1 py-1">
+                <div className="flex-1 space-y-1 mb-2">
+                  {dayMeals.map((meal) => (
+                    <div 
+                      key={meal.id} 
+                      className="text-xs bg-gradient-to-r from-white to-gray-50 rounded-md px-2 py-1.5 border hover:shadow-sm transition-all cursor-pointer group"
+                      onClick={() => handleMealClick(meal)}
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="truncate flex-1 font-medium">{meal.title}</span>
-                        <div className="flex space-x-1 ml-1">
-                          <button className="text-blue-600 hover:text-blue-800">
-                            <Edit3 className="h-2 w-2" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteMeal(meal.id!)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-2 w-2" />
-                          </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate text-xs mb-0.5">
+                            {meal.title}
+                          </div>
+                          <div className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${mealTypeColors[meal.mealType as keyof typeof mealTypeColors]}`}>
+                            {t(`mealTypes.${meal.mealType}`)}
+                          </div>
+                        </div>
+                        <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
                         </div>
                       </div>
-                      <Badge className={`${mealTypeColors[meal.mealType as keyof typeof mealTypeColors]} text-xs py-0`}>
-                        {t(`mealTypes.${meal.mealType}`)}
-                      </Badge>
                     </div>
                   ))}
-                  {dayMeals.length > 2 && (
-                    <div className="text-xs text-gray-500 text-center">+{dayMeals.length - 2} more</div>
-                  )}
                 </div>
                 
                 {/* Add Meal Button */}
                 <button 
                   onClick={() => handleAddMealForDate(date)}
-                  className={`w-full p-1 border-2 border-dashed rounded text-xs transition-colors ${
+                  className={`w-full p-1 border-2 border-dashed rounded text-xs transition-colors flex-shrink-0 ${
                     isToday 
                       ? 'border-blue-300 hover:border-blue-400 text-blue-600 hover:bg-blue-100'
                       : 'border-gray-300 hover:border-gray-400 text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -409,24 +434,17 @@ export default function MealsPage() {
             </div>
           ) : (
             filteredMeals.map((meal) => (
-            <Card key={meal.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={meal.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleMealClick(meal)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{meal.title}</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={mealTypeColors[meal.mealType as keyof typeof mealTypeColors]}>
-                      {t(`mealTypes.${meal.mealType}`)}
-                    </Badge>
-                    <button className="text-blue-600 hover:text-blue-800">
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteMeal(meal.id!)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <Badge className={mealTypeColors[meal.mealType as keyof typeof mealTypeColors]}>
+                    {t(`mealTypes.${meal.mealType}`)}
+                  </Badge>
                 </div>
                 {meal.description && (
                   <CardDescription className="text-sm">{meal.description}</CardDescription>
@@ -437,25 +455,28 @@ export default function MealsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {meal.ingredients && meal.ingredients.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2 text-sm">{t('ingredients')}:</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {meal.ingredients.map((ingredient, index) => (
-                          <span key={index} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
-                            {ingredient.name}
-                            {ingredient.amount && ` (${ingredient.amount})`}
-                          </span>
-                        ))}
+                  {(() => {
+                    const ingredients = getMealIngredients(meal)
+                    return ingredients.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2 text-sm">{t('ingredients')}:</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {ingredients.map((ingredient) => (
+                            <span key={ingredient.id} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
+                              {ingredient.name}
+                              {ingredient.amount && ` (${ingredient.amount})`}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {meal.ingredients && meal.ingredients.length > 0 && (
+                    )
+                  })()}
+                  {meal.ingredientIds && meal.ingredientIds.length > 0 && (
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="w-full"
-                      onClick={() => handleAddIngredientsToGrocery(meal.ingredients!)}
+                      onClick={() => handleAddIngredientsToGrocery(meal.ingredientIds!)}
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       {t('addToGrocery')}
@@ -564,29 +585,6 @@ export default function MealsPage() {
             {viewType === 'month' && renderMonthView()}
           </CardContent>
         </Card>
-        
-        {/* Summary */}
-        <div className="mt-8 p-6 bg-white rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('summary.title')}</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{mealsSummary.breakfast}</p>
-              <p className="text-sm text-gray-500">{t('summary.breakfasts')}</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{mealsSummary.lunch}</p>
-              <p className="text-sm text-gray-500">{t('summary.lunches')}</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-purple-600">{mealsSummary.dinner}</p>
-              <p className="text-sm text-gray-500">{t('summary.dinners')}</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{mealsSummary.totalIngredients}</p>
-              <p className="text-sm text-gray-500">{t('summary.ingredients')}</p>
-            </div>
-          </div>
-        </div>
 
         <AddMealDialog
           open={showAddDialog}
@@ -609,6 +607,19 @@ export default function MealsPage() {
           onAddMealWithTemplate={(template) => {
             setShowSavedMealsDialog(false)
             handleAddMealWithTemplate(template)
+          }}
+        />
+        
+        <MealDetailsDialog
+          open={showMealDetailsDialog}
+          onOpenChange={setShowMealDetailsDialog}
+          meal={selectedMeal}
+          onMealUpdated={() => {
+            // Meals will refresh automatically via useLiveQuery
+          }}
+          onMealDeleted={() => {
+            setShowMealDetailsDialog(false)
+            setSelectedMeal(null)
           }}
         />
       </div>

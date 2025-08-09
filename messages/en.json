@@ -299,6 +299,17 @@
     "planFirstMeal": "Plan First Meal",
     "ingredients": "Ingredients",
     "addToGrocery": "Add to Grocery List",
+    "edit": "Edit",
+    "editMeal": "Edit Meal",
+    "delete": "Delete",
+    "close": "Close",
+    "notifications": {
+      "addedToGroceryList": "Added ingredients to grocery list",
+      "addedMultipleToGroceryList": "Added {count} ingredients to grocery list",
+      "ingredientsAddedDescription": "Ingredients have been added to your shopping list",
+      "viewList": "View List",
+      "errorAddingToGrocery": "Error adding ingredients to grocery list"
+    },
     "viewTypes": {
       "day": "Day",
       "week": "Week",
@@ -386,7 +397,10 @@
     "savedMeals": {
       "manage": "Manage Saved Meals",
       "noSavedMeals": "No saved meals yet",
+      "search": "Search meals...",
+      "noSearchResults": "No meals found",
       "addMeal": "Add Meal",
+      "useMeal": "Use Meal",
       "edit": "Edit",
       "delete": "Delete",
       "close": "Close",

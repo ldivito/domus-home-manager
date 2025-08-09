@@ -3,7 +3,10 @@
     "appName": "Domus",
     "appSubtitle": "Gestión del Hogar",
     "comingSoon": "Próximamente",
-    "language": "Idioma"
+    "language": "Idioma",
+    "all": "Todos",
+    "cancel": "Cancelar",
+    "notAssigned": "Sin asignar"
   },
   "navigation": {
     "home": "Inicio",
@@ -418,6 +421,47 @@
         "cancel": "Cancelar",
         "save": "Guardar"
       }
+    }
+  },
+  "tasks": {
+    "title": "Lista de Pendientes",
+    "subtitle": "Lista general de tareas por hacer de una sola vez",
+    "addTask": "Agregar Tarea",
+    "editTask": "Editar Tarea",
+    "noTasks": "Aún no hay tareas",
+    "addFirstTask": "Crea tu primera tarea para empezar",
+    "noTasksFound": "No se encontraron tareas",
+    "tryDifferentFilter": "Intenta ajustar los filtros",
+    "searchPlaceholder": "Buscar tareas...",
+    "markComplete": "Marcar Completa",
+    "filters": {
+      "priority": "Prioridad",
+      "status": "Estado",
+      "assignee": "Asignado a"
+    },
+    "priority": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "completed": "Completada"
+    },
+    "form": {
+      "title": "Título",
+      "titlePlaceholder": "Ingresa el título de la tarea",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Descripción opcional de la tarea",
+      "assignedTo": "Asignado a",
+      "selectUser": "Seleccionar usuario",
+      "priority": "Prioridad",
+      "dueDate": "Fecha límite",
+      "pickDate": "Selecciona una fecha",
+      "createTask": "Crear Tarea",
+      "creating": "Creando...",
+      "updateTask": "Actualizar Tarea",
+      "updating": "Actualizando..."
     }
   }
 }

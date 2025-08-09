@@ -151,19 +151,31 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
-    this.version(6).stores({
+    this.version(7).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
       groceryItems: '++id, name, category, importance, addedBy, createdAt',
       groceryCategories: '++id, name, isDefault, locale, createdAt',
       savedGroceryItems: '++id, name, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted',
+      tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted, createdAt',
       homeImprovements: '++id, title, status, assignedUserId, priority',
       meals: '++id, title, date, mealType, assignedUserId',
       mealCategories: '++id, name, isDefault, locale, createdAt',
       savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
       reminders: '++id, title, reminderTime, isCompleted, userId, type',
       calendarEvents: '++id, title, date, type, userId'
+    })
+
+    // Add createdAt to existing tasks (version 7 upgrade)
+    this.version(7).upgrade(async (tx) => {
+      const tasks = await tx.table('tasks').toArray()
+      
+      // Add createdAt to tasks that don't have it
+      for (const task of tasks) {
+        if (!task.createdAt) {
+          await tx.table('tasks').update(task.id, { createdAt: new Date() })
+        }
+      }
     })
 
     // Fix invalid meal categories that use meal types instead of categories

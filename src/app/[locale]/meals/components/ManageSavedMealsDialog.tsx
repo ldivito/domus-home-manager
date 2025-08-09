@@ -36,7 +36,6 @@ interface ManageSavedMealsDialogProps {
 export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMealWithTemplate }: ManageSavedMealsDialogProps) {
   const t = useTranslations('meals.savedMeals')
   const tCat = useTranslations('meals.defaultCategories')
-  const tGrocery = useTranslations('grocery.defaultCategories')
   const [editingMeal, setEditingMeal] = useState<SavedMeal | null>(null)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -150,25 +149,6 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
     return name.includes(query) || description.includes(query) || ingredients.includes(query)
   })
 
-  const translateGroceryCategoryName = (categoryName: string) => {
-    if (categoryName.startsWith('defaultCategories.')) {
-      const key = categoryName.replace('defaultCategories.', '')
-      const categoryMap: Record<string, string> = {
-        'produce': tGrocery('produce'),
-        'dairy': tGrocery('dairy'),
-        'meatFish': tGrocery('meatFish'),
-        'bakery': tGrocery('bakery'),
-        'pantry': tGrocery('pantry'),
-        'frozen': tGrocery('frozen'),
-        'beverages': tGrocery('beverages'),
-        'snacks': tGrocery('snacks'),
-        'healthBeauty': tGrocery('healthBeauty'),
-        'household': tGrocery('household')
-      }
-      return categoryMap[key] || categoryName
-    }
-    return categoryName
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

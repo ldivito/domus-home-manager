@@ -504,4 +504,41 @@
       "updating": "Updating..."
     }
   }
+  ,
+  "planner": {
+    "title": "Daily Planner",
+    "subtitle": "Calendar with day, week and month views",
+    "today": "Today",
+    "views": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "addEvent": "Add Event",
+    "noUsers": "No users available",
+    "types": {
+      "general": "General",
+      "task": "Task",
+      "meal": "Meal",
+      "reminder": "Reminder"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Enter event title",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "date": "Date",
+      "time": "Time",
+      "type": "Type",
+      "assignedUsers": "Assigned Users",
+      "createEvent": "Create Event",
+      "creating": "Creating..."
+    },
+    "close": "Close",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editEvent": "Edit Event",
+    "cancel": "Cancel",
+    "save": "Save"
+  }
 }

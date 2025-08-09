@@ -1,84 +1,184 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Clock } from "lucide-react"
+"use client"
+
+import { useMemo, useState } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { useLiveQuery } from "dexie-react-hooks"
+import { db, CalendarEvent, User as UserType } from "@/lib/db"
+import { AddEventDialog } from "./components/AddEventDialog"
+import { DayView } from "./components/DayView"
+import { WeekView } from "./components/WeekView"
+import { MonthView } from "./components/MonthView"
+import { EventDetailsDialog } from "./components/EventDetailsDialog"
+import { EditEventDialog } from "./components/EditEventDialog"
+
+type PlannerView = 'day' | 'week' | 'month'
+
+function toKey(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function getStartOfWeek(d: Date) {
+  const x = new Date(d)
+  const delta = x.getDay() // Sunday start
+  x.setDate(x.getDate() - delta)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
 
 export default function PlannerPage() {
-  const today = new Date()
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(today)
-    date.setDate(today.getDate() + i)
-    return date
+  const t = useTranslations('planner')
+  const [view, setView] = useState<PlannerView>('week')
+  const [cursorDate, setCursorDate] = useState<Date>(() => {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    return now
   })
+  const [showAdd, setShowAdd] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
 
-  const events = [
-    { id: 1, title: "Grocery Shopping", time: "10:00 AM", type: "task", day: 0 },
-    { id: 2, title: "Lunch: Pasta", time: "12:30 PM", type: "meal", day: 0 },
-    { id: 3, title: "Doctor Appointment", time: "2:00 PM", type: "reminder", day: 1 },
-    { id: 4, title: "Dinner: Tacos", time: "6:00 PM", type: "meal", day: 2 },
-  ]
+  const usersLive = useLiveQuery(() => db.users.toArray(), [])
+  const users = useMemo(() => usersLive ?? [], [usersLive])
+  const usersById = useMemo(() => {
+    return Object.fromEntries(users.map(u => [u.id!, u as UserType]))
+  }, [users])
+
+  const eventsLive = useLiveQuery(async () => {
+    // Fetch a range depending on view
+    const from = new Date(cursorDate)
+    const to = new Date(cursorDate)
+    if (view === 'day') {
+      // same day
+    } else if (view === 'week') {
+      const start = getStartOfWeek(cursorDate)
+      from.setTime(start.getTime())
+      to.setTime(start.getTime())
+      to.setDate(start.getDate() + 6)
+    } else {
+      // month
+      const s = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), 1)
+      const e = new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 1, 0)
+      from.setTime(s.getTime())
+      to.setTime(e.getTime())
+    }
+    from.setHours(0,0,0,0)
+    to.setHours(23,59,59,999)
+    const all = await db.calendarEvents
+      .where('date')
+      .between(from, to, true, true)
+      .toArray()
+    return all as CalendarEvent[]
+  }, [cursorDate, view])
+  const events = useMemo(() => eventsLive ?? [], [eventsLive])
+
+  const eventsByDate = useMemo(() => {
+    const list = events
+    const map: Record<string, CalendarEvent[]> = {}
+    for (const evt of list) {
+      const key = toKey(new Date(evt.date))
+      if (!map[key]) map[key] = []
+      map[key].push(evt)
+    }
+    return map
+  }, [events])
+
+  const goPrev = () => {
+    const next = new Date(cursorDate)
+    if (view === 'day') next.setDate(next.getDate() - 1)
+    else if (view === 'week') next.setDate(next.getDate() - 7)
+    else next.setMonth(next.getMonth() - 1)
+    setCursorDate(next)
+  }
+  const goNext = () => {
+    const next = new Date(cursorDate)
+    if (view === 'day') next.setDate(next.getDate() + 1)
+    else if (view === 'week') next.setDate(next.getDate() + 7)
+    else next.setMonth(next.getMonth() + 1)
+    setCursorDate(next)
+  }
+  const goToday = () => {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    setCursorDate(now)
+  }
 
   return (
     <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Daily Planner</h1>
-            <p className="text-xl text-gray-600">Weekly calendar with drag & drop scheduling</p>
+            <h1 className="text-4xl font-bold">{t('title')}</h1>
+            <p className="text-xl text-muted-foreground">{t('subtitle')}</p>
           </div>
-          <Button size="lg" className="h-14 px-8 text-lg">
-            <Calendar className="mr-2 h-6 w-6" />
-            Add Event
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={goPrev} className="h-12 px-4">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button variant="outline" onClick={goToday} className="h-12 px-4">{t('today')}</Button>
+            <Button variant="outline" onClick={goNext} className="h-12 px-4">
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+            <div className="border rounded-lg p-1 ml-2">
+              <Button variant={view==='day'? 'default':'ghost'} onClick={() => setView('day')} className="h-10">{t('views.day')}</Button>
+              <Button variant={view==='week'? 'default':'ghost'} onClick={() => setView('week')} className="h-10">{t('views.week')}</Button>
+              <Button variant={view==='month'? 'default':'ghost'} onClick={() => setView('month')} className="h-10">{t('views.month')}</Button>
+            </div>
+            <Button onClick={() => setShowAdd(true)} className="h-12 px-6">
+              <Plus className="mr-2 h-5 w-5" />
+              {t('addEvent')}
+            </Button>
+          </div>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {days.map((day, index) => {
-            const dayEvents = events.filter(event => event.day === index)
-            const isToday = day.toDateString() === today.toDateString()
-            
-            return (
-              <Card key={index} className={`min-h-96 ${isToday ? 'ring-2 ring-orange-500' : ''}`}>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-center">
-                    <div className={`text-lg font-semibold ${isToday ? 'text-orange-600' : 'text-gray-700'}`}>
-                      {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                    </div>
-                    <div className={`text-2xl font-bold ${isToday ? 'text-orange-700' : 'text-gray-900'}`}>
-                      {day.getDate()}
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {dayEvents.map((event) => {
-                      const colorMap = {
-                        task: 'bg-blue-100 text-blue-800 border-blue-200',
-                        meal: 'bg-orange-100 text-orange-800 border-orange-200',
-                        reminder: 'bg-purple-100 text-purple-800 border-purple-200'
-                      }
-                      
-                      return (
-                        <div key={event.id} className={`p-3 rounded-lg border-l-4 ${colorMap[event.type as keyof typeof colorMap]}`}>
-                          <div className="font-medium text-sm">{event.title}</div>
-                          <div className="flex items-center text-xs mt-1">
-                            <Clock className="mr-1 h-3 w-3" />
-                            {event.time}
-                          </div>
-                        </div>
-                      )
-                    })}
-                    
-                    {dayEvents.length === 0 && (
-                      <div className="text-center text-gray-400 py-8">
-                        <p>No events scheduled</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+
+        {/* Calendar */}
+        <Card className="p-4">
+          {view === 'day' && (
+            <DayView
+              date={cursorDate}
+              events={eventsByDate[toKey(cursorDate)] || []}
+              usersById={usersById}
+              onView={(evt) => { setSelectedEvent(evt); setDetailsOpen(true) }}
+              onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+            />
+          )}
+          {view === 'week' && (
+            <WeekView
+              startOfWeek={getStartOfWeek(cursorDate)}
+              eventsByDate={eventsByDate}
+              usersById={usersById}
+              onView={(evt) => { setSelectedEvent(evt); setDetailsOpen(true) }}
+              onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+            />
+          )}
+          {view === 'month' && (
+            <MonthView
+              month={cursorDate}
+              eventsByDate={eventsByDate}
+              usersById={usersById}
+              onView={(evt) => { setSelectedEvent(evt); setDetailsOpen(true) }}
+              onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+            />
+          )}
+        </Card>
+
+        <AddEventDialog open={showAdd} onOpenChange={setShowAdd} users={users} defaultDate={cursorDate} onCreated={() => {}} />
+        <EventDetailsDialog
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          event={selectedEvent}
+          usersById={usersById}
+          onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+          onDelete={async (evt) => { await db.calendarEvents.delete(evt.id!); setDetailsOpen(false) }}
+        />
+        <EditEventDialog open={editOpen} onOpenChange={setEditOpen} users={users} event={selectedEvent} />
       </div>
     </div>
   )

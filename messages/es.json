@@ -503,4 +503,41 @@
       "updating": "Actualizando..."
     }
   }
+  ,
+  "planner": {
+    "title": "Planificador Diario",
+    "subtitle": "Calendario con vistas de día, semana y mes",
+    "today": "Hoy",
+    "views": {
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes"
+    },
+    "addEvent": "Agregar Evento",
+    "noUsers": "No hay usuarios disponibles",
+    "types": {
+      "general": "General",
+      "task": "Tarea",
+      "meal": "Comida",
+      "reminder": "Recordatorio"
+    },
+    "form": {
+      "title": "Título",
+      "titlePlaceholder": "Ingresa el título del evento",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Descripción opcional",
+      "date": "Fecha",
+      "time": "Hora",
+      "type": "Tipo",
+      "assignedUsers": "Usuarios Asignados",
+      "createEvent": "Crear Evento",
+      "creating": "Creando..."
+    },
+    "close": "Cerrar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "editEvent": "Editar Evento",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  }
 }

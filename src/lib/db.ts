@@ -128,10 +128,14 @@ export interface CalendarEvent {
   id?: number
   title: string
   description?: string
+  // Calendar date of the event (date component). Time is stored separately in `time` to avoid TZ issues
   date: Date
+  // Optional 24h time string HH:MM
+  time?: string
   type: 'task' | 'meal' | 'reminder' | 'general'
   relatedId?: number
-  userId?: number
+  // Multiple users can be assigned to an event
+  userIds?: number[]
   createdAt: Date
 }
 
@@ -151,7 +155,8 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
-    this.version(8).stores({
+    // v9: Add multi-user support and time for calendar events
+    this.version(9).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
       groceryItems: '++id, name, category, importance, addedBy, createdAt',
@@ -163,7 +168,26 @@ export class DomusDatabase extends Dexie {
       mealCategories: '++id, name, isDefault, locale, createdAt',
       savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
       reminders: '++id, title, reminderTime, isCompleted, userId, type',
-      calendarEvents: '++id, title, date, type, userId'
+      // Index by date and type for efficient filtering
+      calendarEvents: '++id, title, date, type'
+    })
+
+    // Upgrade existing calendar events to new structure
+    this.version(9).upgrade(async (tx) => {
+      type LegacyEvent = CalendarEvent & { userId?: number; userIds?: number[]; createdAt?: Date }
+      const events = await tx.table('calendarEvents').toArray() as LegacyEvent[]
+      for (const evt of events) {
+        const updates: Partial<CalendarEvent> = {}
+        if (evt.userId && !evt.userIds) {
+          updates.userIds = [evt.userId]
+        }
+        if (!evt.createdAt) {
+          updates.createdAt = new Date()
+        }
+        if (Object.keys(updates).length > 0) {
+          await tx.table('calendarEvents').update(evt.id, updates)
+        }
+      }
     })
 
     // Add createdAt to existing home improvements (version 8 upgrade)

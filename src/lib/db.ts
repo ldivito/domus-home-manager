@@ -89,7 +89,34 @@ export interface Meal {
   date: Date
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   assignedUserId?: number
-  ingredients?: string[]
+  ingredients?: MealIngredient[]
+  createdAt: Date
+}
+
+export interface MealCategory {
+  id?: number
+  name: string
+  color?: string
+  isDefault: boolean
+  locale?: string
+  createdAt: Date
+}
+
+export interface MealIngredient {
+  name: string
+  category: string
+  amount?: string
+  importance: 'low' | 'medium' | 'high'
+}
+
+export interface SavedMeal {
+  id?: number
+  name: string
+  description?: string
+  category: string
+  ingredients: MealIngredient[]
+  timesUsed: number
+  lastUsed?: Date
   createdAt: Date
 }
 
@@ -124,12 +151,14 @@ export class DomusDatabase extends Dexie {
   tasks!: Table<Task>
   homeImprovements!: Table<HomeImprovement>
   meals!: Table<Meal>
+  mealCategories!: Table<MealCategory>
+  savedMeals!: Table<SavedMeal>
   reminders!: Table<Reminder>
   calendarEvents!: Table<CalendarEvent>
 
   constructor() {
     super('DomusDatabase')
-    this.version(4).stores({
+    this.version(5).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
       groceryItems: '++id, name, category, importance, addedBy, createdAt',
@@ -138,6 +167,8 @@ export class DomusDatabase extends Dexie {
       tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted',
       homeImprovements: '++id, title, status, assignedUserId, priority',
       meals: '++id, title, date, mealType, assignedUserId',
+      mealCategories: '++id, name, isDefault, locale, createdAt',
+      savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
       reminders: '++id, title, reminderTime, isCompleted, userId, type',
       calendarEvents: '++id, title, date, type, userId'
     })
@@ -179,8 +210,8 @@ export class DomusDatabase extends Dexie {
 
     // Populate default categories
     this.on('ready', async () => {
-      const count = await this.groceryCategories.count()
-      if (count === 0) {
+      const groceryCategoryCount = await this.groceryCategories.count()
+      if (groceryCategoryCount === 0) {
         await this.groceryCategories.bulkAdd([
           { name: 'defaultCategories.produce', color: '#10b981', isDefault: true, locale: undefined, createdAt: new Date() },
           { name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, locale: undefined, createdAt: new Date() },
@@ -192,6 +223,22 @@ export class DomusDatabase extends Dexie {
           { name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, locale: undefined, createdAt: new Date() },
           { name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, locale: undefined, createdAt: new Date() },
           { name: 'defaultCategories.household', color: '#6b7280', isDefault: true, locale: undefined, createdAt: new Date() }
+        ])
+      }
+      
+      const mealCategoryCount = await this.mealCategories.count()
+      if (mealCategoryCount === 0) {
+        await this.mealCategories.bulkAdd([
+          { name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: new Date() },
+          { name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: new Date() }
         ])
       }
     })

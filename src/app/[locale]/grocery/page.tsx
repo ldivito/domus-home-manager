@@ -11,6 +11,7 @@ import { db, GroceryItem, SavedGroceryItem } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddItemDialog } from './components/AddItemDialog'
 import { ManageCategoriesDialog } from './components/ManageCategoriesDialog'
+import { ManageSavedItemsDialog } from './components/ManageSavedItemsDialog'
 
 type ViewMode = 'list' | 'categories'
 type ViewType = 'current' | 'saved'
@@ -25,6 +26,7 @@ export default function GroceryPage() {
   const [sortBy, setSortBy] = useState<SortBy>('importance')
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showCategoriesDialog, setShowCategoriesDialog] = useState(false)
+  const [showSavedItemsDialog, setShowSavedItemsDialog] = useState(false)
 
   const groceryItems = useLiveQuery(
     () => db.groceryItems.orderBy('createdAt').reverse().toArray(),
@@ -47,19 +49,7 @@ export default function GroceryPage() {
 
   const handleAddSavedItem = async (savedItem: SavedGroceryItem) => {
     try {
-      // Check if item is already in current grocery list
-      const existing = await db.groceryItems
-        .where('name')
-        .equalsIgnoreCase(savedItem.name)
-        .and(item => item.category === savedItem.category)
-        .first()
-
-      if (existing) {
-        // Item already exists in current list, don't add duplicate
-        return
-      }
-
-      // Add to current grocery list
+      // Always add to current grocery list (allow duplicates)
       await db.groceryItems.add({
         name: savedItem.name,
         category: savedItem.category,
@@ -337,6 +327,18 @@ export default function GroceryPage() {
               <Archive className="mr-2 h-5 w-5" />
               {viewType === 'current' ? tSaved('savedItemsButton') : tSaved('currentListButton')}
             </Button>
+
+            {viewType === 'saved' && (
+              <Button 
+                onClick={() => setShowSavedItemsDialog(true)}
+                variant="outline" 
+                size="lg" 
+                className="h-14 px-6 text-lg"
+              >
+                <Settings2 className="mr-2 h-5 w-5" />
+                {tSaved('manageSaved')}
+              </Button>
+            )}
             
             <Button 
               onClick={() => setShowCategoriesDialog(true)}
@@ -465,6 +467,12 @@ export default function GroceryPage() {
         <ManageCategoriesDialog
           open={showCategoriesDialog}
           onOpenChange={setShowCategoriesDialog}
+          categories={groceryCategories}
+        />
+        
+        <ManageSavedItemsDialog
+          open={showSavedItemsDialog}
+          onOpenChange={setShowSavedItemsDialog}
           categories={groceryCategories}
         />
       </div>

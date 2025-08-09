@@ -89,7 +89,7 @@ export interface Meal {
   date: Date
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   assignedUserId?: number
-  ingredients?: MealIngredient[]
+  ingredientIds?: number[] // Array of SavedGroceryItem IDs
   createdAt: Date
 }
 
@@ -102,19 +102,12 @@ export interface MealCategory {
   createdAt: Date
 }
 
-export interface MealIngredient {
-  name: string
-  category: string
-  amount?: string
-  importance: 'low' | 'medium' | 'high'
-}
-
 export interface SavedMeal {
   id?: number
   name: string
   description?: string
   category: string
-  ingredients: MealIngredient[]
+  ingredientIds: number[] // Array of SavedGroceryItem IDs
   timesUsed: number
   lastUsed?: Date
   createdAt: Date
@@ -158,7 +151,7 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
-    this.version(5).stores({
+    this.version(6).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
       groceryItems: '++id, name, category, importance, addedBy, createdAt',
@@ -171,6 +164,25 @@ export class DomusDatabase extends Dexie {
       savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
       reminders: '++id, title, reminderTime, isCompleted, userId, type',
       calendarEvents: '++id, title, date, type, userId'
+    })
+
+    // Fix invalid meal categories that use meal types instead of categories
+    this.version(6).upgrade(async (tx) => {
+      const savedMeals = await tx.table('savedMeals').toArray()
+      const validMealCategories = [
+        'defaultMealCategories.meat', 'defaultMealCategories.vegetarian', 'defaultMealCategories.seafood',
+        'defaultMealCategories.pasta', 'defaultMealCategories.salad', 'defaultMealCategories.soup',
+        'defaultMealCategories.dessert', 'defaultMealCategories.healthy', 'defaultMealCategories.comfort',
+        'defaultMealCategories.international'
+      ]
+
+      // Fix saved meals with invalid categories (especially breakfast/snack which are meal types)
+      for (const savedMeal of savedMeals) {
+        if (!validMealCategories.includes(savedMeal.category)) {
+          // Default to meat category if category is invalid
+          await tx.table('savedMeals').update(savedMeal.id, { category: 'defaultMealCategories.meat' })
+        }
+      }
     })
 
     // Migrate existing categories to use translation keys
@@ -241,6 +253,7 @@ export class DomusDatabase extends Dexie {
           { name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: new Date() }
         ])
       }
+
     })
   }
 }

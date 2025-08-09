@@ -32,6 +32,11 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
     []
   ) || []
 
+  const savedGroceryItems = useLiveQuery(
+    () => db.savedGroceryItems.toArray(),
+    []
+  ) || []
+
   const mealCategories = useLiveQuery(
     () => db.mealCategories.orderBy('name').toArray(),
     []
@@ -62,11 +67,20 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
     return category?.color || '#6b7280'
   }
 
-  const filteredMeals = savedMeals.filter(meal =>
-    meal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    meal.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    meal.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  const filteredMeals = savedMeals.filter(meal => {
+    const matchesName = meal.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesDescription = meal.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Check if any ingredient names match the search term
+    const ingredients = (meal.ingredientIds || [])
+      .map(id => savedGroceryItems.find(item => item.id === id))
+      .filter(Boolean)
+    const matchesIngredient = ingredients.some(ing => 
+      ing && ing.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    
+    return matchesName || matchesDescription || matchesIngredient
+  })
 
   const handleSelectTemplate = (meal: { id?: number }) => {
     if (meal.id) {
@@ -155,21 +169,24 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
                       <div className="flex items-center space-x-4 text-xs text-gray-500">
                         <span>Used {meal.timesUsed} times</span>
                         <span>•</span>
-                        <span>{meal.ingredients.length} ingredients</span>
+                        <span>{(meal.ingredientIds || []).length} ingredients</span>
                       </div>
 
                       {/* Ingredients Preview */}
                       <div>
                         <p className="text-xs font-medium text-gray-700 mb-1">Ingredients:</p>
                         <div className="flex flex-wrap gap-1">
-                          {meal.ingredients.slice(0, 4).map((ingredient, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {ingredient.name}
-                            </Badge>
-                          ))}
-                          {meal.ingredients.length > 4 && (
+                          {(meal.ingredientIds || []).slice(0, 4).map((ingredientId) => {
+                            const ingredient = savedGroceryItems.find(item => item.id === ingredientId)
+                            return ingredient ? (
+                              <Badge key={ingredientId} variant="secondary" className="text-xs">
+                                {ingredient.name}
+                              </Badge>
+                            ) : null
+                          })}
+                          {(meal.ingredientIds || []).length > 4 && (
                             <Badge variant="secondary" className="text-xs">
-                              +{meal.ingredients.length - 4} more
+                              +{(meal.ingredientIds || []).length - 4} more
                             </Badge>
                           )}
                         </div>

@@ -50,7 +50,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
     return `${year}-${month}-${day}`
   })
   const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('dinner')
-  const [ingredients, setIngredients] = useState<string[]>([])
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<number[]>([])
   const [newIngredient, setNewIngredient] = useState('')
   const [newIngredientAmount, setNewIngredientAmount] = useState('')
   const [newIngredientCategory, setNewIngredientCategory] = useState('')
@@ -91,7 +91,18 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
         setName(preSelectedTemplate.name)
         setDescription(preSelectedTemplate.description || '')
         setCategory(preSelectedTemplate.category)
-        setIngredients([...preSelectedTemplate.ingredients])
+        // Convert ingredient names to IDs by finding them in savedGroceryItems
+        const findIngredientIds = async () => {
+          const ids: number[] = []
+          for (const ingredientName of preSelectedTemplate.ingredients) {
+            const savedItem = await db.savedGroceryItems.where('name').equals(ingredientName).first()
+            if (savedItem?.id) {
+              ids.push(savedItem.id)
+            }
+          }
+          setSelectedIngredientIds(ids)
+        }
+        findIngredientIds()
       }
     } else {
       // Reset form when dialog closes
@@ -105,7 +116,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
       const day = String(today.getDate()).padStart(2, '0')
       setMealDate(`${year}-${month}-${day}`)
       setMealType('dinner')
-      setIngredients([])
+      setSelectedIngredientIds([])
       setNewIngredient('')
       setNewIngredientAmount('')
       setNewIngredientCategory('')
@@ -155,35 +166,36 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
   }
 
 
-  const handleAddIngredient = (ingredientName: string) => {
-    if (ingredientName && !ingredients.includes(ingredientName)) {
-      setIngredients([...ingredients, ingredientName])
+  const handleAddIngredient = (savedItemId: number) => {
+    if (savedItemId && !selectedIngredientIds.includes(savedItemId)) {
+      setSelectedIngredientIds([...selectedIngredientIds, savedItemId])
     }
   }
 
-  const handleRemoveIngredient = (ingredientToRemove: string) => {
-    setIngredients(ingredients.filter(ing => ing !== ingredientToRemove))
+  const handleRemoveIngredient = (ingredientIdToRemove: number) => {
+    setSelectedIngredientIds(selectedIngredientIds.filter(id => id !== ingredientIdToRemove))
   }
 
   const handleAddNewIngredient = async () => {
     if (newIngredient.trim()) {
-      // Create saved grocery item if all details provided
-      if (newIngredientAmount.trim() || newIngredientCategory || newIngredientImportance !== 'medium') {
-        try {
-          await db.savedGroceryItems.add({
-            name: newIngredient.trim(),
-            category: newIngredientCategory || 'defaultCategories.pantry',
-            amount: newIngredientAmount.trim() || '',
-            importance: newIngredientImportance,
-            timesUsed: 0,
-            createdAt: new Date()
-          })
-        } catch (error) {
-          console.error('Error saving ingredient to grocery items:', error)
-        }
+      try {
+        // Save ingredient to savedGroceryItems and get the ID
+        const savedItemId = await db.savedGroceryItems.add({
+          name: newIngredient.trim(),
+          category: newIngredientCategory || 'defaultCategories.pantry',
+          amount: newIngredientAmount.trim() || '',
+          importance: newIngredientImportance,
+          timesUsed: 1,
+          lastUsed: new Date(),
+          createdAt: new Date()
+        })
+        
+        // Add the saved item ID to the current meal
+        handleAddIngredient(savedItemId)
+      } catch (error) {
+        console.error('Error saving ingredient to grocery items:', error)
       }
 
-      handleAddIngredient(newIngredient.trim())
       setNewIngredient('')
       setNewIngredientAmount('')
       setNewIngredientCategory('')
@@ -219,8 +231,8 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
       setName(template.name)
       setDescription(template.description || '')
       setCategory(template.category)
-      // Convert MealIngredient array to string array for the ingredients state
-      setIngredients(template.ingredients.map(ing => ing.name))
+      // Use the ingredient IDs directly
+      setSelectedIngredientIds([...template.ingredientIds])
       
       // Update usage stats
       try {
@@ -237,7 +249,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
 
 
   const handleSave = async () => {
-    if (!name.trim() || ingredients.length === 0) {
+    if (!name.trim() || selectedIngredientIds.length === 0) {
       return
     }
 
@@ -248,7 +260,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
         description: description.trim() || undefined,
         date: new Date(mealDate + 'T12:00:00'), // Set to noon to avoid timezone issues
         mealType,
-        ingredients: ingredients.map(name => ({ name, amount: '', category: '', importance: 'medium' as const })),
+        ingredientIds: selectedIngredientIds,
         createdAt: new Date()
       })
 
@@ -258,7 +270,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
           name: name.trim(),
           description: description.trim() || undefined,
           category: category || 'defaultMealCategories.meat', // Default category if none selected
-          ingredients: ingredients.map(name => ({ name, amount: '', category: '', importance: 'medium' as const })),
+          ingredientIds: selectedIngredientIds,
           timesUsed: 0,
           createdAt: new Date()
         })
@@ -425,13 +437,15 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
               {/* Existing grocery items */}
               <div>
                 <Label className="text-sm font-medium text-gray-700">{t('form.fromGroceries')}</Label>
-                <Select onValueChange={handleAddIngredient}>
+                <Select onValueChange={(value) => handleAddIngredient(parseInt(value))}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder={t('form.selectIngredient')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {groceryItems.map((item) => (
-                      <SelectItem key={item.id} value={item.name}>
+                    {groceryItems
+                      .filter(item => !selectedIngredientIds.includes(item.id!))
+                      .map((item) => (
+                      <SelectItem key={item.id} value={item.id!.toString()}>
                         {item.name}
                       </SelectItem>
                     ))}
@@ -513,21 +527,24 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
               </div>
 
               {/* Selected ingredients */}
-              {ingredients.length > 0 && (
+              {selectedIngredientIds.length > 0 && (
                 <div>
                   <Label className="text-sm text-gray-600">{t('form.selectedIngredients')}</Label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {ingredients.map((ingredient, index) => (
-                      <Badge key={index} variant="secondary" className="text-sm">
-                        {ingredient}
-                        <button
-                          onClick={() => handleRemoveIngredient(ingredient)}
-                          className="ml-2 hover:text-red-500"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                    {selectedIngredientIds.map((ingredientId) => {
+                      const ingredient = groceryItems.find(item => item.id === ingredientId)
+                      return ingredient ? (
+                        <Badge key={ingredientId} variant="secondary" className="text-sm">
+                          {ingredient.name}
+                          <button
+                            onClick={() => handleRemoveIngredient(ingredientId)}
+                            className="ml-2 hover:text-red-500"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ) : null
+                    })}
                   </div>
                 </div>
               )}
@@ -555,7 +572,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={!name.trim() || ingredients.length === 0}
+            disabled={!name.trim() || selectedIngredientIds.length === 0}
           >
             {t('form.planMeal')}
           </Button>

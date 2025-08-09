@@ -16,7 +16,7 @@
     "tasks": "Pendientes",
     "projects": "Proyectos",
     "meals": "Comidas",
-    "reminders": "Recordatorios",
+    "reminders": "Notificaciones",
     "users": "Usuarios",
     "settings": "Configuración"
   },
@@ -49,8 +49,8 @@
         "description": "Planifica comidas y conecta con la lista de compras"
       },
       "reminders": {
-        "title": "Recordatorios",
-        "description": "Notificaciones visuales y auditivas"
+        "title": "Notificaciones",
+        "description": "Alertas generadas por el sistema y recordatorios"
       },
       "users": {
         "title": "Perfiles de Usuario",
@@ -502,8 +502,35 @@
       "updateProject": "Actualizar Proyecto",
       "updating": "Actualizando..."
     }
-  }
-  ,
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "subtitle": "Alertas del sistema para tareas, quehaceres y fechas importantes",
+    "clearAll": "Limpiar Todo",
+    "urgent": "Urgente",
+    "regular": "Regular",
+    "noNotifications": "No hay notificaciones",
+    "noNotificationsDescription": "¡Todo al día! Las notificaciones aparecerán aquí cuando haya tareas pendientes o quehaceres vencidos.",
+    "choreDue": "Quehacer Vencido: {title}",
+    "choreDueDescription": "Este quehacer debe completarse ahora",
+    "choreSoon": "Quehacer Próximo: {title}",
+    "choreSoonDescription": "Este quehacer vence en 1 hora",
+    "taskDue": "Tarea Vence Hoy: {title}",
+    "taskDueDescription": "Esta tarea vence hoy",
+    "taskTomorrow": "Tarea Vence Mañana: {title}",
+    "taskTomorrowDescription": "Esta tarea vence mañana",
+    "type": {
+      "chore": "Quehacer",
+      "task": "Tarea"
+    },
+    "summary": {
+      "title": "Resumen de Notificaciones",
+      "urgent": "Urgente",
+      "regular": "Regular",
+      "chores": "Quehaceres",
+      "tasks": "Tareas"
+    }
+  },
   "planner": {
     "title": "Planificador Diario",
     "subtitle": "Calendario con vistas de día, semana y mes",

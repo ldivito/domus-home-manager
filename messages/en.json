@@ -16,7 +16,7 @@
     "tasks": "Tasks",
     "projects": "Projects",
     "meals": "Meals",
-    "reminders": "Reminders",
+    "reminders": "Notifications",
     "users": "Users",
     "settings": "Settings"
   },
@@ -49,8 +49,8 @@
         "description": "Plan meals and connect to grocery list"
       },
       "reminders": {
-        "title": "Reminders",
-        "description": "Visual and audible notifications"
+        "title": "Notifications",
+        "description": "System-generated alerts and reminders"
       },
       "users": {
         "title": "User Profiles",
@@ -503,8 +503,35 @@
       "updateProject": "Update Project",
       "updating": "Updating..."
     }
-  }
-  ,
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "System alerts for chores, tasks, and important deadlines",
+    "clearAll": "Clear All",
+    "urgent": "Urgent",
+    "regular": "Regular",
+    "noNotifications": "No notifications",
+    "noNotificationsDescription": "All caught up! Notifications will appear here when chores are due or tasks need attention.",
+    "choreDue": "Chore Due: {title}",
+    "choreDueDescription": "This chore is now due for completion",
+    "choreSoon": "Chore Coming Up: {title}",
+    "choreSoonDescription": "This chore is due in 1 hour",
+    "taskDue": "Task Due Today: {title}",
+    "taskDueDescription": "This task is due today",
+    "taskTomorrow": "Task Due Tomorrow: {title}",
+    "taskTomorrowDescription": "This task is due tomorrow",
+    "type": {
+      "chore": "Chore",
+      "task": "Task"
+    },
+    "summary": {
+      "title": "Notification Summary",
+      "urgent": "Urgent",
+      "regular": "Regular",
+      "chores": "Chores",
+      "tasks": "Tasks"
+    }
+  },
   "planner": {
     "title": "Daily Planner",
     "subtitle": "Calendar with day, week and month views",

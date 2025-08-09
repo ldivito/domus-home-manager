@@ -3,7 +3,10 @@
     "appName": "Domus",
     "appSubtitle": "Home Management",
     "comingSoon": "Coming Soon",
-    "language": "Language"
+    "language": "Language",
+    "all": "All",
+    "cancel": "Cancel",
+    "notAssigned": "Not assigned"
   },
   "navigation": {
     "home": "Home",
@@ -419,6 +422,47 @@
         "cancel": "Cancel",
         "save": "Save"
       }
+    }
+  },
+  "tasks": {
+    "title": "Task List",
+    "subtitle": "General to-do list for one-off things",
+    "addTask": "Add Task",
+    "editTask": "Edit Task",
+    "noTasks": "No tasks yet",
+    "addFirstTask": "Create your first task to get started",
+    "noTasksFound": "No tasks found",
+    "tryDifferentFilter": "Try adjusting your filters",
+    "searchPlaceholder": "Search tasks...",
+    "markComplete": "Mark Complete",
+    "filters": {
+      "priority": "Priority",
+      "status": "Status",
+      "assignee": "Assignee"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "status": {
+      "pending": "Pending",
+      "completed": "Completed"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Enter task title",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional task description",
+      "assignedTo": "Assigned To",
+      "selectUser": "Select user",
+      "priority": "Priority",
+      "dueDate": "Due Date",
+      "pickDate": "Pick a date",
+      "createTask": "Create Task",
+      "creating": "Creating...",
+      "updateTask": "Update Task",
+      "updating": "Updating..."
     }
   }
 }

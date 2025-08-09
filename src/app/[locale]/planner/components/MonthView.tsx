@@ -3,13 +3,14 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { CalendarEvent, User } from "@/lib/db"
 import { EventPill } from "./EventPill"
+import type { PlannerItem } from "../types"
 
 interface MonthViewProps {
   month: Date // any date within the month
-  eventsByDate: Record<string, CalendarEvent[]>
+  itemsByDate: Record<string, PlannerItem[]>
   usersById: Record<number, User>
-  onView?: (event: CalendarEvent) => void
-  onEdit?: (event: CalendarEvent) => void
+  onView?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
+  onEdit?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
 }
 
 function startOfMonth(d: Date) {
@@ -36,7 +37,7 @@ function formatKey(date: Date) {
   return `${y}-${m}-${d}`
 }
 
-export function MonthView({ month, eventsByDate, usersById, onView, onEdit }: MonthViewProps) {
+export function MonthView({ month, itemsByDate, usersById, onView, onEdit }: MonthViewProps) {
   const gridStart = startOfGrid(month)
   const cells: Date[] = Array.from({ length: 42 }, (_, i) => {
     const d = new Date(gridStart)
@@ -51,7 +52,7 @@ export function MonthView({ month, eventsByDate, usersById, onView, onEdit }: Mo
       {cells.map((day, idx) => {
         const isCurrentMonth = day.getMonth() === currentMonth
         const key = formatKey(day)
-        const list = (eventsByDate[key] || []).slice(0, 3)
+        const list = (itemsByDate[key] || []).slice(0, 3)
         return (
           <Card key={`${key}-${idx}`} className={!isCurrentMonth ? 'opacity-60' : ''}>
             <CardContent className="pt-2 pb-3">
@@ -62,11 +63,21 @@ export function MonthView({ month, eventsByDate, usersById, onView, onEdit }: Mo
                 <div className="text-sm font-semibold">{day.getDate()}</div>
               </div>
               <div className="space-y-1">
-                {list.map(evt => (
-                  <EventPill key={evt.id} event={evt} usersById={usersById} compact onView={(e)=>onView?.(e)} onEdit={(e)=>onEdit?.(e)} />
+                {list.map((item, idx) => (
+                  <EventPill
+                    key={`${item.source}-${item.event.id ?? idx}`}
+                    event={item.event}
+                    source={item.source}
+                    typeLabel={item.typeLabel}
+                    usersById={usersById}
+                    compact
+                    onView={(payload)=>onView?.(payload)}
+                    onEdit={(payload)=>onEdit?.(payload)}
+                    hideEdit={item.hideEdit}
+                  />
                 ))}
-                {(eventsByDate[key]?.length || 0) > 3 && (
-                  <div className="text-[10px] text-muted-foreground">+{(eventsByDate[key]!.length - 3)} more</div>
+                {(itemsByDate[key]?.length || 0) > 3 && (
+                  <div className="text-[10px] text-muted-foreground">+{(itemsByDate[key]!.length - 3)} more</div>
                 )}
               </div>
             </CardContent>

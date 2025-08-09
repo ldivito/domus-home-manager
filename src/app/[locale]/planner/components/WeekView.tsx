@@ -3,13 +3,14 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { CalendarEvent, User } from "@/lib/db"
 import { EventPill } from "./EventPill"
+import type { PlannerItem } from "../types"
 
 interface WeekViewProps {
   startOfWeek: Date // Sunday as start
-  eventsByDate: Record<string, CalendarEvent[]>
+  itemsByDate: Record<string, PlannerItem[]>
   usersById: Record<number, User>
-  onView?: (event: CalendarEvent) => void
-  onEdit?: (event: CalendarEvent) => void
+  onView?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
+  onEdit?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
 }
 
 function formatKey(date: Date) {
@@ -19,7 +20,7 @@ function formatKey(date: Date) {
   return `${y}-${m}-${d}`
 }
 
-export function WeekView({ startOfWeek, eventsByDate, usersById, onView, onEdit }: WeekViewProps) {
+export function WeekView({ startOfWeek, itemsByDate, usersById, onView, onEdit }: WeekViewProps) {
   const days: Date[] = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(startOfWeek)
     d.setDate(startOfWeek.getDate() + i)
@@ -30,7 +31,7 @@ export function WeekView({ startOfWeek, eventsByDate, usersById, onView, onEdit 
     <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
       {days.map((day) => {
         const key = formatKey(day)
-        const list = (eventsByDate[key] || []).sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+        const list = (itemsByDate[key] || []).sort((a, b) => (a.event.time || '').localeCompare(b.event.time || ''))
         const today = new Date()
         const isToday = today.toDateString() === day.toDateString()
         return (
@@ -43,8 +44,18 @@ export function WeekView({ startOfWeek, eventsByDate, usersById, onView, onEdit 
               <div className="space-y-2">
                 {list.length === 0 ? (
                   <div className="text-xs text-muted-foreground text-center py-4">No events</div>
-                ) : list.map(evt => (
-                  <EventPill key={evt.id} event={evt} usersById={usersById} compact onView={(e)=>onView?.(e)} onEdit={(e)=>onEdit?.(e)} />
+                ) : list.map((item, idx) => (
+                  <EventPill
+                    key={`${item.source}-${item.event.id ?? idx}`}
+                    event={item.event}
+                    source={item.source}
+                    typeLabel={item.typeLabel}
+                    usersById={usersById}
+                    compact
+                    onView={(payload)=>onView?.(payload)}
+                    onEdit={(payload)=>onEdit?.(payload)}
+                    hideEdit={item.hideEdit}
+                  />
                 ))}
               </div>
             </CardContent>

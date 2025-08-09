@@ -463,5 +463,44 @@
       "updateTask": "Actualizar Tarea",
       "updating": "Actualizando..."
     }
+  },
+  "projects": {
+    "title": "Proyectos del Hogar",
+    "subtitle": "Tablero Kanban para tareas de mejora del hogar",
+    "addProject": "Agregar Proyecto",
+    "editProject": "Editar Proyecto",
+    "noProjects": "Aún no hay proyectos",
+    "addFirstProject": "Crea tu primer proyecto de mejora del hogar",
+    "status": {
+      "todo": "Por Hacer",
+      "inProgress": "En Progreso",
+      "done": "Completado"
+    },
+    "priority": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta"
+    },
+    "summary": {
+      "activeProjects": "Proyectos Activos",
+      "completed": "Completados",
+      "estimatedCost": "Costo Estimado"
+    },
+    "form": {
+      "name": "Nombre del Proyecto",
+      "namePlaceholder": "Ingresa el nombre del proyecto",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Describe el proyecto",
+      "estimatedCost": "Costo Estimado",
+      "costPlaceholder": "Ingresa el costo estimado (opcional)",
+      "priority": "Prioridad",
+      "status": "Estado",
+      "assignedTo": "Asignado a",
+      "selectUser": "Seleccionar usuario",
+      "createProject": "Crear Proyecto",
+      "creating": "Creando...",
+      "updateProject": "Actualizar Proyecto",
+      "updating": "Actualizando..."
+    }
   }
 }

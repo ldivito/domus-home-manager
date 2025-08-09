@@ -151,19 +151,31 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
-    this.version(7).stores({
+    this.version(8).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
       groceryItems: '++id, name, category, importance, addedBy, createdAt',
       groceryCategories: '++id, name, isDefault, locale, createdAt',
       savedGroceryItems: '++id, name, category, importance, timesUsed, lastUsed, createdAt',
       tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: '++id, title, status, assignedUserId, priority',
+      homeImprovements: '++id, title, status, assignedUserId, priority, createdAt',
       meals: '++id, title, date, mealType, assignedUserId',
       mealCategories: '++id, name, isDefault, locale, createdAt',
       savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
       reminders: '++id, title, reminderTime, isCompleted, userId, type',
       calendarEvents: '++id, title, date, type, userId'
+    })
+
+    // Add createdAt to existing home improvements (version 8 upgrade)
+    this.version(8).upgrade(async (tx) => {
+      const homeImprovements = await tx.table('homeImprovements').toArray()
+      
+      // Add createdAt to home improvements that don't have it
+      for (const project of homeImprovements) {
+        if (!project.createdAt) {
+          await tx.table('homeImprovements').update(project.id, { createdAt: new Date() })
+        }
+      }
     })
 
     // Add createdAt to existing tasks (version 7 upgrade)

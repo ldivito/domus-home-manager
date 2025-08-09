@@ -3,17 +3,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarEvent, User } from "@/lib/db"
 import { EventPill } from "./EventPill"
+import type { PlannerItem } from "../types"
 
 interface DayViewProps {
   date: Date
-  events: CalendarEvent[]
+  items: PlannerItem[]
   usersById: Record<number, User>
-  onView?: (event: CalendarEvent) => void
-  onEdit?: (event: CalendarEvent) => void
+  onView?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
+  onEdit?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
 }
 
-export function DayView({ date, events, usersById, onView, onEdit }: DayViewProps) {
-  const sorted = [...events].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+export function DayView({ date, items, usersById, onView, onEdit }: DayViewProps) {
+  const sorted = [...items].sort((a, b) => (a.event.time || '').localeCompare(b.event.time || ''))
 
   return (
     <Card>
@@ -27,8 +28,17 @@ export function DayView({ date, events, usersById, onView, onEdit }: DayViewProp
           {sorted.length === 0 && (
             <div className="text-center text-muted-foreground py-8">No events</div>
           )}
-          {sorted.map(evt => (
-            <EventPill key={evt.id} event={evt} usersById={usersById} onView={(e)=>onView?.(e)} onEdit={(e)=>onEdit?.(e)} />
+          {sorted.map((item, idx) => (
+            <EventPill
+              key={`${item.source}-${item.event.id ?? idx}`}
+              event={item.event}
+              source={item.source}
+              typeLabel={item.typeLabel}
+              usersById={usersById}
+              onView={(payload)=>onView?.(payload)}
+              onEdit={(payload)=>onEdit?.(payload)}
+              hideEdit={item.hideEdit}
+            />
           ))}
         </div>
       </CardContent>

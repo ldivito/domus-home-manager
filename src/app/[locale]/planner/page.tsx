@@ -1,18 +1,20 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db, CalendarEvent, User as UserType } from "@/lib/db"
+import { db, CalendarEvent, User as UserType, Task, Meal, Chore } from "@/lib/db"
 import { AddEventDialog } from "./components/AddEventDialog"
 import { DayView } from "./components/DayView"
 import { WeekView } from "./components/WeekView"
 import { MonthView } from "./components/MonthView"
 import { EventDetailsDialog } from "./components/EventDetailsDialog"
 import { EditEventDialog } from "./components/EditEventDialog"
+import type { PlannerItem } from "./types"
 
 type PlannerView = 'day' | 'week' | 'month'
 
@@ -33,6 +35,8 @@ function getStartOfWeek(d: Date) {
 
 export default function PlannerPage() {
   const t = useTranslations('planner')
+  const locale = useLocale()
+  const router = useRouter()
   const [view, setView] = useState<PlannerView>('week')
   const [cursorDate, setCursorDate] = useState<Date>(() => {
     const now = new Date()
@@ -78,16 +82,136 @@ export default function PlannerPage() {
   }, [cursorDate, view])
   const events = useMemo(() => eventsLive ?? [], [eventsLive])
 
-  const eventsByDate = useMemo(() => {
-    const list = events
-    const map: Record<string, CalendarEvent[]> = {}
-    for (const evt of list) {
-      const key = toKey(new Date(evt.date))
+  const tasksLive = useLiveQuery(async () => {
+    const from = new Date(cursorDate)
+    const to = new Date(cursorDate)
+    if (view === 'week') {
+      const start = getStartOfWeek(cursorDate)
+      from.setTime(start.getTime())
+      to.setTime(start.getTime())
+      to.setDate(start.getDate() + 6)
+    } else if (view === 'month') {
+      const s = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), 1)
+      const e = new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 1, 0)
+      from.setTime(s.getTime()); to.setTime(e.getTime())
+    }
+    from.setHours(0,0,0,0); to.setHours(23,59,59,999)
+    const all = await db.tasks
+      .where('dueDate')
+      .between(from, to, true, true)
+      .toArray()
+    return all as Task[]
+  }, [cursorDate, view])
+  const tasks = useMemo(() => tasksLive ?? [], [tasksLive])
+
+  const mealsLive = useLiveQuery(async () => {
+    const from = new Date(cursorDate)
+    const to = new Date(cursorDate)
+    if (view === 'week') {
+      const start = getStartOfWeek(cursorDate)
+      from.setTime(start.getTime())
+      to.setTime(start.getTime())
+      to.setDate(start.getDate() + 6)
+    } else if (view === 'month') {
+      const s = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), 1)
+      const e = new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 1, 0)
+      from.setTime(s.getTime()); to.setTime(e.getTime())
+    }
+    from.setHours(0,0,0,0); to.setHours(23,59,59,999)
+    const all = await db.meals
+      .where('date')
+      .between(from, to, true, true)
+      .toArray()
+    return all as Meal[]
+  }, [cursorDate, view])
+  const meals = useMemo(() => mealsLive ?? [], [mealsLive])
+
+  const choresLive = useLiveQuery(async () => {
+    const from = new Date(cursorDate)
+    const to = new Date(cursorDate)
+    if (view === 'week') {
+      const start = getStartOfWeek(cursorDate)
+      from.setTime(start.getTime())
+      to.setTime(start.getTime())
+      to.setDate(start.getDate() + 6)
+    } else if (view === 'month') {
+      const s = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), 1)
+      const e = new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 1, 0)
+      from.setTime(s.getTime()); to.setTime(e.getTime())
+    }
+    from.setHours(0,0,0,0); to.setHours(23,59,59,999)
+    const all = await db.chores
+      .where('nextDue')
+      .between(from, to, true, true)
+      .toArray()
+    return all as Chore[]
+  }, [cursorDate, view])
+  const chores = useMemo(() => choresLive ?? [], [choresLive])
+
+  const items = useMemo<PlannerItem[]>(() => {
+    const arr: PlannerItem[] = []
+    for (const evt of events) {
+      arr.push({
+        source: 'calendar',
+        typeLabel: t(`types.${evt.type}`),
+        event: evt,
+      })
+    }
+    for (const task of tasks) {
+      if (!task.dueDate) continue
+      const synthetic: CalendarEvent = {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        date: new Date(task.dueDate),
+        time: undefined,
+        type: 'task',
+        relatedId: task.id,
+        userIds: task.assignedUserId ? [task.assignedUserId] : undefined,
+        createdAt: task.createdAt,
+      }
+      arr.push({ source: 'task', typeLabel: t('types.task'), event: synthetic, hideEdit: true })
+    }
+    for (const meal of meals) {
+      const synthetic: CalendarEvent = {
+        id: meal.id,
+        title: meal.title,
+        description: meal.description,
+        date: new Date(meal.date),
+        time: undefined,
+        type: 'meal',
+        relatedId: meal.id,
+        userIds: meal.assignedUserId ? [meal.assignedUserId] : undefined,
+        createdAt: meal.createdAt,
+      }
+      arr.push({ source: 'meal', typeLabel: t('types.meal'), event: synthetic, hideEdit: true })
+    }
+    for (const chore of chores) {
+      const synthetic: CalendarEvent = {
+        id: chore.id,
+        title: chore.title,
+        description: chore.description,
+        date: new Date(chore.nextDue),
+        time: chore.scheduledTime,
+        type: 'general',
+        relatedId: chore.id,
+        userIds: chore.assignedUserId ? [chore.assignedUserId] : undefined,
+        createdAt: chore.createdAt,
+      }
+      arr.push({ source: 'chore', typeLabel: t('types.chore'), event: synthetic, hideEdit: true })
+    }
+    return arr
+  }, [events, tasks, meals, chores, t])
+
+  const itemsByDate = useMemo(() => {
+    const map: Record<string, PlannerItem[]> = {}
+    for (const item of items) {
+      const key = toKey(new Date(item.event.date))
       if (!map[key]) map[key] = []
-      map[key].push(evt)
+      map[key].push(item)
     }
     return map
-  }, [events])
+  }, [items])
 
   const goPrev = () => {
     const next = new Date(cursorDate)
@@ -143,28 +267,58 @@ export default function PlannerPage() {
           {view === 'day' && (
             <DayView
               date={cursorDate}
-              events={eventsByDate[toKey(cursorDate)] || []}
+              items={itemsByDate[toKey(cursorDate)] || []}
               usersById={usersById}
-              onView={(evt) => { setSelectedEvent(evt); setDetailsOpen(true) }}
-              onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+              onView={({ event, source }) => {
+                if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
+                else if (source === 'task') { router.push(`/${locale}/tasks`) }
+                else if (source === 'meal') { router.push(`/${locale}/meals`) }
+                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+              }}
+              onEdit={({ event, source }) => {
+                if (source === 'calendar') { setSelectedEvent(event); setEditOpen(true) }
+                else if (source === 'task') { router.push(`/${locale}/tasks`) }
+                else if (source === 'meal') { router.push(`/${locale}/meals`) }
+                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+              }}
             />
           )}
           {view === 'week' && (
             <WeekView
               startOfWeek={getStartOfWeek(cursorDate)}
-              eventsByDate={eventsByDate}
+              itemsByDate={itemsByDate}
               usersById={usersById}
-              onView={(evt) => { setSelectedEvent(evt); setDetailsOpen(true) }}
-              onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+              onView={({ event, source }) => {
+                if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
+                else if (source === 'task') { router.push(`/${locale}/tasks`) }
+                else if (source === 'meal') { router.push(`/${locale}/meals`) }
+                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+              }}
+              onEdit={({ event, source }) => {
+                if (source === 'calendar') { setSelectedEvent(event); setEditOpen(true) }
+                else if (source === 'task') { router.push(`/${locale}/tasks`) }
+                else if (source === 'meal') { router.push(`/${locale}/meals`) }
+                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+              }}
             />
           )}
           {view === 'month' && (
             <MonthView
               month={cursorDate}
-              eventsByDate={eventsByDate}
+              itemsByDate={itemsByDate}
               usersById={usersById}
-              onView={(evt) => { setSelectedEvent(evt); setDetailsOpen(true) }}
-              onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
+              onView={({ event, source }) => {
+                if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
+                else if (source === 'task') { router.push(`/${locale}/tasks`) }
+                else if (source === 'meal') { router.push(`/${locale}/meals`) }
+                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+              }}
+              onEdit={({ event, source }) => {
+                if (source === 'calendar') { setSelectedEvent(event); setEditOpen(true) }
+                else if (source === 'task') { router.push(`/${locale}/tasks`) }
+                else if (source === 'meal') { router.push(`/${locale}/meals`) }
+                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+              }}
             />
           )}
         </Card>

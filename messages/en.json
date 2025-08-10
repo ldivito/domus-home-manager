@@ -615,6 +615,55 @@
     "title": "Settings",
     "subtitle": "Customize your Domus experience and manage your data",
     "saved": "Settings saved",
+    "homeSettings": {
+      "title": "Home Information",
+      "description": "Personalize your home details and important information for effective household management",
+      "saved": "Home information saved successfully!",
+      "saveError": "Error saving home information",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "sections": {
+        "basicInfo": "Basic Information",
+        "address": "Address",
+        "emergency": "Emergency Contact",
+        "notes": "General Notes"
+      },
+      "fields": {
+        "homeName": "Home Name",
+        "homeType": "Home Type",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "street": "Street Address",
+        "city": "City",
+        "stateProvince": "State/Province",
+        "postalCode": "Postal Code",
+        "emergencyName": "Name",
+        "emergencyPhone": "Phone Number",
+        "emergencyRelationship": "Relationship"
+      },
+      "placeholders": {
+        "homeName": "e.g., The Johnson Family Home",
+        "homeType": "Select home type",
+        "street": "123 Main Street",
+        "city": "City",
+        "stateProvince": "State/Province",
+        "postalCode": "12345",
+        "emergencyName": "Full Name",
+        "emergencyPhone": "+1 (555) 123-4567",
+        "emergencyRelationship": "e.g., Spouse, Parent, Friend",
+        "notes": "Add any important notes about your home, family rules, maintenance reminders, etc."
+      },
+      "homeTypes": {
+        "house": "House",
+        "apartment": "Apartment",
+        "condo": "Condominium",
+        "townhouse": "Townhouse",
+        "other": "Other"
+      },
+      "notSet": "Not set",
+      "noNotes": "No notes added yet"
+    },
     "languageAppearance": {
       "title": "Language & Appearance",
       "description": "Choose your language and customize the visual appearance",

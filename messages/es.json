@@ -614,6 +614,55 @@
     "title": "Configuración",
     "subtitle": "Personaliza tu experiencia Domus y gestiona tus datos",
     "saved": "Configuración guardada",
+    "homeSettings": {
+      "title": "Información del Hogar",
+      "description": "Personaliza los detalles de tu hogar e información importante para una gestión doméstica efectiva",
+      "saved": "¡Información del hogar guardada exitosamente!",
+      "saveError": "Error al guardar la información del hogar",
+      "edit": "Editar",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "sections": {
+        "basicInfo": "Información Básica",
+        "address": "Dirección",
+        "emergency": "Contacto de Emergencia",
+        "notes": "Notas Generales"
+      },
+      "fields": {
+        "homeName": "Nombre del Hogar",
+        "homeType": "Tipo de Hogar",
+        "bedrooms": "Habitaciones",
+        "bathrooms": "Baños",
+        "street": "Dirección",
+        "city": "Ciudad",
+        "stateProvince": "Estado/Provincia",
+        "postalCode": "Código Postal",
+        "emergencyName": "Nombre",
+        "emergencyPhone": "Número de Teléfono",
+        "emergencyRelationship": "Parentesco"
+      },
+      "placeholders": {
+        "homeName": "ej., La Casa Familiar de los Johnson",
+        "homeType": "Seleccionar tipo de hogar",
+        "street": "Calle Principal 123",
+        "city": "Ciudad",
+        "stateProvince": "Estado/Provincia",
+        "postalCode": "12345",
+        "emergencyName": "Nombre Completo",
+        "emergencyPhone": "+1 (555) 123-4567",
+        "emergencyRelationship": "ej., Esposo/a, Padre/Madre, Amigo/a",
+        "notes": "Agrega notas importantes sobre tu hogar, reglas familiares, recordatorios de mantenimiento, etc."
+      },
+      "homeTypes": {
+        "house": "Casa",
+        "apartment": "Apartamento",
+        "condo": "Condominio",
+        "townhouse": "Casa Adosada",
+        "other": "Otro"
+      },
+      "notSet": "No configurado",
+      "noNotes": "No se han agregado notas"
+    },
     "languageAppearance": {
       "title": "Idioma y Apariencia",
       "description": "Elige tu idioma y personaliza la apariencia visual",

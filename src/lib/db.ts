@@ -139,6 +139,76 @@ export interface CalendarEvent {
   createdAt: Date
 }
 
+export interface HomeSettings {
+  id?: number
+  // Basic Home Information
+  homeName?: string
+  homeType?: 'house' | 'apartment' | 'condo' | 'townhouse' | 'other'
+  address?: {
+    street?: string
+    city?: string
+    stateProvince?: string
+    postalCode?: string
+    country?: string
+  }
+  // Home Details
+  bedrooms?: number
+  bathrooms?: number
+  squareFootage?: number
+  yearBuilt?: number
+  // Emergency Contacts
+  emergencyContact?: {
+    name?: string
+    phone?: string
+    relationship?: string
+  }
+  // Property Information
+  propertyManager?: {
+    name?: string
+    phone?: string
+    email?: string
+  }
+  // Service Contacts
+  serviceContacts?: Array<{
+    id: string
+    type: 'plumber' | 'electrician' | 'hvac' | 'handyman' | 'cleaning' | 'landscaping' | 'other'
+    name: string
+    phone?: string
+    email?: string
+    notes?: string
+  }>
+  // Home Preferences
+  preferences?: {
+    defaultTemperature?: number
+    temperatureUnit?: 'celsius' | 'fahrenheit'
+    timezone?: string
+  }
+  // Important Information (stored locally only, never exported for security)
+  privateInfo?: {
+    wifiNetworkName?: string
+    wifiPassword?: string
+    securityCodes?: Array<{
+      id: string
+      name: string
+      code: string
+      notes?: string
+    }>
+  }
+  // Important Dates
+  importantDates?: Array<{
+    id: string
+    name: string
+    date: Date
+    recurring?: boolean
+    reminderDays?: number
+    notes?: string
+  }>
+  // General Notes
+  notes?: string
+  lastUpdated: Date
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   chores!: Table<Chore>
@@ -152,9 +222,28 @@ export class DomusDatabase extends Dexie {
   savedMeals!: Table<SavedMeal>
   reminders!: Table<Reminder>
   calendarEvents!: Table<CalendarEvent>
+  homeSettings!: Table<HomeSettings>
 
   constructor() {
     super('DomusDatabase')
+    // v10: Add home settings for personalization
+    this.version(10).stores({
+      users: '++id, name, color, type',
+      chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: '++id, name, category, importance, addedBy, createdAt',
+      groceryCategories: '++id, name, isDefault, locale, createdAt',
+      savedGroceryItems: '++id, name, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: '++id, title, status, assignedUserId, priority, createdAt',
+      meals: '++id, title, date, mealType, assignedUserId',
+      mealCategories: '++id, name, isDefault, locale, createdAt',
+      savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
+      reminders: '++id, title, reminderTime, isCompleted, userId, type',
+      // Index by date and type for efficient filtering
+      calendarEvents: '++id, title, date, type',
+      homeSettings: '++id, homeName, lastUpdated, createdAt'
+    })
+
     // v9: Add multi-user support and time for calendar events
     this.version(9).stores({
       users: '++id, name, color, type',

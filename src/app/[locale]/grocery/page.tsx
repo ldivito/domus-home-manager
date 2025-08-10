@@ -158,11 +158,11 @@ export default function GroceryPage() {
           return (
             <div
               key={item.id}
-              className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all"
+              className="flex items-center p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-all"
             >
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{item.name}</h3>
                   <div className="flex items-center space-x-2">
                     <Badge variant={badge.variant}>{badge.text}</Badge>
                     {isSavedItem && (
@@ -172,7 +172,7 @@ export default function GroceryPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
+                <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500 dark:text-gray-400">
                   <span 
                     className="px-2 py-1 rounded text-white font-medium"
                     style={{ backgroundColor: getCategoryColor(item.category) }}
@@ -246,10 +246,10 @@ export default function GroceryPage() {
                   return (
                     <div
                       key={item.id}
-                      className="p-3 bg-gray-50 rounded-lg border"
+                      className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border dark:border-gray-600"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-gray-900">{item.name}</h4>
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{item.name}</h4>
                         <div className="flex items-center space-x-1">
                           <Badge variant={badge.variant}>{badge.text}</Badge>
                           {isSavedItem && (
@@ -260,7 +260,7 @@ export default function GroceryPage() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">{item.amount}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{item.amount}</span>
                         <Button
                           onClick={() => isSavedItem ? handleAddSavedItem(savedItem) : handleBought(item.id!)}
                           size="sm"
@@ -298,10 +298,10 @@ export default function GroceryPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {t('title')}
             </h1>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               {t('subtitle')}
             </p>
           </div>
@@ -364,10 +364,10 @@ export default function GroceryPage() {
         </div>
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center justify-between mb-6 p-4 bg-white rounded-lg border border-gray-200">
+        <div className="flex flex-wrap items-center justify-between mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">{t('view')}:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('view')}:</label>
               <div className="flex border border-gray-200 rounded-lg p-1">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -391,7 +391,7 @@ export default function GroceryPage() {
             </div>
             
             <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">{t('sortBy')}:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('sortBy')}:</label>
               <Select value={sortBy} onValueChange={(value: SortBy) => setSortBy(value)}>
                 <SelectTrigger className="w-48">
                   <SelectValue />
@@ -406,7 +406,7 @@ export default function GroceryPage() {
             </div>
           </div>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {t('itemsTotal', { count: viewType === 'current' ? groceryItems.length : savedGroceryItems.length })}
           </div>
         </div>

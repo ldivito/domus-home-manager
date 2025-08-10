@@ -204,8 +204,8 @@ export default function MealsPage() {
             return (
               <div key={`header-${index}`} className={`text-center p-2 rounded border ${
                 isToday 
-                  ? 'bg-blue-50 border-blue-200 text-blue-800' 
-                  : 'bg-gray-50 border-gray-200 text-gray-700'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300' 
+                  : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300'
               }`}>
                 <div className="text-sm font-medium">{dayNames[day.getDay()]}</div>
                 <div className="text-lg font-semibold">{day.getDate()}</div>
@@ -226,19 +226,19 @@ export default function MealsPage() {
             return (
               <div key={index} className={`border rounded-lg p-2 min-h-[280px] flex flex-col ${
                 isToday 
-                  ? 'bg-blue-50 border-blue-200' 
-                  : 'bg-white border-gray-200'
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' 
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
               }`}>
                 <div className="flex-1 space-y-1 mb-2">
                   {dayMeals.map((meal) => (
                     <div 
                       key={meal.id} 
-                      className="bg-white rounded-lg p-2 text-xs border shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                      className="bg-white dark:bg-gray-700 rounded-lg p-2 text-xs border dark:border-gray-600 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                       onClick={() => handleMealClick(meal)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate text-sm mb-1">
+                          <div className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm mb-1">
                             {meal.title}
                           </div>
                           <Badge className={`${mealTypeColors[meal.mealType as keyof typeof mealTypeColors]} text-xs py-0 px-2`}>
@@ -252,7 +252,7 @@ export default function MealsPage() {
                     </div>
                   ))}
                   {dayMeals.length === 0 && (
-                    <div className="text-center text-gray-400 text-xs py-4">
+                    <div className="text-center text-gray-400 dark:text-gray-500 text-xs py-4">
                       <p>No meals</p>
                     </div>
                   )}
@@ -262,8 +262,8 @@ export default function MealsPage() {
                   onClick={() => handleAddMealForDate(day)}
                   className={`w-full p-2 border-2 border-dashed rounded text-xs transition-colors ${
                     isToday 
-                      ? 'border-blue-300 hover:border-blue-400 text-blue-600 hover:bg-blue-100'
-                      : 'border-gray-300 hover:border-gray-400 text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      ? 'border-blue-300 dark:border-blue-600 hover:border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   <Plus className="h-3 w-3 mx-auto mb-1" />
@@ -306,7 +306,7 @@ export default function MealsPage() {
         {/* Month Header */}
         <div className="grid grid-cols-7 gap-2 mb-4">
           {dayNames.map(day => (
-            <div key={day} className="text-center font-semibold text-gray-700 p-2 bg-gray-100 rounded border">
+            <div key={day} className="text-center font-semibold text-gray-700 dark:text-gray-300 p-2 bg-gray-100 dark:bg-gray-700 rounded border dark:border-gray-600">
               {day}
             </div>
           ))}
@@ -316,7 +316,7 @@ export default function MealsPage() {
         <div className="grid grid-cols-7 gap-2 auto-rows-min">
           {days.map((day, index) => {
             if (day === null) {
-              return <div key={index} className="h-32 bg-gray-50 rounded opacity-50"></div>
+              return <div key={index} className="h-32 bg-gray-50 dark:bg-gray-800 rounded opacity-50"></div>
             }
             
             const date = new Date(year, month, day)
@@ -337,14 +337,13 @@ export default function MealsPage() {
                 key={index} 
                 className={`border rounded-lg p-2 flex flex-col ${
                   isToday 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : 'bg-white border-gray-200'
-                }`}
-                style={{ minHeight: `${minHeight}rem` }}
-              >
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' 
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                }`}>
+                <div style={{ minHeight: `${minHeight}rem` }}>
                 {/* Day Number */}
                 <div className={`text-lg font-semibold mb-1 flex-shrink-0 ${
-                  isToday ? 'text-blue-800' : 'text-gray-700'
+                  isToday ? 'text-blue-800 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'
                 }`}>
                   {day}
                 </div>
@@ -354,12 +353,12 @@ export default function MealsPage() {
                   {dayMeals.map((meal) => (
                     <div 
                       key={meal.id} 
-                      className="text-xs bg-gradient-to-r from-white to-gray-50 rounded-md px-2 py-1.5 border hover:shadow-sm transition-all cursor-pointer group"
+                      className="text-xs bg-gradient-to-r from-white to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-md px-2 py-1.5 border dark:border-gray-600 hover:shadow-sm transition-all cursor-pointer group"
                       onClick={() => handleMealClick(meal)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate text-xs mb-0.5">
+                          <div className="font-medium text-gray-900 dark:text-gray-100 truncate text-xs mb-0.5">
                             {meal.title}
                           </div>
                           <div className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${mealTypeColors[meal.mealType as keyof typeof mealTypeColors]}`}>
@@ -379,13 +378,14 @@ export default function MealsPage() {
                   onClick={() => handleAddMealForDate(date)}
                   className={`w-full p-1 border-2 border-dashed rounded text-xs transition-colors flex-shrink-0 ${
                     isToday 
-                      ? 'border-blue-300 hover:border-blue-400 text-blue-600 hover:bg-blue-100'
-                      : 'border-gray-300 hover:border-gray-400 text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      ? 'border-blue-300 dark:border-blue-600 hover:border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   <Plus className="h-3 w-3 mx-auto mb-1" />
                   <span className="block">{t('addMeal')}</span>
                 </button>
+                </div>
               </div>
             )
           })}
@@ -398,10 +398,10 @@ export default function MealsPage() {
     return (
       <div className="space-y-6">
         {/* Day Header with Add Meal Button */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
                 {currentDate.toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   year: 'numeric', 
@@ -409,7 +409,7 @@ export default function MealsPage() {
                   day: 'numeric' 
                 })}
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {filteredMeals.length} {filteredMeals.length === 1 ? 'meal' : 'meals'} planned
               </p>
             </div>
@@ -429,8 +429,8 @@ export default function MealsPage() {
           {filteredMeals.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <UtensilsCrossed className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg">No meals planned for today</p>
-              <p className="text-gray-400 text-sm mt-2">Click the button above to plan your first meal!</p>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">No meals planned for today</p>
+              <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Click the button above to plan your first meal!</p>
             </div>
           ) : (
             filteredMeals.map((meal) => (
@@ -449,7 +449,7 @@ export default function MealsPage() {
                 {meal.description && (
                   <CardDescription className="text-sm">{meal.description}</CardDescription>
                 )}
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   {new Date(meal.date).toLocaleDateString()}
                 </div>
               </CardHeader>
@@ -459,10 +459,10 @@ export default function MealsPage() {
                     const ingredients = getMealIngredients(meal)
                     return ingredients.length > 0 && (
                       <div>
-                        <h4 className="font-medium text-gray-700 mb-2 text-sm">{t('ingredients')}:</h4>
+                        <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm">{t('ingredients')}:</h4>
                         <div className="flex flex-wrap gap-1">
                           {ingredients.map((ingredient) => (
-                            <span key={ingredient.id} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
+                            <span key={ingredient.id} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-xs dark:text-gray-300">
                               {ingredient.name}
                               {ingredient.amount && ` (${ingredient.amount})`}
                             </span>
@@ -497,10 +497,10 @@ export default function MealsPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {t('title')}
             </h1>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               {t('subtitle')}
             </p>
           </div>
@@ -537,10 +537,10 @@ export default function MealsPage() {
         </div>
         
         {/* Calendar Controls */}
-        <div className="flex items-center justify-between mb-6 p-4 bg-white rounded-lg border border-gray-200">
+        <div className="flex items-center justify-between mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">{t('view')}:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('view')}:</label>
               <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -566,7 +566,7 @@ export default function MealsPage() {
             </Button>
           </div>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {t('mealsTotal', { count: filteredMeals.length })}
           </div>
         </div>

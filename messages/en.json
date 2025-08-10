@@ -23,6 +23,7 @@
   "home": {
     "welcome": "Welcome to Domus",
     "subtitle": "Your family home management dashboard",
+    "dashboard": "Dashboard",
     "modules": {
       "chores": {
         "title": "Chores Manager",
@@ -60,12 +61,86 @@
         "title": "Settings",
         "description": "Customize app preferences and manage data"
       }
+    },
+    "widgets": {
+      "chores": {
+        "title": "Next Chore",
+        "none": "No chores scheduled",
+        "addFirst": "Add First Chore",
+        "complete": "Complete",
+        "completed": "Chore completed!",
+        "error": "Error completing chore"
+      },
+      "grocery": {
+        "title": "Shopping List",
+        "empty": "Shopping list is empty",
+        "placeholder": "Add quick item...",
+        "viewAll": "View All Items",
+        "added": "Item added to shopping list!",
+        "error": "Error adding item",
+        "moreItems": "more items"
+      },
+      "meals": {
+        "title": "Today's Meals",
+        "none": "No meals planned for today",
+        "planToday": "Plan today's menu to keep everyone on track",
+        "addFirst": "Plan First Meal",
+        "viewAll": "View All Meals"
+      },
+      "tasks": {
+        "title": "Upcoming Tasks",
+        "none": "No upcoming tasks",
+        "addFirst": "Add First Task",
+        "viewAll": "View All Tasks",
+        "upcoming": "Upcoming Tasks",
+        "moreTasks": "more tasks",
+        "getOrganized": "Start organizing your daily tasks",
+        "high": "High Priority",
+        "medium": "Medium Priority",
+        "low": "Low Priority"
+      },
+      "projects": {
+        "title": "Current Projects",
+        "none": "No projects in progress",
+        "addFirst": "Start First Project",
+        "viewAll": "View All Projects"
+      },
+      "users": {
+        "title": "Family Members",
+        "none": "No family members added",
+        "addFirst": "Add First Member",
+        "manage": "Manage Members",
+        "members": "Members",
+        "residents": "Residents"
+      },
+      "stats": {
+        "priority": "Priority",
+        "items": "Items",
+        "planned": "Planned",
+        "ingredients": "Ingredients",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "recent": "Recent",
+        "active": "Active",
+        "completed": "Completed",
+        "inProgress": "In Progress"
+      }
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "description": "Jump into your most common tasks",
+      "addChore": "Add Chore",
+      "addTask": "Add Task",
+      "planMeal": "Plan Meal",
+      "newProject": "New Project"
     }
   },
   "users": {
     "title": "User Profiles",
     "subtitle": "Manage family members and track their contributions",
     "addUser": "Add User",
+    "resident": "Resident",
     "addUserModal": {
       "title": "Add New User",
       "name": "Name",

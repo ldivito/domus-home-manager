@@ -294,7 +294,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Basic Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 border-b dark:border-gray-700 pb-2">Basic Information</h3>
             
             <div className="grid grid-cols-1 gap-4">
               <div>
@@ -413,7 +413,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
 
           {/* Right Column - Template & Ingredients */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Template & Ingredients</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 border-b dark:border-gray-700 pb-2">Template & Ingredients</h3>
 
             {/* Template Selection */}
             {savedMeals.length > 0 && (
@@ -436,7 +436,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
             <div className="space-y-4 mt-2">
               {/* Existing grocery items */}
               <div>
-                <Label className="text-sm font-medium text-gray-700">{t('form.fromGroceries')}</Label>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('form.fromGroceries')}</Label>
                 <Select onValueChange={(value) => handleAddIngredient(parseInt(value))}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder={t('form.selectIngredient')} />
@@ -455,9 +455,9 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
 
               {/* Add custom ingredient */}
               <div>
-                <Label className="text-sm font-medium text-gray-700">{t('form.newIngredient')}</Label>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('form.newIngredient')}</Label>
                 
-                <div className="space-y-3 mt-2 p-4 border rounded-lg bg-gray-50">
+                <div className="space-y-3 mt-2 p-4 border dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-sm font-medium">{t('form.name')} *</Label>
@@ -529,7 +529,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
               {/* Selected ingredients */}
               {selectedIngredientIds.length > 0 && (
                 <div>
-                  <Label className="text-sm text-gray-600">{t('form.selectedIngredients')}</Label>
+                  <Label className="text-sm text-gray-600 dark:text-gray-400">{t('form.selectedIngredients')}</Label>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {selectedIngredientIds.map((ingredientId) => {
                       const ingredient = groceryItems.find(item => item.id === ingredientId)

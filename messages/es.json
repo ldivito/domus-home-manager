@@ -23,6 +23,7 @@
   "home": {
     "welcome": "Bienvenido a Domus",
     "subtitle": "Tu panel de gestión del hogar familiar",
+    "dashboard": "Panel Principal",
     "modules": {
       "chores": {
         "title": "Gestor de Tareas",
@@ -60,12 +61,86 @@
         "title": "Configuración",
         "description": "Personaliza preferencias de la app y gestiona datos"
       }
+    },
+    "widgets": {
+      "chores": {
+        "title": "Próxima Tarea",
+        "none": "No hay tareas programadas",
+        "addFirst": "Agregar Primera Tarea",
+        "complete": "Completar",
+        "completed": "¡Tarea completada!",
+        "error": "Error al completar tarea"
+      },
+      "grocery": {
+        "title": "Lista de Compras",
+        "empty": "La lista de compras está vacía",
+        "placeholder": "Agregar artículo rápido...",
+        "viewAll": "Ver Todos los Artículos",
+        "added": "¡Artículo agregado a la lista!",
+        "error": "Error al agregar artículo",
+        "moreItems": "más artículos"
+      },
+      "meals": {
+        "title": "Comidas de Hoy",
+        "none": "No hay comidas planeadas para hoy",
+        "planToday": "Planifica el menú de hoy para mantener a todos al día",
+        "addFirst": "Planear Primera Comida",
+        "viewAll": "Ver Todas las Comidas"
+      },
+      "tasks": {
+        "title": "Tareas Pendientes",
+        "none": "No hay tareas pendientes",
+        "addFirst": "Agregar Primera Tarea",
+        "viewAll": "Ver Todas las Tareas",
+        "upcoming": "Tareas Próximas",
+        "moreTasks": "más tareas",
+        "getOrganized": "Comienza a organizar tus tareas diarias",
+        "high": "Alta Prioridad",
+        "medium": "Media Prioridad",
+        "low": "Baja Prioridad"
+      },
+      "projects": {
+        "title": "Proyectos Actuales",
+        "none": "No hay proyectos en progreso",
+        "addFirst": "Iniciar Primer Proyecto",
+        "viewAll": "Ver Todos los Proyectos"
+      },
+      "users": {
+        "title": "Miembros de la Familia",
+        "none": "No se han agregado miembros",
+        "addFirst": "Agregar Primer Miembro",
+        "manage": "Gestionar Miembros",
+        "members": "Miembros",
+        "residents": "Residentes"
+      },
+      "stats": {
+        "priority": "Prioridad",
+        "items": "Artículos",
+        "planned": "Planificado",
+        "ingredients": "Ingredientes",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja",
+        "recent": "Reciente",
+        "active": "Activo",
+        "completed": "Completado",
+        "inProgress": "En Progreso"
+      }
+    },
+    "quickActions": {
+      "title": "Acciones Rápidas",
+      "description": "Accede a tus tareas más comunes",
+      "addChore": "Agregar Quehacer",
+      "addTask": "Agregar Tarea",
+      "planMeal": "Planear Comida",
+      "newProject": "Nuevo Proyecto"
     }
   },
   "users": {
     "title": "Perfiles de Usuario",
     "subtitle": "Gestiona miembros de la familia y rastrea sus contribuciones",
     "addUser": "Agregar Usuario",
+    "resident": "Residente",
     "addUserModal": {
       "title": "Agregar Nuevo Usuario",
       "name": "Nombre",

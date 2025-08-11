@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
+import SyncStatus from './SyncStatus'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -91,7 +92,12 @@ export default function Navigation() {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border/50">
+      <div className="p-4 border-t border-border/50 space-y-3">
+        {/* Sync Status */}
+        <div className="flex justify-center">
+          <SyncStatus />
+        </div>
+        
         <div className="text-xs text-muted-foreground text-center space-y-1">
           <p>{tCommon('appName')} v1.0.0</p>
           <p>Tablet-optimized home management</p>

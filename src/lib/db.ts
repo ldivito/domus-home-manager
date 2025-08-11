@@ -1,19 +1,23 @@
 import Dexie, { Table } from 'dexie'
+import dexieCloud from 'dexie-cloud-addon'
 
 export interface User {
-  id?: number
+  id?: string // Changed to string for cloud compatibility
   name: string
+  email?: string // For cloud authentication
   avatar?: string
   color: string
   type: 'resident' | 'guest'
+  householdId?: string // Link to household
   createdAt: Date
 }
 
 export interface Chore {
-  id?: number
+  id?: string
   title: string
   description?: string
-  assignedUserId?: number
+  householdId?: string
+  assignedUserId?: string
   frequency: 'daily' | 'weekly' | 'monthly' | 'custom'
   customFrequency?: {
     type: 'times_per_day' | 'times_per_week' | 'times_per_month' | 'days_interval'
@@ -22,7 +26,7 @@ export interface Chore {
   }
   scheduledTime?: string // HH:MM format
   lastCompleted?: Date
-  lastCompletedBy?: number // User ID who completed it
+  lastCompletedBy?: string // User ID who completed it
   nextDue: Date
   isCompleted: boolean
   completedAt?: Date // Timestamp when marked complete
@@ -30,41 +34,45 @@ export interface Chore {
 }
 
 export interface GroceryItem {
-  id?: number
+  id?: string
   name: string
   category: string
   amount: string
   importance: 'low' | 'medium' | 'high'
-  addedBy?: number
+  householdId?: string
+  addedBy?: string
   createdAt: Date
 }
 
 export interface GroceryCategory {
-  id?: number
+  id?: string
   name: string
   color?: string
   isDefault: boolean
+  householdId?: string
   locale?: string // For user-created categories, store the language they were created in
   createdAt: Date
 }
 
 export interface SavedGroceryItem {
-  id?: number
+  id?: string
   name: string
   category: string
   amount?: string
   importance?: 'low' | 'medium' | 'high'
-  addedBy?: number
+  householdId?: string
+  addedBy?: string
   timesUsed: number
   lastUsed?: Date
   createdAt: Date
 }
 
 export interface Task {
-  id?: number
+  id?: string
   title: string
   description?: string
-  assignedUserId?: number
+  householdId?: string
+  assignedUserId?: string
   dueDate?: Date
   priority: 'low' | 'medium' | 'high'
   isCompleted: boolean
@@ -72,60 +80,65 @@ export interface Task {
 }
 
 export interface HomeImprovement {
-  id?: number
+  id?: string
   title: string
   description?: string
   status: 'todo' | 'in-progress' | 'done'
-  assignedUserId?: number
+  householdId?: string
+  assignedUserId?: string
   estimatedCost?: number
   priority: 'low' | 'medium' | 'high'
   createdAt: Date
 }
 
 export interface Meal {
-  id?: number
+  id?: string
   title: string
   description?: string
   date: Date
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  assignedUserId?: number
-  ingredientIds?: number[] // Array of SavedGroceryItem IDs
+  householdId?: string
+  assignedUserId?: string
+  ingredientIds?: string[] // Array of SavedGroceryItem IDs
   createdAt: Date
 }
 
 export interface MealCategory {
-  id?: number
+  id?: string
   name: string
   color?: string
   isDefault: boolean
+  householdId?: string
   locale?: string
   createdAt: Date
 }
 
 export interface SavedMeal {
-  id?: number
+  id?: string
   name: string
   description?: string
   category: string
-  ingredientIds: number[] // Array of SavedGroceryItem IDs
+  householdId?: string
+  ingredientIds: string[] // Array of SavedGroceryItem IDs
   timesUsed: number
   lastUsed?: Date
   createdAt: Date
 }
 
 export interface Reminder {
-  id?: number
+  id?: string
   title: string
   description?: string
   reminderTime: Date
   isCompleted: boolean
-  userId?: number
+  householdId?: string
+  userId?: string
   type: 'general' | 'chore' | 'task' | 'meal'
   createdAt: Date
 }
 
 export interface CalendarEvent {
-  id?: number
+  id?: string
   title: string
   description?: string
   // Calendar date of the event (date component). Time is stored separately in `time` to avoid TZ issues
@@ -133,14 +146,40 @@ export interface CalendarEvent {
   // Optional 24h time string HH:MM
   time?: string
   type: 'task' | 'meal' | 'reminder' | 'general'
-  relatedId?: number
+  householdId?: string
+  relatedId?: string
   // Multiple users can be assigned to an event
-  userIds?: number[]
+  userIds?: string[]
   createdAt: Date
 }
 
+export interface Household {
+  id?: string // Cloud ID for household
+  name: string
+  description?: string
+  owner?: string // User ID of the household owner
+  members?: string[] // Array of user IDs who are members
+  inviteCode?: string // Code for inviting new members
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface HouseholdMember {
+  id?: string
+  householdId: string
+  userId: string
+  role: 'owner' | 'admin' | 'member'
+  joinedAt: Date
+  permissions?: {
+    canManageMembers?: boolean
+    canManageSettings?: boolean
+    canDeleteItems?: boolean
+  }
+}
+
 export interface HomeSettings {
-  id?: number
+  id?: string // Changed to string for cloud compatibility
+  householdId?: string // Link to household
   // Basic Home Information
   homeName?: string
   homeType?: 'house' | 'apartment' | 'condo' | 'townhouse' | 'other'
@@ -211,6 +250,8 @@ export interface HomeSettings {
 
 export class DomusDatabase extends Dexie {
   users!: Table<User>
+  households!: Table<Household>
+  householdMembers!: Table<HouseholdMember>
   chores!: Table<Chore>
   groceryItems!: Table<GroceryItem>
   groceryCategories!: Table<GroceryCategory>
@@ -226,7 +267,43 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
-    // v10: Add home settings for personalization
+    
+    // Configure Dexie Cloud
+    this.addons([dexieCloud])
+    
+    // Cloud configuration
+    this.cloud.configure({
+      databaseUrl: process.env.NEXT_PUBLIC_DEXIE_CLOUD_URL || 'https://dexie.cloud',
+      tryUseServiceWorker: false // Disable for Next.js compatibility
+    })
+
+    // v11: Add Dexie Cloud support with household management
+    this.version(11).stores({
+      users: '@id, name, email, color, type, householdId',
+      households: '@id, name, owner, createdAt, updatedAt',
+      householdMembers: '@id, householdId, userId, role, joinedAt',
+      chores: '@id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: '@id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: '@id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: '@id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: '@id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: '@id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: '@id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: '@id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: '@id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: '@id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: '@id, title, householdId, date, type',
+      homeSettings: '@id, householdId, homeName, lastUpdated, createdAt'
+    })
+    
+    // Migration from local storage to cloud (v11 upgrade)
+    this.version(11).upgrade(async () => {
+      // This migration will handle transitioning from local-only to cloud-enabled
+      // Users will need to authenticate and create/join households
+      console.log('Database upgraded to v11 with Dexie Cloud support')
+    })
+    
+    // v10: Add home settings for personalization (legacy version)
     this.version(10).stores({
       users: '++id, name, color, type',
       chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
@@ -357,41 +434,101 @@ export class DomusDatabase extends Dexie {
       }
     })
 
-    // Populate default categories
+    // Populate default categories (now household-specific)
     this.on('ready', async () => {
-      const groceryCategoryCount = await this.groceryCategories.count()
-      if (groceryCategoryCount === 0) {
-        await this.groceryCategories.bulkAdd([
-          { name: 'defaultCategories.produce', color: '#10b981', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultCategories.household', color: '#6b7280', isDefault: true, locale: undefined, createdAt: new Date() }
-        ])
-      }
-      
-      const mealCategoryCount = await this.mealCategories.count()
-      if (mealCategoryCount === 0) {
-        await this.mealCategories.bulkAdd([
-          { name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: new Date() },
-          { name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: new Date() }
-        ])
-      }
-
+      // Note: Default categories will now be created per-household
+      // This seeding will be handled by the household setup process
+      console.log('Database ready with Dexie Cloud support')
     })
+  }
+
+  // Helper methods for household management
+  async getCurrentUserHouseholdId(): Promise<string | null> {
+    try {
+      const currentUser = await this.cloud.currentUser
+      if (!currentUser?.userId) return null
+      
+      const user = await this.users.get(currentUser.userId)
+      return user?.householdId || null
+    } catch (error) {
+      console.error('Error getting current user household:', error)
+      return null
+    }
+  }
+
+  async createHousehold(name: string, description?: string): Promise<string> {
+    const currentUser = await this.cloud.currentUser
+    if (!currentUser?.userId) {
+      throw new Error('User must be authenticated to create household')
+    }
+
+    const householdId = crypto.randomUUID()
+    const now = new Date()
+
+    // Create household
+    await this.households.add({
+      id: householdId,
+      name,
+      description,
+      owner: currentUser.userId,
+      members: [currentUser.userId],
+      createdAt: now,
+      updatedAt: now
+    })
+
+    // Add user as household owner
+    await this.householdMembers.add({
+      id: crypto.randomUUID(),
+      householdId,
+      userId: currentUser.userId,
+      role: 'owner',
+      joinedAt: now,
+      permissions: {
+        canManageMembers: true,
+        canManageSettings: true,
+        canDeleteItems: true
+      }
+    })
+
+    // Update user's household ID
+    await this.users.update(currentUser.userId, { householdId })
+
+    // Create default categories for this household
+    await this.seedDefaultCategories(householdId)
+
+    return householdId
+  }
+
+  async seedDefaultCategories(householdId: string): Promise<void> {
+    const now = new Date()
+    
+    // Add default grocery categories
+    await this.groceryCategories.bulkAdd([
+      { id: crypto.randomUUID(), name: 'defaultCategories.produce', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultCategories.household', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
+    ])
+
+    // Add default meal categories
+    await this.mealCategories.bulkAdd([
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: crypto.randomUUID(), name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
+    ])
   }
 }
 

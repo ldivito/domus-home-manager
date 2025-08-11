@@ -713,6 +713,83 @@
       "description": "Domus is designed for tablet-first home management. All data is stored locally for privacy and offline access."
     }
   },
+  "cloud": {
+    "auth": {
+      "welcome": "Welcome to Domus",
+      "signInDescription": "Sign in to sync your data across devices",
+      "email": "Email",
+      "emailPlaceholder": "your.email@example.com",
+      "signIn": "Sign In",
+      "signOut": "Sign Out",
+      "signedIn": "Signed In",
+      "loginSuccess": "Successfully logged in!",
+      "loginFailed": "Login failed",
+      "logoutSuccess": "Logged out",
+      "logoutFailed": "Failed to log out"
+    },
+    "setup": {
+      "completeSetup": "Complete Your Setup",
+      "setupDescription": "Let's set up your profile and household",
+      "createProfile": "Create Your Profile",
+      "profileDescription": "Tell us a bit about yourself",
+      "yourName": "Your Name",
+      "namePlaceholder": "Enter your name",
+      "createProfileButton": "Create Profile",
+      "profileCreated": "Profile created!",
+      "profileFailed": "Failed to create profile",
+      "household": "Household",
+      "createHousehold": "Create Household",
+      "createHouseholdDescription": "Start a new household for your family",
+      "joinHousehold": "Join Household",
+      "joinHouseholdDescription": "Enter an invite code to join an existing household",
+      "householdName": "Household Name",
+      "householdNamePlaceholder": "e.g., The Smith Family",
+      "inviteCode": "Invite Code",
+      "inviteCodePlaceholder": "Enter invite code",
+      "createHouseholdButton": "Create Household",
+      "joinHouseholdButton": "Join Household",
+      "householdCreated": "Household created!",
+      "householdJoined": "Joined household!",
+      "householdCreateFailed": "Failed to create household",
+      "householdJoinFailed": "Failed to join household",
+      "invalidInviteCode": "Invalid invite code"
+    },
+    "modes": {
+      "chooseMode": "Choose how you'd like to use your home management app",
+      "syncAcrossDevices": "Sync Across Devices",
+      "syncDescription": "Keep your data synced across all your devices and share with family members",
+      "useOfflineOnly": "Use Offline Only",
+      "offlineDescription": "Keep all your data stored locally on this device only",
+      "syncFeatures": {
+        "multiDevice": "Multi-device synchronization",
+        "familySharing": "Family sharing and collaboration",
+        "automaticBackups": "Automatic backups"
+      },
+      "offlineFeatures": {
+        "completePrivacy": "Complete privacy - data stays local",
+        "worksOffline": "Works without internet connection",
+        "noAccount": "No account required"
+      },
+      "setupSync": "Set Up Sync",
+      "continueOffline": "Continue Offline",
+      "canChangeSettings": "You can change this setting later in the app preferences"
+    },
+    "sync": {
+      "synced": "Synced",
+      "offline": "Offline",
+      "disconnected": "Not Synced",
+      "error": "Sync Error",
+      "syncStatus": "Sync Status",
+      "syncNow": "Sync Now",
+      "internetConnection": "Internet Connection",
+      "online": "Online",
+      "cloudSync": "Cloud Sync",
+      "connected": "Connected",
+      "signedInAs": "Signed in as",
+      "syncError": "Sync Error:",
+      "workingOffline": "You're working offline. Changes will sync when you're back online."
+    }
+  },
   "planner": {
     "title": "Daily Planner",
     "subtitle": "Calendar with day, week and month views",

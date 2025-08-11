@@ -747,5 +747,82 @@
     "editEvent": "Editar Evento",
     "cancel": "Cancelar",
     "save": "Guardar"
+  },
+  "cloud": {
+    "auth": {
+      "welcome": "Bienvenido a Domus",
+      "signInDescription": "Inicia sesión para sincronizar tus datos entre dispositivos",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu.email@ejemplo.com",
+      "signIn": "Iniciar Sesión",
+      "signOut": "Cerrar Sesión",
+      "signedIn": "Sesión Iniciada",
+      "loginSuccess": "¡Sesión iniciada exitosamente!",
+      "loginFailed": "Error al iniciar sesión",
+      "logoutSuccess": "Sesión cerrada",
+      "logoutFailed": "Error al cerrar sesión"
+    },
+    "setup": {
+      "completeSetup": "Completa tu Configuración",
+      "setupDescription": "Configuremos tu perfil y hogar",
+      "createProfile": "Crear tu Perfil",
+      "profileDescription": "Cuéntanos un poco sobre ti",
+      "yourName": "Tu Nombre",
+      "namePlaceholder": "Ingresa tu nombre",
+      "createProfileButton": "Crear Perfil",
+      "profileCreated": "¡Perfil creado!",
+      "profileFailed": "Error al crear perfil",
+      "household": "Hogar",
+      "createHousehold": "Crear Hogar",
+      "createHouseholdDescription": "Inicia un nuevo hogar para tu familia",
+      "joinHousehold": "Unirse a Hogar",
+      "joinHouseholdDescription": "Ingresa un código de invitación para unirte a un hogar existente",
+      "householdName": "Nombre del Hogar",
+      "householdNamePlaceholder": "ej., La Familia Smith",
+      "inviteCode": "Código de Invitación",
+      "inviteCodePlaceholder": "Ingresa código de invitación",
+      "createHouseholdButton": "Crear Hogar",
+      "joinHouseholdButton": "Unirse al Hogar",
+      "householdCreated": "¡Hogar creado!",
+      "householdJoined": "¡Te uniste al hogar!",
+      "householdCreateFailed": "Error al crear hogar",
+      "householdJoinFailed": "Error al unirse al hogar",
+      "invalidInviteCode": "Código de invitación inválido"
+    },
+    "modes": {
+      "chooseMode": "Elige cómo te gustaría usar tu aplicación de gestión del hogar",
+      "syncAcrossDevices": "Sincronizar entre Dispositivos",
+      "syncDescription": "Mantén tus datos sincronizados en todos tus dispositivos y comparte con miembros de la familia",
+      "useOfflineOnly": "Usar Solo sin Conexión",
+      "offlineDescription": "Mantén todos tus datos almacenados localmente solo en este dispositivo",
+      "syncFeatures": {
+        "multiDevice": "Sincronización multi-dispositivo",
+        "familySharing": "Compartir y colaborar en familia",
+        "automaticBackups": "Respaldos automáticos"
+      },
+      "offlineFeatures": {
+        "completePrivacy": "Privacidad completa - los datos permanecen locales",
+        "worksOffline": "Funciona sin conexión a internet",
+        "noAccount": "No requiere cuenta"
+      },
+      "setupSync": "Configurar Sincronización",
+      "continueOffline": "Continuar sin Conexión",
+      "canChangeSettings": "Puedes cambiar esta configuración más tarde en las preferencias de la aplicación"
+    },
+    "sync": {
+      "synced": "Sincronizado",
+      "offline": "Sin conexión",
+      "disconnected": "No Sincronizado",
+      "error": "Error de Sincronización",
+      "syncStatus": "Estado de Sincronización",
+      "syncNow": "Sincronizar Ahora",
+      "internetConnection": "Conexión a Internet",
+      "online": "En línea",
+      "cloudSync": "Sincronización en la Nube",
+      "connected": "Conectado",
+      "signedInAs": "Sesión iniciada como",
+      "syncError": "Error de Sincronización:",
+      "workingOffline": "Estás trabajando sin conexión. Los cambios se sincronizarán cuando regreses en línea."
+    }
   }
 }

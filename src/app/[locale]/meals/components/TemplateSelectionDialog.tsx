@@ -82,9 +82,9 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
     return matchesName || matchesDescription || matchesIngredient
   })
 
-  const handleSelectTemplate = (meal: { id?: number }) => {
+  const handleSelectTemplate = (meal: { id?: string }) => {
     if (meal.id) {
-      onTemplateSelected(meal.id.toString())
+      onTemplateSelected(meal.id)
       onOpenChange(false)
     }
   }

@@ -146,3 +146,23 @@ button,
     0 10px 15px -3px rgb(0 0 0 / 0.3),
     0 4px 6px -4px rgb(0 0 0 / 0.3);
 }
+
+/* Hide default Dexie Cloud dialogs - we use our custom UI instead */
+.dxc-login-dlg,
+.dxc-otp-dlg,
+.dxc-user-interaction-dlg,
+[data-dexie-cloud-dialog],
+dialog[data-dexie-cloud] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Hide any Dexie Cloud overlays */
+.dxc-overlay,
+.dxc-backdrop,
+[data-dexie-cloud-overlay] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}

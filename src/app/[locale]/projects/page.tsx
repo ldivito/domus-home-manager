@@ -40,7 +40,7 @@ export default function ProjectsPage() {
     done: 'border-green-300 bg-green-50'
   }
 
-  const handleDeleteProject = async (projectId: number) => {
+  const handleDeleteProject = async (projectId: string) => {
     try {
       await db.homeImprovements.delete(projectId)
     } catch (error) {
@@ -53,7 +53,7 @@ export default function ProjectsPage() {
     setEditDialogOpen(true)
   }
 
-  const getUserName = (userId?: number) => {
+  const getUserName = (userId?: string) => {
     if (!userId) return tCommon('notAssigned')
     const user = users.find(u => u.id === userId)
     return user?.name || tCommon('notAssigned')

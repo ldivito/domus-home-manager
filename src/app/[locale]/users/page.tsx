@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { AddUserModal } from "@/components/AddUserModal"
 import { db, User as UserType } from "@/lib/db"
+import { generateId } from "@/lib/utils"
 
 interface UserStats {
   activeTasks: number
@@ -19,7 +20,7 @@ interface UserStats {
 export default function UsersPage() {
   const t = useTranslations('users')
   const [users, setUsers] = useState<UserType[]>([])
-  const [userStats, setUserStats] = useState<Record<number, UserStats>>({})
+  const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -34,7 +35,7 @@ export default function UsersPage() {
       setUsers(dbUsers)
       
       // Load stats for each user
-      const stats: Record<number, UserStats> = {}
+      const stats: Record<string, UserStats> = {}
       for (const user of dbUsers) {
         if (user.id) {
           const [activeTasks, completedTasks, chores] = await Promise.all([
@@ -60,7 +61,8 @@ export default function UsersPage() {
 
   const handleCreateUser = async (userData: Omit<UserType, 'id' | 'createdAt'>) => {
     try {
-      const newUser: Omit<UserType, 'id'> = {
+      const newUser: UserType = {
+        id: generateId('usr'),
         ...userData,
         createdAt: new Date()
       }
@@ -73,7 +75,7 @@ export default function UsersPage() {
     }
   }
 
-  const getCompletionRate = (userId: number) => {
+  const getCompletionRate = (userId: string) => {
     const stats = userStats[userId]
     if (!stats) return 0
     const total = stats.activeTasks + stats.completedTasks

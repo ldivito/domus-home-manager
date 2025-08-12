@@ -16,7 +16,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Plus, X } from "lucide-react"
-import { db } from '@/lib/db'
+import { db, Meal, SavedMeal, SavedGroceryItem } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { TemplateSelectionDialog } from './TemplateSelectionDialog'
 
@@ -50,7 +51,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
     return `${year}-${month}-${day}`
   })
   const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('dinner')
-  const [selectedIngredientIds, setSelectedIngredientIds] = useState<number[]>([])
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([])
   const [newIngredient, setNewIngredient] = useState('')
   const [newIngredientAmount, setNewIngredientAmount] = useState('')
   const [newIngredientCategory, setNewIngredientCategory] = useState('')
@@ -93,7 +94,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
         setCategory(preSelectedTemplate.category)
         // Convert ingredient names to IDs by finding them in savedGroceryItems
         const findIngredientIds = async () => {
-          const ids: number[] = []
+          const ids: string[] = []
           for (const ingredientName of preSelectedTemplate.ingredients) {
             const savedItem = await db.savedGroceryItems.where('name').equals(ingredientName).first()
             if (savedItem?.id) {
@@ -166,13 +167,13 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
   }
 
 
-  const handleAddIngredient = (savedItemId: number) => {
+  const handleAddIngredient = (savedItemId: string) => {
     if (savedItemId && !selectedIngredientIds.includes(savedItemId)) {
       setSelectedIngredientIds([...selectedIngredientIds, savedItemId])
     }
   }
 
-  const handleRemoveIngredient = (ingredientIdToRemove: number) => {
+  const handleRemoveIngredient = (ingredientIdToRemove: string) => {
     setSelectedIngredientIds(selectedIngredientIds.filter(id => id !== ingredientIdToRemove))
   }
 
@@ -180,7 +181,8 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
     if (newIngredient.trim()) {
       try {
         // Save ingredient to savedGroceryItems and get the ID
-        const savedItemId = await db.savedGroceryItems.add({
+        const saved: SavedGroceryItem = {
+          id: generateId('sgi'),
           name: newIngredient.trim(),
           category: newIngredientCategory || 'defaultCategories.pantry',
           amount: newIngredientAmount.trim() || '',
@@ -188,7 +190,8 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
           timesUsed: 1,
           lastUsed: new Date(),
           createdAt: new Date()
-        })
+        }
+        const savedItemId = await db.savedGroceryItems.add(saved)
         
         // Add the saved item ID to the current meal
         handleAddIngredient(savedItemId)
@@ -255,25 +258,29 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
 
     try {
       // Create the scheduled meal
-      await db.meals.add({
+      const meal: Meal = {
+        id: generateId('mea'),
         title: name.trim(),
         description: description.trim() || undefined,
         date: new Date(mealDate + 'T12:00:00'), // Set to noon to avoid timezone issues
         mealType,
         ingredientIds: selectedIngredientIds,
         createdAt: new Date()
-      })
+      }
+      await db.meals.add(meal)
 
       // Also save as template if requested
       if (saveAsTemplate) {
-        await db.savedMeals.add({
+        const savedMeal: SavedMeal = {
+          id: generateId('smea'),
           name: name.trim(),
           description: description.trim() || undefined,
           category: category || 'defaultMealCategories.meat', // Default category if none selected
           ingredientIds: selectedIngredientIds,
           timesUsed: 0,
           createdAt: new Date()
-        })
+        }
+        await db.savedMeals.add(savedMeal)
       }
 
       onMealCreated?.()
@@ -437,7 +444,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
               {/* Existing grocery items */}
               <div>
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('form.fromGroceries')}</Label>
-                <Select onValueChange={(value) => handleAddIngredient(parseInt(value))}>
+                <Select onValueChange={(value) => handleAddIngredient(value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder={t('form.selectIngredient')} />
                   </SelectTrigger>

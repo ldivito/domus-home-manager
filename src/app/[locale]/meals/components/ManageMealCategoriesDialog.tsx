@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Edit3, X, Plus } from "lucide-react"
 import { db, MealCategory } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 
 interface ManageMealCategoriesDialogProps {
   open: boolean
@@ -81,7 +82,7 @@ export function ManageMealCategoriesDialog({ open, onOpenChange, categories }: M
     setEditColor('#6b7280')
   }
 
-  const handleDelete = async (categoryId: number, isDefault: boolean) => {
+  const handleDelete = async (categoryId: string, isDefault: boolean) => {
     if (isDefault) return // Don't allow deleting default categories
 
     try {
@@ -96,6 +97,7 @@ export function ManageMealCategoriesDialog({ open, onOpenChange, categories }: M
 
     try {
       await db.mealCategories.add({
+        id: generateId('mcat'),
         name: newName.trim(),
         color: newColor,
         isDefault: false,

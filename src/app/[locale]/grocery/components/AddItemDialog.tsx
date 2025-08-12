@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus } from "lucide-react"
-import { db, GroceryCategory } from '@/lib/db'
+import { db, GroceryCategory, SavedGroceryItem, GroceryItem } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 
 interface AddItemDialogProps {
   open: boolean
@@ -48,6 +49,7 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
         const randomColor = categoryColors[Math.floor(Math.random() * categoryColors.length)]
         
         await db.groceryCategories.add({
+          id: generateId('gcat'),
           name: newCategoryName.trim(),
           color: randomColor,
           isDefault: false,
@@ -59,13 +61,15 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
       }
 
       // Add to current grocery list
-      await db.groceryItems.add({
+      const grocery: GroceryItem = {
+        id: generateId('gri'),
         name: name.trim(),
         category: finalCategory,
         amount: amount.trim(),
         importance,
         createdAt: new Date()
-      })
+      }
+      await db.groceryItems.add(grocery)
 
       // Also add or update in saved grocery items database
       const existingItem = await db.savedGroceryItems
@@ -84,7 +88,8 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
         })
       } else {
         // Create new saved item
-        await db.savedGroceryItems.add({
+        const saved: SavedGroceryItem = {
+          id: generateId('sgi'),
           name: name.trim(),
           category: finalCategory,
           amount: amount.trim(),
@@ -92,7 +97,8 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
           timesUsed: 1,
           lastUsed: new Date(),
           createdAt: new Date()
-        })
+        }
+        await db.savedGroceryItems.add(saved)
       }
 
       // Reset form

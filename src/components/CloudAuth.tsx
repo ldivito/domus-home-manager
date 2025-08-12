@@ -1,44 +1,49 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { db } from '@/lib/db'
+import { db, switchDbMode } from '@/lib/db'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, User, Home, Users } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Loader2, User, Home, Users, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useDexieCloud } from '@/hooks/useDexieCloud'
 
 interface CloudAuthProps {
   onAuthSuccess?: () => void
+  onBackToOffline?: () => void
+  onBackToModeSelection?: () => void
 }
 
-export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
+export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToModeSelection }: CloudAuthProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [isSendingLink, setIsSendingLink] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [householdName, setHouseholdName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [authStep, setAuthStep] = useState<'login' | 'setup'>('login')
+  const [activeTab, setActiveTab] = useState<'profile' | 'household'>('profile')
+  const [showOtpDialog, setShowOtpDialog] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [pendingEmail, setPendingEmail] = useState('')
+  const [showOtpForm, setShowOtpForm] = useState(false)
+  const [postAuthInProgress, setPostAuthInProgress] = useState(false)
 
-  // Check current authentication state
-  const currentUser = useLiveQuery(async () => {
-    try {
-      return await db.cloud.currentUser
-    } catch (error) {
-      console.error('Error getting current user:', error)
-      return null
-    }
-  })
+  // Reactive current user via Dexie Cloud subjects
+  const { currentUser } = useDexieCloud()
 
   const userProfile = useLiveQuery(async () => {
     if (!currentUser?.userId) return null
     try {
-      return await db.users.get(currentUser.userId)
+      return await db.users.get(`usr_${currentUser.userId}`)
     } catch (error) {
       console.error('Error getting user profile:', error)
       return null
@@ -55,40 +60,201 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
     }
   }, [userProfile?.householdId])
 
+  // Determine authentication state
+  // For Dexie Cloud: user is fully authenticated when they have userId and email
+  const isFullyAuthenticated = !!(currentUser && currentUser.userId && currentUser.email)
+  const needsSetup = isFullyAuthenticated && (!userProfile || !userProfile.householdId)
+  const isSetupComplete = isFullyAuthenticated && !!(userProfile && userProfile.householdId)
+  
   // If user is fully set up, call success callback
   useEffect(() => {
-    if (currentUser && userProfile && userHousehold && onAuthSuccess) {
+    if (isSetupComplete && onAuthSuccess) {
+      try { localStorage.setItem('domusMode', 'cloud') } catch {}
+      setPostAuthInProgress(false)
       onAuthSuccess()
     }
-  }, [currentUser, userProfile, userHousehold, onAuthSuccess])
+  }, [isSetupComplete, onAuthSuccess])
+
+  // Reset authStep when setup is complete
+  useEffect(() => {
+    if (isSetupComplete) {
+      setAuthStep('login')
+    }
+  }, [isSetupComplete])
+
+  // Hide any Dexie Cloud default UI that might appear
+  useEffect(() => {
+    // Override any default UI that might appear
+    const hideDexieDialogs = () => {
+      try {
+        const dialogs = document.querySelectorAll('.dxc-login-dlg, .dxc-otp-dlg, .dxc-user-interaction-dlg, [data-dexie-cloud-dialog], dialog[data-dexie-cloud]')
+        dialogs.forEach((dialog: Element) => {
+          if (dialog instanceof HTMLElement) {
+            dialog.style.display = 'none'
+            dialog.style.visibility = 'hidden'
+            dialog.style.opacity = '0'
+          }
+        })
+      } catch (error) {
+        console.warn('Error hiding Dexie dialogs:', error)
+      }
+    }
+
+    // Initial hide
+    hideDexieDialogs()
+
+    // Continuously check for and hide any Dexie Cloud dialogs
+    const dialogHideInterval = setInterval(hideDexieDialogs, 200)
+
+    return () => {
+      clearInterval(dialogHideInterval)
+    }
+  }, [])
 
   const handleLogin = async () => {
     if (!email) return
 
-    setIsLoading(true)
+    setError(null)
+
+    // Ensure cloud API is available (handles case after switching to offline)
+    if (!(db as unknown as { cloud?: unknown }).cloud) {
+      try { localStorage.setItem('domusMode', 'cloud') } catch {}
+      switchDbMode('cloud')
+      await Promise.resolve()
+    }
+
+    // Normalize and persist email, immediately show OTP form so user can enter code
+    const normalizedEmail = email.trim()
+    setPendingEmail(normalizedEmail)
+    setShowOtpForm(true)
+    setIsSendingLink(true)
+    toast.success('Check your email for the verification code!')
+
+    // Fire-and-forget: trigger Dexie Cloud to send OTP without blocking the UI
+    ;(db as unknown as { cloud: { login: (hints: unknown) => Promise<void> } }).cloud
+      .login({ email: normalizedEmail })
+      .then(async () => {
+        const user = db.cloud.currentUser.value
+        if (user) {
+          try {
+            const profile = await db.users.get(`usr_${user.userId}`)
+            if (!profile) {
+              setAuthStep('setup')
+              toast.success("Welcome! Let's set up your profile.")
+            } else if (!profile.householdId) {
+              setAuthStep('setup')
+              toast.success("Welcome back! Let's complete your household setup.")
+            } else {
+              toast.success('Successfully logged in!')
+            }
+          } catch (err) {
+            console.error('Error checking profile after login:', err)
+          }
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Login error (fire-and-forget):', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to log in'
+        setError(errorMessage)
+        if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          toast.error('Network error. Please check your connection and try again.')
+        } else if (errorMessage.includes('email')) {
+          toast.error('Please enter a valid email address.')
+        } else {
+          // Keep OTP form visible; user might still be able to complete with a valid code
+          toast.error('Login failed to send code. You can retry or check your email.')
+        }
+      })
+      .finally(() => {
+        setIsSendingLink(false)
+      })
+  }
+
+  const handleOtpSubmit = async () => {
+    if (!otpCode || !pendingEmail || isVerifying) return
+
+    setIsVerifying(true)
     setError(null)
 
     try {
-      await db.cloud.login({ email })
-      
-      // Check if user needs to set up profile
-      const user = await db.cloud.currentUser
-      if (user) {
-        const profile = await db.users.get(user.userId)
-        if (!profile) {
-          setAuthStep('setup')
-        } else if (!profile.householdId) {
-          setAuthStep('setup')
-        }
+      // Ensure cloud API available (user may have switched modes)
+      if (!(db as unknown as { cloud?: unknown }).cloud) {
+        try { localStorage.setItem('domusMode', 'cloud') } catch {}
+        switchDbMode('cloud')
+        await Promise.resolve()
       }
-      
-      toast.success('Successfully logged in!')
+
+      // Sanitize OTP input: trim only (codes can be alphanumeric)
+      const sanitizedOtp = otpCode.trim()
+      if (!sanitizedOtp) {
+        throw new Error('Please enter the verification code')
+      }
+
+      // If Dexie Cloud is prompting for OTP via userInteraction, submit there
+      // Narrow type to OTP prompt when present
+      const ui = (db as unknown as { cloud: { userInteraction?: { value?: { type?: string; onSubmit?: (p: { otp: string }) => void } } } }).cloud.userInteraction?.value as {
+        type: 'otp'
+        onSubmit?: (params: { otp: string }) => void
+      } | undefined
+      if (ui && ui.type === 'otp' && typeof ui.onSubmit === 'function') {
+        // Submit to Dexie Cloud OTP prompt and wait a tick for state to update
+        await Promise.resolve(ui.onSubmit({ otp: sanitizedOtp }))
+        await new Promise((r) => setTimeout(r, 200))
+      } else {
+        // Fallback: verify via API directly (resolves on success, rejects on invalid)
+        await (db as unknown as { cloud: { login: (hints: { email: string; grant_type: 'otp'; otp: string }) => Promise<void> } }).cloud.login({ email: pendingEmail, grant_type: 'otp', otp: sanitizedOtp })
+      }
+
+      // Verify that current user has been authenticated now; poll briefly to avoid race
+      let user = (db as unknown as { cloud: { currentUser: { value: { userId?: string; email?: string } | null } } }).cloud.currentUser.value
+      for (let i = 0; i < 5 && (!user || !user.userId || !user.email); i++) {
+        await new Promise((r) => setTimeout(r, 150))
+        user = (db as unknown as { cloud: { currentUser: { value: { userId?: string; email?: string } | null } } }).cloud.currentUser.value
+      }
+      if (!user || !user.userId || !user.email) throw new Error('Invalid or expired code. Please request a new one.')
+
+      // Success: clear any previous error and UI state, then continue with setup if needed
+      setError(null)
+      setShowOtpForm(false)
+      setShowOtpDialog(false)
+      setOtpCode('')
+      setPendingEmail('')
+      toast.success('Successfully verified! Setting up your account...')
+
+      // Check profile and set next step without relying on timers
+      try {
+        const settledUser = (db as unknown as { cloud: { currentUser: { value: { userId?: string; email?: string } | null } } }).cloud.currentUser.value
+        if (settledUser) {
+          const profile = await db.users.get(`usr_${settledUser.userId}`)
+          if (!profile || !profile.householdId) {
+            setAuthStep('setup')
+            setPostAuthInProgress(false)
+          } else {
+            setAuthStep('login')
+            setPostAuthInProgress(true)
+            try { localStorage.setItem('domusMode', 'cloud') } catch {}
+            // Notify wrapper to avoid showing Back button and close auth
+            try { window.dispatchEvent(new Event('domus:authSuccess')) } catch {}
+            onAuthSuccess?.()
+          }
+        }
+      } catch (err) {
+        console.error('Error checking profile after verification:', err)
+      }
     } catch (error: unknown) {
-      console.error('Login error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to log in')
-      toast.error('Login failed')
+      console.error('OTP verification error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Invalid verification code'
+      setError(errorMessage)
+
+      if (errorMessage.toLowerCase().includes('otp') || errorMessage.toLowerCase().includes('code') || errorMessage.toLowerCase().includes('invalid')) {
+        toast.error('Invalid verification code. Please check the code in your email and try again.')
+      } else if (errorMessage.toLowerCase().includes('expired')) {
+        toast.error('Verification code has expired. Please request a new one.')
+      } else {
+        toast.error('Verification failed. Please try again.')
+      }
     } finally {
-      setIsLoading(false)
+      setIsVerifying(false)
     }
   }
 
@@ -107,15 +273,17 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
       ]
       const randomColor = colors[Math.floor(Math.random() * colors.length)]
 
-      await db.users.add({
-        id: currentUser.userId,
+      const profileData = {
+        id: `usr_${currentUser.userId}`,
         name,
         email: currentUser.email,
         color: randomColor,
-        type: 'resident',
+        type: 'resident' as const,
         createdAt: new Date()
-      })
-
+      }
+      
+      await db.users.add(profileData)
+      setActiveTab('household')
       toast.success('Profile created!')
     } catch (error: unknown) {
       console.error('Profile creation error:', error)
@@ -162,7 +330,7 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
 
       // Add user to household members
       await db.householdMembers.add({
-        id: crypto.randomUUID(),
+        id: `hmbr_${crypto.randomUUID()}`,
         householdId: household.id!,
         userId: currentUser.userId,
         role: 'member',
@@ -175,7 +343,7 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
       })
 
       // Update user's household ID
-      await db.users.update(currentUser.userId, { 
+      await db.users.update(`usr_${currentUser.userId}`, { 
         householdId: household.id 
       })
 
@@ -199,8 +367,25 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
     }
   }
 
-  // Show setup screen if user is authenticated but needs setup
-  if (currentUser && authStep === 'setup') {
+  // While finishing post-auth (waiting for wrapper or profile to settle), show a small loader
+  if (postAuthInProgress) {
+    return (
+      <div className="max-w-sm mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Signing you in…</CardTitle>
+            <CardDescription>Please wait</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show setup screen only when we explicitly decided to show it (authStep === 'setup') and profile is missing
+  if (isFullyAuthenticated && authStep === 'setup' && needsSetup) {
     return (
       <div className="max-w-md mx-auto p-6 space-y-6">
         <Card>
@@ -215,7 +400,7 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
           </CardHeader>
         </Card>
 
-        <Tabs defaultValue="profile" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'profile' | 'household')} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="household" disabled={!userProfile}>Household</TabsTrigger>
@@ -332,40 +517,135 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        <div className="mt-6">
+          <Button 
+            variant="ghost" 
+            onClick={onBackToModeSelection}
+            className="w-full"
+          >
+            Back to Mode Selection
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Show OTP form if explicitly requested, regardless of auth state
+  if (showOtpForm) {
+    return (
+      <div className="max-w-sm mx-auto p-6 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Enter Verification Code
+            </CardTitle>
+            <CardDescription>
+              We sent a verification code to your email. Enter it below to complete your sign-in.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-sent">Email Sent To:</Label>
+              <Input
+                id="email-sent"
+                type="email"
+                value={pendingEmail}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="otp-code">Verification Code</Label>
+              <Input
+                id="otp-code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="Enter 8-digit code"
+                maxLength={8}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && otpCode && !isLoading) {
+                    handleOtpSubmit()
+                  }
+                }}
+              />
+            </div>
+            
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex gap-2">
+              <Button 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleOtpSubmit(); }} 
+                disabled={!otpCode || isVerifying}
+                className="flex-1"
+              >
+                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isVerifying ? 'Verifying...' : 'Verify Code'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation();
+                  setShowOtpForm(false)
+                  setOtpCode('')
+                  setPendingEmail('')
+                  setError(null)
+                }}
+                disabled={isVerifying}
+                className="flex-1"
+              >
+                Back
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   // Show login screen if not authenticated
-  if (!currentUser) {
+  if (!isFullyAuthenticated) {
     return (
-      <div className="max-w-sm mx-auto p-6">
+      <div className="max-w-sm mx-auto p-6 space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Welcome to Domus</CardTitle>
             <CardDescription>
-              Sign in to sync your data across devices
+              Enter your email to sign in. We&apos;ll send you a secure login link.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your.email@example.com"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && email && !isLoading) {
+                    handleLogin()
+                  }
+                }}
               />
             </div>
             <Button 
               onClick={handleLogin} 
-              disabled={!email || isLoading}
+              disabled={!email || isSendingLink}
               className="w-full"
             >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {isSendingLink && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSendingLink ? 'Sending Login Link...' : 'Send Login Link'}
             </Button>
+            
+            <div className="text-xs text-muted-foreground text-center">
+              No account? No problem! We&apos;ll create one for you automatically.
+            </div>
             
             {error && (
               <Alert variant="destructive">
@@ -374,26 +654,92 @@ export default function CloudAuth({ onAuthSuccess }: CloudAuthProps) {
             )}
           </CardContent>
         </Card>
+
+
+        {/* OTP Dialog */}
+        <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Enter Verification Code
+              </DialogTitle>
+              <DialogDescription>
+                We sent a verification code to {pendingEmail}. Please enter it below to complete your sign-in.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification Code</Label>
+                <Input
+                  id="otp"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="Enter 8-digit code"
+                  maxLength={8}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && otpCode && !isLoading) {
+                      handleOtpSubmit()
+                    }
+                  }}
+                />
+              </div>
+              
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleOtpSubmit(); }} 
+                  disabled={!otpCode || isVerifying}
+                  className="flex-1"
+                >
+                  {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isVerifying ? 'Verifying...' : 'Verify Code'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation();
+                    setShowOtpDialog(false)
+                    setOtpCode('')
+                    setError(null)
+                  }}
+                  disabled={isVerifying}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
 
-  // Show authenticated state
+  // If setup is complete, rely on the useEffect to close this UI; render a tiny loader instead of showing Continue/Back
+  if (isSetupComplete) {
+    return (
+      <div className="max-w-sm mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading…</CardTitle>
+            <CardDescription>Preparing your workspace</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Fallback: show a loader
   return (
     <div className="max-w-sm mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Signed In</CardTitle>
-          <CardDescription>
-            {userProfile?.name} • {userHousehold?.name}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={handleLogout} variant="outline" className="w-full">
-            Sign Out
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
     </div>
   )
 }

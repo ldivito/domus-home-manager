@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { db, User as UserType } from "@/lib/db"
+import { db, User as UserType, CalendarEvent } from "@/lib/db"
+import { generateId } from "@/lib/utils"
 
 type EventType = 'general' | 'task' | 'meal' | 'reminder'
 
@@ -30,7 +31,7 @@ export function AddEventDialog({ open, onOpenChange, users, defaultDate, onCreat
   const [date, setDate] = useState<string>("")
   const [time, setTime] = useState<string>("")
   const [type, setType] = useState<EventType>('general')
-  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Initialize date with provided default
@@ -57,7 +58,7 @@ export function AddEventDialog({ open, onOpenChange, users, defaultDate, onCreat
     }
   }, [open, defaultDate])
 
-  const toggleUser = (userId: number) => {
+  const toggleUser = (userId: string) => {
     setSelectedUserIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId])
   }
 
@@ -66,7 +67,8 @@ export function AddEventDialog({ open, onOpenChange, users, defaultDate, onCreat
     setIsSubmitting(true)
     try {
       const eventDate = new Date(`${date}T12:00:00`)
-      await db.calendarEvents.add({
+      const event: CalendarEvent = {
+        id: generateId('evt'),
         title: title.trim(),
         description: description.trim() || undefined,
         date: eventDate,
@@ -74,7 +76,8 @@ export function AddEventDialog({ open, onOpenChange, users, defaultDate, onCreat
         type,
         userIds: selectedUserIds.length ? selectedUserIds : undefined,
         createdAt: new Date()
-      })
+      }
+      await db.calendarEvents.add(event)
       onCreated?.()
       onOpenChange(false)
     } finally {

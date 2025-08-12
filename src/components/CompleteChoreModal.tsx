@@ -13,7 +13,7 @@ import { CheckSquare, User as UserIcon } from "lucide-react"
 interface CompleteChoreModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onComplete: (completedByUserId: number) => void
+  onComplete: (completedByUserId: string) => void
   choreTitle: string
 }
 
@@ -47,7 +47,7 @@ export function CompleteChoreModal({ open, onOpenChange, onComplete, choreTitle 
     setIsSubmitting(true)
     
     try {
-      await onComplete(parseInt(completedByUserId))
+      await onComplete(completedByUserId)
       
       // Reset form
       setCompletedByUserId("none")

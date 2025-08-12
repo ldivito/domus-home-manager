@@ -124,7 +124,7 @@ export default function MealsPage() {
     }
   }
 
-  const handleAddIngredientsToGrocery = async (ingredientIds: number[]) => {
+  const handleAddIngredientsToGrocery = async (ingredientIds: string[]) => {
     try {
       for (const ingredientId of ingredientIds) {
         // Get the saved grocery item

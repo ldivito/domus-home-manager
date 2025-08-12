@@ -77,7 +77,7 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
     return category?.color || '#6b7280'
   }
 
-  const handleDelete = async (mealId: number) => {
+  const handleDelete = async (mealId: string) => {
     try {
       await db.savedMeals.delete(mealId)
     } catch (error) {

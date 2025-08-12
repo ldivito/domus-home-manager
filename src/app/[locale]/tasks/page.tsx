@@ -40,7 +40,7 @@ export default function TasksPage() {
     low: 'bg-green-100 text-green-800'
   }
 
-  const handleMarkComplete = async (taskId: number) => {
+  const handleMarkComplete = async (taskId: string) => {
     try {
       await db.tasks.update(taskId, { isCompleted: true })
     } catch (error) {
@@ -48,7 +48,7 @@ export default function TasksPage() {
     }
   }
 
-  const handleDeleteTask = async (taskId: number) => {
+  const handleDeleteTask = async (taskId: string) => {
     try {
       await db.tasks.delete(taskId)
     } catch (error) {
@@ -61,7 +61,7 @@ export default function TasksPage() {
     setEditDialogOpen(true)
   }
 
-  const getUserName = (userId?: number) => {
+  const getUserName = (userId?: string) => {
     if (!userId) return tCommon('notAssigned')
     const user = users.find(u => u.id === userId)
     return user?.name || tCommon('notAssigned')

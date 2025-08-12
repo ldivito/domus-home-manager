@@ -27,7 +27,7 @@ export function EditEventDialog({ open, onOpenChange, users, event }: EditEventD
   const [date, setDate] = useState<string>("")
   const [time, setTime] = useState<string>("")
   const [type, setType] = useState<EventType>('general')
-  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function EditEventDialog({ open, onOpenChange, users, event }: EditEventD
     }
   }, [open, event])
 
-  const toggleUser = (id: number) => {
+  const toggleUser = (id: string) => {
     setSelectedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 

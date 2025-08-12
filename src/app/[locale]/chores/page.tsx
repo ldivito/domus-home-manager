@@ -11,6 +11,7 @@ import { AddChoreModal } from "@/components/AddChoreModal"
 import { EditChoreModal } from "@/components/EditChoreModal"
 import { CompleteChoreModal } from "@/components/CompleteChoreModal"
 import { db, Chore, User as UserType } from "@/lib/db"
+import { generateId } from "@/lib/utils"
 
 export default function ChoresPage() {
   const t = useTranslations('chores')
@@ -45,7 +46,8 @@ export default function ChoresPage() {
 
   const handleCreateChore = async (choreData: Omit<Chore, 'id' | 'createdAt'>) => {
     try {
-      const newChore: Omit<Chore, 'id'> = {
+      const newChore: Chore = {
+        id: generateId('chr'),
         ...choreData,
         createdAt: new Date()
       }
@@ -68,7 +70,7 @@ export default function ChoresPage() {
     setIsEditModalOpen(true)
   }
 
-  const handleConfirmComplete = async (completedByUserId: number) => {
+  const handleConfirmComplete = async (completedByUserId: string) => {
     if (!selectedChore?.id) return
     
     try {
@@ -129,7 +131,7 @@ export default function ChoresPage() {
     }
   }
 
-  const handleEditChoreSubmit = async (choreId: number, choreData: Partial<Chore>) => {
+  const handleEditChoreSubmit = async (choreId: string, choreData: Partial<Chore>) => {
     try {
       await db.chores.update(choreId, choreData)
       await loadData()
@@ -139,7 +141,7 @@ export default function ChoresPage() {
     }
   }
 
-  const getUserById = (userId?: number) => {
+  const getUserById = (userId?: string) => {
     return users.find(user => user.id === userId)
   }
 

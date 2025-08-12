@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { db } from '@/lib/db'
+import { useDexieCloud } from '@/hooks/useDexieCloud'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -19,6 +20,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 export default function SyncStatus() {
   const [isOnline, setIsOnline] = useState(true)
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [mode, setMode] = useState<string | null>(null)
 
   // Monitor online status
   useEffect(() => {
@@ -30,36 +32,62 @@ export default function SyncStatus() {
     
     setIsOnline(navigator.onLine)
 
+    const m = localStorage.getItem('domusMode')
+    setMode(m)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'domusMode') setMode(e.newValue)
+    }
+    window.addEventListener('storage', onStorage)
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('storage', onStorage)
     }
   }, [])
 
   // Get sync status from Dexie Cloud
+  const { currentUser, webSocketStatus } = useDexieCloud()
   const syncState = useLiveQuery(async () => {
     try {
       return {
-        isConnected: db.cloud.isOnline,
-        currentUser: await db.cloud.currentUser,
+        isConnected: webSocketStatus === 'connected',
+        currentUser,
         schema: db.cloud.schema
       }
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : 'Sync error')
       return null
     }
-  })
+  }, [currentUser?.userId, webSocketStatus])
 
   const handleForceSync = async () => {
     try {
       setSyncError(null)
-      await db.cloud.sync({ wait: true })
+      await db.cloud.sync({ wait: true, purpose: 'pull' })
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : 'Sync failed')
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      setSyncError(null)
+      await db.cloud.logout({ force: true })
+      try { localStorage.setItem('domusMode', 'offline') } catch {}
+      setMode('offline')
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Logout failed')
+    }
+  }
+
+  const handleShowModeSelection = () => {
+    try { localStorage.setItem('domusMode', 'cloud') } catch {}
+    window.dispatchEvent(new Event('domus:showMode'))
+  }
+
   const getSyncIcon = () => {
+    if (mode === 'offline') return <Wifi className="h-4 w-4" />
     if (!isOnline) return <WifiOff className="h-4 w-4" />
     if (syncError) return <AlertTriangle className="h-4 w-4" />
     if (!syncState?.isConnected) return <CloudOff className="h-4 w-4" />
@@ -67,6 +95,7 @@ export default function SyncStatus() {
   }
 
   const getSyncStatus = () => {
+    if (mode === 'offline') return 'offline-mode'
     if (!isOnline) return 'offline'
     if (syncError) return 'error'
     if (!syncState?.isConnected) return 'disconnected'
@@ -76,6 +105,8 @@ export default function SyncStatus() {
   const getStatusText = () => {
     const status = getSyncStatus()
     switch (status) {
+      case 'offline-mode':
+        return 'Offline Only'
       case 'offline':
         return 'Offline'
       case 'error':
@@ -92,6 +123,7 @@ export default function SyncStatus() {
   const getStatusVariant = () => {
     const status = getSyncStatus()
     switch (status) {
+      case 'offline-mode':
       case 'offline':
       case 'disconnected':
         return 'secondary'
@@ -117,8 +149,8 @@ export default function SyncStatus() {
       <PopoverContent className="w-80" align="end">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold">Sync Status</h4>
-            {syncState?.isConnected && (
+            <h4 className="font-semibold">{mode === 'offline' ? 'Offline Mode' : 'Sync Status'}</h4>
+            {mode !== 'offline' && syncState?.isConnected && (
               <Button 
                 size="sm" 
                 variant="outline" 
@@ -149,29 +181,49 @@ export default function SyncStatus() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span>Cloud Sync</span>
-              <div className="flex items-center gap-1">
-                {syncState?.isConnected ? (
-                  <>
-                    <CheckCircle className="h-3 w-3 text-green-500" />
-                    <span className="text-green-500">Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <CloudOff className="h-3 w-3 text-gray-500" />
-                    <span className="text-gray-500">Disconnected</span>
-                  </>
-                )}
-              </div>
-            </div>
+            {mode !== 'offline' ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <span>Cloud Sync</span>
+                  <div className="flex items-center gap-1">
+                    {syncState?.isConnected ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        <span className="text-green-500">Connected</span>
+                      </>
+                    ) : (
+                      <>
+                        <CloudOff className="h-3 w-3 text-gray-500" />
+                        <span className="text-gray-500">Disconnected</span>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            {syncState?.currentUser && (
-              <div className="flex items-center justify-between">
-                <span>Signed in as</span>
-                <span className="text-xs bg-muted px-2 py-1 rounded">
-                  {syncState.currentUser.email}
-                </span>
+                {syncState?.currentUser?.userId && (
+                  <div className="flex items-center justify-between">
+                    <span>Signed in as</span>
+                    <span className="text-xs bg-muted px-2 py-1 rounded">
+                      {syncState.currentUser.email}
+                    </span>
+                  </div>
+                )}
+
+                {syncState?.currentUser?.userId && (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button size="sm" variant="outline" onClick={handleShowModeSelection}>Switch Mode</Button>
+                    <Button size="sm" variant="ghost" onClick={handleLogout}>Sign out</Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  You are using Domus in offline-only mode. To enable sync, switch back to the setup screen.
+                </p>
+                <Button size="sm" variant="outline" onClick={handleShowModeSelection}>
+                  Switch to Setup
+                </Button>
               </div>
             )}
 

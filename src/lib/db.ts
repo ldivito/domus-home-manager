@@ -266,34 +266,34 @@ export class DomusDatabase extends Dexie {
   homeSettings!: Table<HomeSettings>
 
   constructor() {
-    super('DomusDatabase')
+    super('DomusDatabase', { addons: [dexieCloud] })
     
     // Configure Dexie Cloud
-    this.addons([dexieCloud])
-    
-    // Cloud configuration
     this.cloud.configure({
-      databaseUrl: process.env.NEXT_PUBLIC_DEXIE_CLOUD_URL || 'https://dexie.cloud',
-      tryUseServiceWorker: false // Disable for Next.js compatibility
+      databaseUrl: process.env.NEXT_PUBLIC_DEXIE_CLOUD_URL || 'https://znr86uysz.dexie.cloud',
+      tryUseServiceWorker: false, // Disable for Next.js compatibility
+      requireAuth: true, // Require authentication for all operations
+      unsyncedTables: [], // All tables are synced
+      customLoginGui: true // Disable default login GUI - we handle it ourselves
     })
 
     // v11: Add Dexie Cloud support with household management
     this.version(11).stores({
-      users: '@id, name, email, color, type, householdId',
-      households: '@id, name, owner, createdAt, updatedAt',
-      householdMembers: '@id, householdId, userId, role, joinedAt',
-      chores: '@id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: '@id, name, householdId, category, importance, addedBy, createdAt',
-      groceryCategories: '@id, name, householdId, isDefault, locale, createdAt',
-      savedGroceryItems: '@id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: '@id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: '@id, title, householdId, status, assignedUserId, priority, createdAt',
-      meals: '@id, title, householdId, date, mealType, assignedUserId',
-      mealCategories: '@id, name, householdId, isDefault, locale, createdAt',
-      savedMeals: '@id, name, householdId, category, timesUsed, lastUsed, createdAt',
-      reminders: '@id, title, householdId, reminderTime, isCompleted, userId, type',
-      calendarEvents: '@id, title, householdId, date, type',
-      homeSettings: '@id, householdId, homeName, lastUpdated, createdAt'
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt'
     })
     
     // Migration from local storage to cloud (v11 upgrade)
@@ -345,7 +345,7 @@ export class DomusDatabase extends Dexie {
       for (const evt of events) {
         const updates: Partial<CalendarEvent> = {}
         if (evt.userId && !evt.userIds) {
-          updates.userIds = [evt.userId]
+          updates.userIds = [String(evt.userId)]
         }
         if (!evt.createdAt) {
           updates.createdAt = new Date()
@@ -434,21 +434,29 @@ export class DomusDatabase extends Dexie {
       }
     })
 
-    // Populate default categories (now household-specific)
+    // Initialize cloud connection and sync
     this.on('ready', async () => {
-      // Note: Default categories will now be created per-household
-      // This seeding will be handled by the household setup process
       console.log('Database ready with Dexie Cloud support')
+      
+      try {
+        // Ensure cloud sync is enabled
+        const url = this.cloud?.options?.databaseUrl
+        if (url && !url.includes('localhost')) {
+          console.log('Connecting to Dexie Cloud:', url)
+        }
+      } catch (error) {
+        console.warn('Dexie Cloud connection issue:', error)
+      }
     })
   }
 
   // Helper methods for household management
   async getCurrentUserHouseholdId(): Promise<string | null> {
     try {
-      const currentUser = await this.cloud.currentUser
+      const currentUser = this.cloud.currentUser.value
       if (!currentUser?.userId) return null
       
-      const user = await this.users.get(currentUser.userId)
+      const user = await this.users.get(`usr_${currentUser.userId}`)
       return user?.householdId || null
     } catch (error) {
       console.error('Error getting current user household:', error)
@@ -457,12 +465,13 @@ export class DomusDatabase extends Dexie {
   }
 
   async createHousehold(name: string, description?: string): Promise<string> {
-    const currentUser = await this.cloud.currentUser
+    const currentUser = this.cloud.currentUser.value
     if (!currentUser?.userId) {
       throw new Error('User must be authenticated to create household')
     }
 
-    const householdId = crypto.randomUUID()
+    const householdId = `hsh_${crypto.randomUUID()}`
+    const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase()
     const now = new Date()
 
     // Create household
@@ -472,13 +481,14 @@ export class DomusDatabase extends Dexie {
       description,
       owner: currentUser.userId,
       members: [currentUser.userId],
+      inviteCode,
       createdAt: now,
       updatedAt: now
     })
 
     // Add user as household owner
     await this.householdMembers.add({
-      id: crypto.randomUUID(),
+      id: `hmbr_${crypto.randomUUID()}`,
       householdId,
       userId: currentUser.userId,
       role: 'owner',
@@ -491,7 +501,7 @@ export class DomusDatabase extends Dexie {
     })
 
     // Update user's household ID
-    await this.users.update(currentUser.userId, { householdId })
+    await this.users.update(`usr_${currentUser.userId}`, { householdId })
 
     // Create default categories for this household
     await this.seedDefaultCategories(householdId)
@@ -504,32 +514,120 @@ export class DomusDatabase extends Dexie {
     
     // Add default grocery categories
     await this.groceryCategories.bulkAdd([
-      { id: crypto.randomUUID(), name: 'defaultCategories.produce', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultCategories.household', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.produce', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.household', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
     ])
 
     // Add default meal categories
     await this.mealCategories.bulkAdd([
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: crypto.randomUUID(), name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
+      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
     ])
   }
 }
 
-export const db = new DomusDatabase()
+// Local-only database (no cloud addon). Used when in offline mode.
+export class LocalDomusDatabase extends Dexie {
+  users!: Table<User>
+  households!: Table<Household>
+  householdMembers!: Table<HouseholdMember>
+  chores!: Table<Chore>
+  groceryItems!: Table<GroceryItem>
+  groceryCategories!: Table<GroceryCategory>
+  savedGroceryItems!: Table<SavedGroceryItem>
+  tasks!: Table<Task>
+  homeImprovements!: Table<HomeImprovement>
+  meals!: Table<Meal>
+  mealCategories!: Table<MealCategory>
+  savedMeals!: Table<SavedMeal>
+  reminders!: Table<Reminder>
+  calendarEvents!: Table<CalendarEvent>
+  homeSettings!: Table<HomeSettings>
+
+  constructor() {
+    super('DomusLocalDatabase')
+
+    // Use same v11 schema but without cloud
+    this.version(11).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt'
+    })
+
+    this.on('ready', async () => {
+      try {
+        // Optional: seed nothing by default; users can create their own
+        // console.log('Local database ready')
+      } catch (err) {
+        console.warn('Local DB init error:', err)
+      }
+    })
+  }
+}
+
+function getInitialMode(): 'cloud' | 'offline' {
+  if (typeof window === 'undefined') return 'cloud'
+  const mode = localStorage.getItem('domusMode')
+  return mode === 'offline' ? 'offline' : 'cloud'
+}
+
+let currentMode: 'cloud' | 'offline' = getInitialMode()
+let currentDb: DomusDatabase | LocalDomusDatabase =
+  currentMode === 'offline' ? new LocalDomusDatabase() : new DomusDatabase()
+
+// Proxy so `db.*` always routes to the active database instance
+export const db = new Proxy({} as DomusDatabase & LocalDomusDatabase, {
+  get(_target, prop) {
+    return (currentDb as unknown as Record<string | symbol, unknown>)[prop as string]
+  },
+  set(_target, prop, value) {
+    ;(currentDb as unknown as Record<string | symbol, unknown>)[prop as string] = value
+    return true
+  },
+})
+
+export function switchDbMode(mode: 'cloud' | 'offline') {
+  if (mode === currentMode) return
+  try { localStorage.setItem('domusMode', mode) } catch {}
+  try {
+    // Close previous instance to free resources
+    ;(currentDb as unknown as { close?: () => void }).close?.()
+  } catch {}
+  currentDb = mode === 'offline' ? new LocalDomusDatabase() : new DomusDatabase()
+  currentMode = mode
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('domus:db-switched', { detail: { mode } }))
+  }
+}
+
+export function getDbMode() {
+  return currentMode
+}

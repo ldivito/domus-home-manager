@@ -11,7 +11,7 @@ interface EventPillProps {
   event: CalendarEvent
   source: PlannerSource
   typeLabel?: string
-  usersById: Record<number, User>
+  usersById: Record<string, User>
   onView: (payload: { event: CalendarEvent; source: PlannerSource }) => void
   onEdit: (payload: { event: CalendarEvent; source: PlannerSource }) => void
   compact?: boolean

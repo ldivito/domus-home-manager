@@ -1,12 +1,13 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/lib/db'
+import { db, switchDbMode, getDbMode } from '@/lib/db'
 import CloudAuth from './CloudAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Shield, Cloud } from 'lucide-react'
+import { useDexieCloud } from '@/hooks/useDexieCloud'
 
 interface AuthWrapperProps {
   children: React.ReactNode
@@ -15,21 +16,68 @@ interface AuthWrapperProps {
 export default function AuthWrapper({ children }: AuthWrapperProps) {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [useOfflineMode, setUseOfflineMode] = useState(false)
+  const [mode, setMode] = useState<"cloud" | "offline" | null>(null)
+  const [initializing, setInitializing] = useState(true)
+  const [authJustSucceeded, setAuthJustSucceeded] = useState(false)
 
-  // Check authentication state
-  const currentUser = useLiveQuery(async () => {
-    try {
-      return await db.cloud.currentUser
-    } catch (error) {
-      console.error('Error checking authentication:', error)
-      return null
+  // Persisted mode preference and cross-component switching
+  useEffect(() => {
+    const storedMode = typeof window !== 'undefined' ? localStorage.getItem('domusMode') : null
+    if (storedMode === 'offline') {
+      setUseOfflineMode(true)
     }
-  })
+    if (storedMode === 'cloud' || storedMode === 'offline') {
+      setMode(storedMode)
+    }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'domusMode') {
+        setUseOfflineMode(e.newValue === 'offline')
+        if (e.newValue === 'cloud' || e.newValue === 'offline') {
+          setMode(e.newValue)
+          // Switch DB immediately so reactive queries use the right instance
+          switchDbMode(e.newValue as 'cloud' | 'offline')
+        }
+      }
+    }
+
+    const onShowMode = () => {
+      // Switch to initial mode selection screen
+      setUseOfflineMode(false)
+      setShowAuthModal(false)
+      setMode(null)
+    }
+
+    window.addEventListener('storage', onStorage)
+    const onDbSwitched = () => {
+      const active = getDbMode()
+      setUseOfflineMode(active === 'offline')
+      setMode(active)
+    }
+    window.addEventListener('domus:db-switched', onDbSwitched as EventListener)
+    const onAuthSuccess = () => {
+      setAuthJustSucceeded(true)
+      // Auto-clear after short delay; wrapper will render app content
+      setTimeout(() => setAuthJustSucceeded(false), 3000)
+    }
+    window.addEventListener('domus:authSuccess', onAuthSuccess as EventListener)
+    window.addEventListener('domus:showMode', onShowMode as EventListener)
+    setInitializing(false)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('domus:db-switched', onDbSwitched as EventListener)
+      window.removeEventListener('domus:authSuccess', onAuthSuccess as EventListener)
+      window.removeEventListener('domus:showMode', onShowMode as EventListener)
+    }
+  }, [])
+
+  // Reactive auth state via Dexie Cloud
+  const { currentUser } = useDexieCloud()
 
   const userProfile = useLiveQuery(async () => {
     if (!currentUser?.userId) return null
     try {
-      return await db.users.get(currentUser.userId)
+      return await db.users.get(`usr_${currentUser.userId}`)
     } catch (error) {
       console.error('Error getting user profile:', error)
       return null
@@ -46,14 +94,55 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     }
   }, [userProfile?.householdId])
 
+  // Avoid flicker of selection screen before mode is resolved on client
+  if (initializing) {
+    return <div className="min-h-screen bg-background" />
+  }
+
   // If user chooses offline mode, render app without authentication
-  if (useOfflineMode) {
-    return <>{children}</>
+  if (useOfflineMode || mode === 'offline') {
+    // Force remount on mode change so all hooks re-bind to the new DB instance
+    return <div key={`app-${mode}`}>{children}</div>
+  }
+
+  // Cloud mode: if not fully set up, keep showing CloudAuth instead of selection
+  const shouldShowCloudAuth = mode === 'cloud' && !authJustSucceeded && (!currentUser || !userProfile || !userHousehold || showAuthModal)
+  
+  if (shouldShowCloudAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <CloudAuth 
+            onAuthSuccess={() => setShowAuthModal(false)} 
+            onBackToOffline={() => {
+              setUseOfflineMode(true)
+              setMode('offline')
+              setShowAuthModal(false)
+            }}
+            onBackToModeSelection={() => {
+              setMode(null)
+              setShowAuthModal(false)
+            }}
+          />
+          {!currentUser && !authJustSucceeded && (
+            <div className="mt-6">
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowAuthModal(false)}
+                className="w-full"
+              >
+                Back
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   // If user is fully authenticated and set up, render the app
-  if (currentUser && userProfile && userHousehold) {
-    return <>{children}</>
+  if (mode === 'cloud' && currentUser && userProfile && userHousehold) {
+    return <div key={`app-${mode}`}>{children}</div>
   }
 
   // Show authentication UI
@@ -61,7 +150,18 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <CloudAuth onAuthSuccess={() => setShowAuthModal(false)} />
+          <CloudAuth 
+            onAuthSuccess={() => setShowAuthModal(false)} 
+            onBackToOffline={() => {
+              setUseOfflineMode(true)
+              setMode('offline')
+              setShowAuthModal(false)
+            }}
+            onBackToModeSelection={() => {
+              setMode(null)
+              setShowAuthModal(false)
+            }}
+          />
           
           <div className="mt-6">
             <Button 
@@ -77,8 +177,8 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     )
   }
 
-  // Show mode selection screen
-  return (
+  // Show mode selection screen only when no mode chosen yet
+  if (mode === null) return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center space-y-2">
@@ -91,7 +191,12 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
         <div className="grid gap-4 md:grid-cols-2">
           {/* Cloud Sync Option */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary/50" 
-                onClick={() => setShowAuthModal(true)}>
+                onClick={() => {
+                  try { localStorage.setItem('domusMode', 'cloud') } catch {}
+                  switchDbMode('cloud')
+                  setMode('cloud')
+                  setShowAuthModal(true)
+                }}>
             <CardHeader className="text-center pb-3">
               <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3">
                 <Cloud className="h-6 w-6 text-primary" />
@@ -124,7 +229,12 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 
           {/* Offline Mode Option */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary/50"
-                onClick={() => setUseOfflineMode(true)}>
+                onClick={() => {
+                  try { localStorage.setItem('domusMode', 'offline') } catch {}
+                  switchDbMode('offline')
+                  setUseOfflineMode(true)
+                  setMode('offline')
+                }}>
             <CardHeader className="text-center pb-3">
               <div className="mx-auto w-12 h-12 bg-muted/50 rounded-full flex items-center justify-center mb-3">
                 <Shield className="h-6 w-6 text-muted-foreground" />
@@ -162,4 +272,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
       </div>
     </div>
   )
+
+  // Fallback (should not reach): render children
+  return <>{children}</>
 }

@@ -10,7 +10,7 @@ interface EventDetailsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   event: CalendarEvent | null
-  usersById: Record<number, User>
+  usersById: Record<string, User>
   onEdit: (event: CalendarEvent) => void
   onDelete: (event: CalendarEvent) => void
 }

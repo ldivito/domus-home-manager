@@ -105,7 +105,7 @@ export function ManageSavedItemsDialog({ open, onOpenChange, categories }: Manag
     setEditImportance('medium')
   }
 
-  const handleDelete = async (itemId: number) => {
+  const handleDelete = async (itemId: string) => {
     try {
       await db.savedGroceryItems.delete(itemId)
     } catch (error) {

@@ -15,7 +15,7 @@ import { CalendarDays, Clock, Edit, User as UserIcon } from "lucide-react"
 interface EditChoreModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onEditChore: (choreId: number, choreData: Partial<Chore>) => void
+  onEditChore: (choreId: string, choreData: Partial<Chore>) => void
   chore: Chore | null
 }
 
@@ -86,7 +86,7 @@ export function EditChoreModal({ open, onOpenChange, onEditChore, chore }: EditC
       const updatedChore: Partial<Chore> = {
         title: title.trim(),
         description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== "none" ? parseInt(assignedUserId) : undefined,
+        assignedUserId: assignedUserId && assignedUserId !== "none" ? assignedUserId : undefined,
         frequency,
         customFrequency: frequency === 'custom' ? {
           type: customType,

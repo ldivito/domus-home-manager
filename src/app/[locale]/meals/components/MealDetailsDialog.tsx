@@ -38,7 +38,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
   const [editDescription, setEditDescription] = useState('')
   const [editMealType, setEditMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('dinner')
   const [editDate, setEditDate] = useState('')
-  const [editIngredientIds, setEditIngredientIds] = useState<number[]>([])
+  const [editIngredientIds, setEditIngredientIds] = useState<string[]>([])
   const [newIngredient, setNewIngredient] = useState('')
   const [newIngredientAmount, setNewIngredientAmount] = useState('')
   const [newIngredientCategory, setNewIngredientCategory] = useState('')
@@ -192,13 +192,13 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
     }
   }
 
-  const handleAddIngredient = (savedItemId: number) => {
+  const handleAddIngredient = (savedItemId: string) => {
     if (savedItemId && !editIngredientIds.includes(savedItemId)) {
       setEditIngredientIds([...editIngredientIds, savedItemId])
     }
   }
 
-  const handleRemoveIngredient = (ingredientIdToRemove: number) => {
+  const handleRemoveIngredient = (ingredientIdToRemove: string) => {
     setEditIngredientIds(editIngredientIds.filter(id => id !== ingredientIdToRemove))
   }
 
@@ -303,7 +303,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
               {/* Add from existing */}
               <div>
                 <Label className="text-xs text-gray-600">Add from saved items</Label>
-                <Select onValueChange={(value) => handleAddIngredient(parseInt(value))}>
+                <Select onValueChange={(value) => handleAddIngredient(value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select ingredient" />
                   </SelectTrigger>

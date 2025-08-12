@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2, Edit2, Palette } from "lucide-react"
 import { db, GroceryCategory } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 
 interface ManageCategoriesDialogProps {
   open: boolean
@@ -42,6 +43,7 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
     setIsSubmitting(true)
     try {
       await db.groceryCategories.add({
+        id: generateId('gcat'),
         name: newCategoryName.trim(),
         color: selectedColor,
         isDefault: false,
@@ -102,7 +104,7 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
     return categoryName
   }
 
-  const handleDeleteCategory = async (categoryId: number, isDefault: boolean) => {
+  const handleDeleteCategory = async (categoryId: string, isDefault: boolean) => {
     if (isDefault) {
       alert(t('cannotDeleteDefault'))
       return

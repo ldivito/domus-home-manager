@@ -62,7 +62,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
       await db.tasks.update(task.id, {
         title: title.trim(),
         description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? parseInt(assignedUserId) : undefined,
+        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
         dueDate: dueDate,
         priority,
       })

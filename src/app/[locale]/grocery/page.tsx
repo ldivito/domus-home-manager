@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db, GroceryItem, SavedGroceryItem } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddItemDialog } from './components/AddItemDialog'
 import { ManageCategoriesDialog } from './components/ManageCategoriesDialog'
@@ -43,14 +44,15 @@ export default function GroceryPage() {
     []
   ) || []
 
-  const handleBought = async (itemId: number) => {
+  const handleBought = async (itemId: string) => {
     await db.groceryItems.delete(itemId)
   }
 
   const handleAddSavedItem = async (savedItem: SavedGroceryItem) => {
     try {
       // Always add to current grocery list (allow duplicates)
-      await db.groceryItems.add({
+    await db.groceryItems.add({
+      id: generateId('gri'),
         name: savedItem.name,
         category: savedItem.category,
         amount: savedItem.amount || '',

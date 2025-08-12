@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from 'next/link'
 import { db } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from 'sonner'
 
@@ -80,7 +81,7 @@ export default function HomePage() {
     []
   ) || []
 
-  const completedChore = async (choreId: number) => {
+  const completedChore = async (choreId: string) => {
     try {
       const chore = await db.chores.get(choreId)
       if (chore) {
@@ -123,6 +124,7 @@ export default function HomePage() {
     setIsAddingGrocery(true)
     try {
       await db.groceryItems.add({
+        id: generateId('gri'),
         name: quickGroceryItem.trim(),
         category: 'defaultCategories.pantry',
         amount: '1',
@@ -140,13 +142,13 @@ export default function HomePage() {
     }
   }
 
-  const getUserName = (userId?: number) => {
+  const getUserName = (userId?: string) => {
     if (!userId) return tCommon('notAssigned')
     const user = users.find(u => u.id === userId)
     return user?.name || tCommon('notAssigned')
   }
 
-  const getUserColor = (userId?: number) => {
+  const getUserColor = (userId?: string) => {
     if (!userId) return 'bg-gray-500'
     const user = users.find(u => u.id === userId)
     return user?.color || 'bg-gray-500'

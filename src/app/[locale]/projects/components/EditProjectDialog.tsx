@@ -60,7 +60,7 @@ export function EditProjectDialog({ open, onOpenChange, project, users }: EditPr
       await db.homeImprovements.update(project.id, {
         title: title.trim(),
         description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? parseInt(assignedUserId) : undefined,
+        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
         estimatedCost: estimatedCost ? parseFloat(estimatedCost) : undefined,
         priority,
         status,

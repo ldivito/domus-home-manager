@@ -17,7 +17,7 @@ interface Notification {
   type: 'chore' | 'task'
   priority: 'high' | 'medium' | 'low'
   triggerTime: Date
-  sourceId: number
+  sourceId: string
   sourcePage: string
   isRead: boolean
 }

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { db, HomeSettings } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -97,7 +98,7 @@ export default function SettingsPage() {
       if (homeSettings.id) {
         await db.homeSettings.update(homeSettings.id, settingsToSave)
       } else {
-        await db.homeSettings.add(settingsToSave)
+        await db.homeSettings.add({ ...settingsToSave, id: generateId('hst') })
       }
       
       setHomeSettings(settingsToSave)
@@ -332,8 +333,8 @@ export default function SettingsPage() {
                     {isEditingHome ? (
                       <Select
                         value={homeSettings.homeType || ''}
-                        onValueChange={(value: HomeSettings['homeType']) => 
-                          setHomeSettings({ ...homeSettings, homeType: value })
+                        onValueChange={(value: string) => 
+                          setHomeSettings({ ...homeSettings, homeType: value as HomeSettings['homeType'] })
                         }
                       >
                         <SelectTrigger>

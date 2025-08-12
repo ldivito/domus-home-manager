@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User } from "lucide-react"
-import { db, User as UserType } from '@/lib/db'
+import { db, User as UserType, HomeImprovement } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 
 interface AddProjectDialogProps {
   open: boolean
@@ -44,15 +45,18 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
     setIsSubmitting(true)
     
     try {
-      await db.homeImprovements.add({
+      const project: HomeImprovement = {
+        id: generateId('prj'),
         title: title.trim(),
         description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? parseInt(assignedUserId) : undefined,
+        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
         estimatedCost: estimatedCost ? parseFloat(estimatedCost) : undefined,
         priority,
         status,
         createdAt: new Date()
-      })
+      }
+
+      await db.homeImprovements.add(project)
 
       // Reset form
       setTitle('')

@@ -17,7 +17,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, User } from "lucide-react"
 import { format } from "date-fns"
-import { db, User as UserType } from '@/lib/db'
+import { db, User as UserType, Task } from '@/lib/db'
+import { generateId } from '@/lib/utils'
 import { cn } from "@/lib/utils"
 
 interface AddTaskDialogProps {
@@ -47,15 +48,18 @@ export function AddTaskDialog({ open, onOpenChange, users }: AddTaskDialogProps)
     setIsSubmitting(true)
     
     try {
-      await db.tasks.add({
+      const task: Task = {
+        id: generateId('tsk'),
         title: title.trim(),
         description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? parseInt(assignedUserId) : undefined,
+        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
         dueDate: dueDate,
         priority,
         isCompleted: false,
         createdAt: new Date()
-      })
+      }
+
+      await db.tasks.add(task)
 
       // Reset form
       setTitle('')

@@ -91,7 +91,7 @@ export function AddChoreModal({ open, onOpenChange, onCreateChore }: AddChoreMod
       const newChore: Omit<Chore, 'id' | 'createdAt'> = {
         title: title.trim(),
         description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== "none" ? parseInt(assignedUserId) : undefined,
+        assignedUserId: assignedUserId && assignedUserId !== "none" ? assignedUserId : undefined,
         frequency,
         customFrequency: frequency === 'custom' ? {
           type: customType,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 import { db } from '@/lib/db'
 import { useDexieCloud } from '@/hooks/useDexieCloud'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 
-export default function SyncStatus() {
+export default function SyncStatus({ compact = false }: { compact?: boolean }) {
   const [isOnline, setIsOnline] = useState(true)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [mode, setMode] = useState<string | null>(null)
@@ -139,11 +140,19 @@ export default function SyncStatus() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button
+          variant="ghost"
+          size={compact ? 'icon' : 'sm'}
+          className={cn(!compact && 'gap-2')}
+          title={getStatusText()}
+        >
           {getSyncIcon()}
-          <Badge variant={getStatusVariant()}>
-            {getStatusText()}
-          </Badge>
+          {!compact && (
+            <Badge variant={getStatusVariant()}>
+              {getStatusText()}
+            </Badge>
+          )}
+          <span className="sr-only">{getStatusText()}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end">

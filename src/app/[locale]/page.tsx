@@ -1,10 +1,7 @@
 'use client'
-
-import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { 
@@ -21,7 +18,7 @@ import {
 } from "lucide-react"
 import Link from 'next/link'
 import { db } from '@/lib/db'
-import { generateId } from '@/lib/utils'
+// import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from 'sonner'
 
@@ -34,8 +31,7 @@ export default function HomePage() {
   const tTasks = useTranslations('tasks')
   const tProjects = useTranslations('projects')
   const tUsers = useTranslations('users')
-  const [quickGroceryItem, setQuickGroceryItem] = useState('')
-  const [isAddingGrocery, setIsAddingGrocery] = useState(false)
+  // Compact dashboard: removed quick-add state
 
   // Live data queries
   const users = useLiveQuery(() => db.users.toArray(), []) || []
@@ -53,7 +49,7 @@ export default function HomePage() {
   )
   
   const groceryItems = useLiveQuery(
-    () => db.groceryItems.orderBy('createdAt').reverse().limit(5).toArray(),
+    () => db.groceryItems.orderBy('createdAt').reverse().limit(6).toArray(),
     []
   ) || []
   
@@ -118,29 +114,7 @@ export default function HomePage() {
     }
   }
 
-  const addQuickGroceryItem = async () => {
-    if (!quickGroceryItem.trim()) return
-    
-    setIsAddingGrocery(true)
-    try {
-      await db.groceryItems.add({
-        id: generateId('gri'),
-        name: quickGroceryItem.trim(),
-        category: 'defaultCategories.pantry',
-        amount: '1',
-        importance: 'medium',
-        createdAt: new Date()
-      })
-      
-      setQuickGroceryItem('')
-      toast.success(tHome('widgets.grocery.added'))
-    } catch (error) {
-      console.error('Error adding grocery item:', error)
-      toast.error(tHome('widgets.grocery.error'))
-    } finally {
-      setIsAddingGrocery(false)
-    }
-  }
+  // Quick-add removed for compact layout
 
   const getUserName = (userId?: string) => {
     if (!userId) return tCommon('notAssigned')
@@ -171,12 +145,40 @@ export default function HomePage() {
 
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="h-full max-w-7xl mx-auto p-6 flex flex-col">
-        {/* Widgets Grid */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 min-h-0">
+      <div className="h-full max-w-[1400px] mx-auto p-6 flex flex-col gap-4">
+        {/* Top Stats Strip */}
+        <div className="grid grid-cols-12 gap-4">
+          <Card className="col-span-12 sm:col-span-6 lg:col-span-3">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm text-muted-foreground">Open Tasks</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 text-3xl font-bold">{upcomingTasks.length}</CardContent>
+          </Card>
+          <Card className="col-span-12 sm:col-span-6 lg:col-span-3">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm text-muted-foreground">Grocery Items</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 text-3xl font-bold">{groceryItems.length}</CardContent>
+          </Card>
+          <Card className="col-span-12 sm:col-span-6 lg:col-span-3">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm text-muted-foreground">Meals Today</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 text-3xl font-bold">{todaysMeals.length}</CardContent>
+          </Card>
+          <Card className="col-span-12 sm:col-span-6 lg:col-span-3">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm text-muted-foreground">Active Members</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 text-3xl font-bold">{users.length}</CardContent>
+          </Card>
+        </div>
+
+        {/* Mosaic Grid */}
+        <div className="flex-1 grid grid-cols-12 auto-rows-[1fr] gap-4 min-h-0">
           
           {/* Next Chore Widget */}
-          <Card className="glass-card shadow-modern hover:shadow-modern-lg transition-all duration-300 group flex flex-col min-h-0">
+          <Card className="glass-card shadow-modern transition-all duration-300 group flex flex-col min-h-0 col-span-12 md:col-span-6 xl:col-span-4">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3 text-xl">
@@ -190,57 +192,44 @@ export default function HomePage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 space-y-6 overflow-auto min-h-0">
+            <CardContent className="flex-1 space-y-4 overflow-auto min-h-0">
               {nextChore ? (
                 <div className="space-y-5">
-                  <div className="p-4 bg-gradient-to-r from-blue-500/5 to-blue-600/5 rounded-xl border border-blue-200/50">
-                    <h3 className="font-bold text-xl mb-2 text-blue-900 dark:text-blue-100">{nextChore.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{nextChore.description || 'No description provided'}</p>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-3 bg-gradient-to-r from-blue-500/5 to-blue-600/5 rounded-lg border border-blue-200/50">
+                    <h3 className="font-semibold text-base mb-1 text-blue-900 dark:text-blue-100 truncate">{nextChore.title}</h3>
+                    <div className="grid grid-cols-2 gap-3 mb-2">
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-blue-500" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Due Time</p>
-                          <p className="font-medium text-sm">{nextChore.nextDue ? formatDate(new Date(nextChore.nextDue)) : 'Not scheduled'}</p>
+                          <p className="text-[10px] text-muted-foreground">Due</p>
+                          <p className="font-medium text-xs">{nextChore.nextDue ? formatDate(new Date(nextChore.nextDue)) : 'Not scheduled'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Avatar className={`h-8 w-8 ${getUserColor(nextChore.assignedUserId)}`}>
-                          <AvatarFallback className="text-white text-sm font-bold">
+                        <Avatar className={`h-6 w-6 ${getUserColor(nextChore.assignedUserId)}`}>
+                          <AvatarFallback className="text-white text-xs font-bold">
                             {getUserName(nextChore.assignedUserId).charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-xs text-muted-foreground">Assigned to</p>
-                          <p className="font-medium text-sm">{getUserName(nextChore.assignedUserId)}</p>
+                          <p className="text-[10px] text-muted-foreground">Assigned</p>
+                          <p className="font-medium text-xs truncate max-w-[120px]">{getUserName(nextChore.assignedUserId)}</p>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="bg-blue-500/10 rounded-lg p-3 mb-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-700">Frequency</span>
-                        <Badge className="bg-blue-100 text-blue-800">
-                           {tChores(`frequency.${nextChore.frequency}`)}
-                        </Badge>
-                      </div>
-                    </div>
+                    {/* Frequency section removed for compactness */}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <Button 
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                      className="flex-1 h-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                       onClick={() => completedChore(nextChore.id!)}
                     >
-                      <Check className="h-4 w-4 mr-2" />
+                      <Check className="h-3 w-3 mr-2" />
                       {tHome('widgets.chores.complete')}
                     </Button>
                     <Link href="/chores">
-                      <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New
-                      </Button>
+                      <Button variant="outline" className="h-8 w-full border-blue-200 text-blue-600 hover:bg-blue-50">View</Button>
                     </Link>
                   </div>
                 </div>
@@ -262,7 +251,7 @@ export default function HomePage() {
           </Card>
 
           {/* Shopping List Widget */}
-          <Card className="glass-card shadow-modern hover:shadow-modern-lg transition-all duration-300 group flex flex-col min-h-0">
+          <Card className="glass-card shadow-modern transition-all duration-300 group flex flex-col min-h-0 col-span-12 md:col-span-6 xl:col-span-4">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3 text-xl">
@@ -276,47 +265,26 @@ export default function HomePage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 space-y-6 overflow-auto min-h-0">
-              {/* Quick Add Section */}
-              <div className="p-4 bg-gradient-to-r from-green-500/5 to-green-600/5 rounded-xl border border-green-200/50">
-                <h4 className="font-semibold text-green-700 mb-3">Quick Add</h4>
-                <div className="flex gap-2 mb-3">
-                  <Input
-                    placeholder={tHome('widgets.grocery.placeholder')}
-                    value={quickGroceryItem}
-                    onChange={(e) => setQuickGroceryItem(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addQuickGroceryItem()}
-                    className="border-green-200 focus:border-green-400"
-                  />
-                  <Button 
-                    onClick={addQuickGroceryItem}
-                    disabled={isAddingGrocery || !quickGroceryItem.trim()}
-                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Recent Items */}
-              <div className="space-y-3">
+            <CardContent className="flex-1 space-y-4 overflow-auto min-h-0">
+              {/* Recent Items Compact */}
+              <div className="space-y-2">
                 <h4 className="font-semibold text-foreground flex items-center gap-2">
                   <Clock className="h-4 w-4 text-green-600" />
                   Recent Items
                 </h4>
                 {groceryItems.length > 0 ? (
-                  <div className="space-y-2">
-                    {groceryItems.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="grid grid-cols-2 gap-2">
+                    {groceryItems.slice(0, 6).map((item) => (
+                      <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                         <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ${
                           item.importance === 'high' ? 'bg-red-500' : 
                           item.importance === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
                         }`} />
-                        <div className="flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          <p className="text-xs text-muted-foreground">{item.amount}</p>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm truncate block">{item.name}</span>
+                          <p className="text-[10px] text-muted-foreground truncate">{item.amount}</p>
                         </div>
-                        <Badge className={`text-xs ${
+                        <Badge className={`text-[10px] ${
                           item.importance === 'high' ? 'bg-red-100 text-red-700' : 
                           item.importance === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
                         }`}>
@@ -324,9 +292,9 @@ export default function HomePage() {
                         </Badge>
                       </div>
                     ))}
-                    {groceryItems.length > 3 && (
+                    {groceryItems.length > 6 && (
                       <div className="text-center py-2">
-                        <span className="text-sm text-muted-foreground">+{groceryItems.length - 3} more items</span>
+                        <span className="text-sm text-muted-foreground">+{groceryItems.length - 6} more items</span>
                       </div>
                     )}
                   </div>
@@ -341,9 +309,9 @@ export default function HomePage() {
               </div>
               
               <Link href="/grocery">
-                <Button variant="outline" className="w-full border-green-200 text-green-600 hover:bg-green-50">
+                <Button variant="outline" className="h-8 w-full border-green-200 text-green-600 hover:bg-green-50 text-sm">
                   {tHome('widgets.grocery.viewAll')}
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-3 w-3 ml-2" />
                 </Button>
               </Link>
             </CardContent>

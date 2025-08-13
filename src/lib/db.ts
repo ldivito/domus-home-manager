@@ -270,11 +270,11 @@ export class DomusDatabase extends Dexie {
     
     // Configure Dexie Cloud
     this.cloud.configure({
-      databaseUrl: process.env.NEXT_PUBLIC_DEXIE_CLOUD_URL || 'https://znr86uysz.dexie.cloud',
-      tryUseServiceWorker: false, // Disable for Next.js compatibility
-      requireAuth: true, // Require authentication for all operations
-      unsyncedTables: [], // All tables are synced
-      customLoginGui: true // Disable default login GUI - we handle it ourselves
+      databaseUrl: process.env.NEXT_PUBLIC_DEXIE_CLOUD_URL || 'https://zjuoc6zhr.dexie.cloud',
+      tryUseServiceWorker: process.env.NEXT_PUBLIC_DEXIE_USE_SERVICE_WORKER === 'true' || false, // Disable for Next.js compatibility
+      requireAuth: process.env.NEXT_PUBLIC_DEXIE_REQUIRE_AUTH !== 'false', // Require authentication for all operations
+      unsyncedTables: process.env.NEXT_PUBLIC_DEXIE_UNSYNCED_TABLES?.split(',').filter(Boolean) || [], // All tables are synced by default
+      customLoginGui: process.env.NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI !== 'false' // Disable default login GUI - we handle it ourselves
     })
 
     // v11: Add Dexie Cloud support with household management

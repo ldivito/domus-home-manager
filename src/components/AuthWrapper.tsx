@@ -77,7 +77,17 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   const userProfile = useLiveQuery(async () => {
     if (!currentUser?.userId) return null
     try {
-      return await db.users.get(`usr_${currentUser.userId}`)
+      // Try both with and without 'usr_' prefix to be resilient across data states
+      const withPrefix = await db.users.get(`usr_${currentUser.userId}`)
+      if (withPrefix) return withPrefix
+      const withoutPrefix = await db.users.get(currentUser.userId)
+      if (withoutPrefix) return withoutPrefix
+      // Fallback: look up by email index if available
+      if (currentUser.email) {
+        const byEmail = await db.users.where('email').equals(currentUser.email).first()
+        if (byEmail) return byEmail
+      }
+      return null
     } catch (error) {
       console.error('Error getting user profile:', error)
       return null
@@ -105,15 +115,19 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     return <div key={`app-${mode}`}>{children}</div>
   }
 
-  // Cloud mode: if not fully set up, keep showing CloudAuth instead of selection
-  const shouldShowCloudAuth = mode === 'cloud' && !authJustSucceeded && (!currentUser || !userProfile || !userHousehold || showAuthModal)
+  // Cloud mode: check if user is fully authenticated and set up
+  const isFullySetup = currentUser && userProfile && userHousehold
   
-  if (shouldShowCloudAuth) {
+  // If cloud mode and not fully set up, show auth
+  if (mode === 'cloud' && !isFullySetup && !authJustSucceeded) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <CloudAuth 
-            onAuthSuccess={() => setShowAuthModal(false)} 
+            onAuthSuccess={() => {
+              setShowAuthModal(false)
+              setAuthJustSucceeded(true)
+            }} 
             onBackToOffline={() => {
               setUseOfflineMode(true)
               setMode('offline')
@@ -124,11 +138,14 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
               setShowAuthModal(false)
             }}
           />
-          {!currentUser && !authJustSucceeded && (
+          {!currentUser && (
             <div className="mt-6">
               <Button 
                 variant="ghost" 
-                onClick={() => setShowAuthModal(false)}
+                onClick={() => {
+                  setMode(null)
+                  setShowAuthModal(false)
+                }}
                 className="w-full"
               >
                 Back
@@ -141,7 +158,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   }
 
   // If user is fully authenticated and set up, render the app
-  if (mode === 'cloud' && currentUser && userProfile && userHousehold) {
+  if (mode === 'cloud' && isFullySetup) {
     return <div key={`app-${mode}`}>{children}</div>
   }
 

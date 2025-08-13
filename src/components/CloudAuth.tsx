@@ -36,6 +36,7 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
   const [pendingEmail, setPendingEmail] = useState('')
   const [showOtpForm, setShowOtpForm] = useState(false)
   const [postAuthInProgress, setPostAuthInProgress] = useState(false)
+  const [resolvingProfile, setResolvingProfile] = useState(false)
 
   // Reactive current user via Dexie Cloud subjects
   const { currentUser } = useDexieCloud()
@@ -43,7 +44,10 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
   const userProfile = useLiveQuery(async () => {
     if (!currentUser?.userId) return null
     try {
-      return await db.users.get(`usr_${currentUser.userId}`)
+      const withPrefix = await db.users.get(`usr_${currentUser.userId}`)
+      if (withPrefix) return withPrefix
+      const withoutPrefix = await db.users.get(currentUser.userId)
+      return withoutPrefix ?? null
     } catch (error) {
       console.error('Error getting user profile:', error)
       return null
@@ -66,6 +70,55 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
   const needsSetup = isFullyAuthenticated && (!userProfile || !userProfile.householdId)
   const isSetupComplete = isFullyAuthenticated && !!(userProfile && userProfile.householdId)
   
+  // Resolve profile after auth to prevent showing setup if profile exists but hasn't synced into IndexedDB yet
+  useEffect(() => {
+    if (!isFullyAuthenticated) return
+    let cancelled = false
+    const resolve = async () => {
+      setResolvingProfile(true)
+      try {
+        // If we already have a profile, decide based on household
+        if (userProfile) {
+          if (!userProfile.householdId) {
+            setAuthStep('setup')
+            setActiveTab('household')
+          }
+          return
+        }
+        // Otherwise, try a quick pull and recheck before showing setup
+        try {
+          await (db as unknown as { cloud: { sync: (opts?: unknown) => Promise<void> } }).cloud.sync({ wait: true, purpose: 'pull' })
+        } catch {}
+        const settledUser = (db as unknown as { cloud: { currentUser: { value: { userId?: string; email?: string } | null } } }).cloud.currentUser.value
+        if (!settledUser || !settledUser.userId) return
+        const withPrefix = await db.users.get(`usr_${settledUser.userId}`)
+        const withoutPrefix = withPrefix || await db.users.get(settledUser.userId)
+        const byEmail = withoutPrefix || (settledUser.email ? await db.users.where('email').equals(settledUser.email).first() : null)
+        if (cancelled) return
+        if (byEmail) {
+          if (!byEmail.householdId) {
+            setAuthStep('setup')
+            setActiveTab('household')
+          }
+        } else {
+          // No profile found after sync: allow setup
+          setAuthStep('setup')
+        }
+      } finally {
+        if (!cancelled) setResolvingProfile(false)
+      }
+    }
+    resolve()
+    return () => { cancelled = true }
+  }, [isFullyAuthenticated, userProfile?.id, userProfile?.householdId])
+
+  // If profile exists but household is missing, default setup tab to Household
+  useEffect(() => {
+    if (isFullyAuthenticated && userProfile && !userProfile.householdId) {
+      setActiveTab('household')
+    }
+  }, [isFullyAuthenticated, userProfile?.householdId])
+
   // If user is fully set up, call success callback
   useEffect(() => {
     if (isSetupComplete && onAuthSuccess) {
@@ -137,7 +190,8 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
         const user = db.cloud.currentUser.value
         if (user) {
           try {
-            const profile = await db.users.get(`usr_${user.userId}`)
+            try { await db.cloud.sync({ wait: true, purpose: 'pull' }) } catch {}
+            const profile = await db.users.get(`usr_${user.userId}`) || await db.users.get(user.userId) || (user.email ? await db.users.where('email').equals(user.email).first() : null)
             if (!profile) {
               setAuthStep('setup')
               toast.success("Welcome! Let's set up your profile.")
@@ -213,6 +267,9 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
       }
       if (!user || !user.userId || !user.email) throw new Error('Invalid or expired code. Please request a new one.')
 
+      // Ensure we have latest profile from the cloud before deciding to show setup
+      try { await db.cloud.sync({ wait: true, purpose: 'pull' }) } catch {}
+
       // Success: clear any previous error and UI state, then continue with setup if needed
       setError(null)
       setShowOtpForm(false)
@@ -225,7 +282,7 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
       try {
         const settledUser = (db as unknown as { cloud: { currentUser: { value: { userId?: string; email?: string } | null } } }).cloud.currentUser.value
         if (settledUser) {
-          const profile = await db.users.get(`usr_${settledUser.userId}`)
+          const profile = await db.users.get(`usr_${settledUser.userId}`) || await db.users.get(settledUser.userId) || (settledUser.email ? await db.users.where('email').equals(settledUser.email).first() : null)
           if (!profile || !profile.householdId) {
             setAuthStep('setup')
             setPostAuthInProgress(false)

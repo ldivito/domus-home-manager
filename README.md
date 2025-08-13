@@ -48,6 +48,25 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
+### Environment Configuration
+
+Copy `.env.example` to `.env.local` and configure your environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your configuration:
+
+```env
+# Dexie Cloud Configuration
+NEXT_PUBLIC_DEXIE_CLOUD_URL=https://your-database-id.dexie.cloud
+NEXT_PUBLIC_DEXIE_USE_SERVICE_WORKER=false
+NEXT_PUBLIC_DEXIE_REQUIRE_AUTH=true
+NEXT_PUBLIC_DEXIE_UNSYNCED_TABLES=
+NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI=true
+```
+
 ### Development Commands
 
 ```bash
@@ -146,6 +165,62 @@ The application features a sidebar navigation optimized for tablet use with larg
 - Maintain large touch targets (minimum 44px)
 - Follow the warm/cozy design system
 - Ensure responsive design for various tablet sizes
+
+## Deployment
+
+### Vercel Deployment
+
+This application is optimized for deployment on Vercel with Dexie Cloud for data synchronization.
+
+#### Prerequisites
+
+1. **Dexie Cloud Account**: Sign up at [dexie.cloud](https://dexie.cloud) and create a database
+2. **Vercel Account**: Sign up at [vercel.com](https://vercel.com)
+
+#### Deployment Steps
+
+1. **Fork/Clone the repository** to your GitHub account
+
+2. **Set up Dexie Cloud**:
+   - Create a new database at [dexie.cloud](https://dexie.cloud)
+   - Note your database URL (e.g., `https://your-id.dexie.cloud`)
+
+3. **Deploy to Vercel**:
+   - Connect your GitHub repository to Vercel
+   - Configure environment variables in Vercel dashboard:
+
+   ```env
+   NEXT_PUBLIC_DEXIE_CLOUD_URL=https://your-database-id.dexie.cloud
+   NEXT_PUBLIC_DEXIE_USE_SERVICE_WORKER=false
+   NEXT_PUBLIC_DEXIE_REQUIRE_AUTH=true
+   NEXT_PUBLIC_DEXIE_UNSYNCED_TABLES=
+   NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI=true
+   ```
+
+4. **Deploy**: Vercel will automatically build and deploy your application
+
+#### Production Configuration
+
+For production deployments, ensure:
+- `NEXT_PUBLIC_DEXIE_REQUIRE_AUTH=true` for secure access
+- `NEXT_PUBLIC_DEXIE_USE_SERVICE_WORKER=false` for Next.js compatibility
+- `NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI=true` to use the built-in auth UI
+
+#### Alternative Deployment Platforms
+
+While optimized for Vercel, the application can be deployed on:
+- **Netlify**: Configure environment variables in site settings
+- **Railway**: Add environment variables in project settings  
+- **Self-hosted**: Ensure Node.js 18+ and configure environment variables
+
+### Cloud Synchronization
+
+The application uses Dexie Cloud for real-time data synchronization across devices:
+
+- **Multi-device sync**: Data syncs automatically across all logged-in devices
+- **Offline-first**: Works fully offline, syncs when connection is restored
+- **Household sharing**: Multiple users can collaborate on the same household data
+- **Authentication**: Email-based OTP authentication for secure access
 
 ## Contributing
 

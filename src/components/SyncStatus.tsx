@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/db'
 import { useDexieCloud } from '@/hooks/useDexieCloud'
@@ -19,6 +20,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks'
 
 export default function SyncStatus({ compact = false }: { compact?: boolean }) {
+  const t = useTranslations('cloud.sync')
   const [isOnline, setIsOnline] = useState(true)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [mode, setMode] = useState<string | null>(null)
@@ -107,15 +109,15 @@ export default function SyncStatus({ compact = false }: { compact?: boolean }) {
     const status = getSyncStatus()
     switch (status) {
       case 'offline-mode':
-        return 'Offline Only'
+        return t('offlineMode')
       case 'offline':
-        return 'Offline'
+        return t('offline')
       case 'error':
-        return 'Sync Error'
+        return t('error')
       case 'disconnected':
-        return 'Not Synced'
+        return t('disconnected')
       case 'synced':
-        return 'Synced'
+        return t('synced')
       default:
         return 'Unknown'
     }
@@ -158,7 +160,7 @@ export default function SyncStatus({ compact = false }: { compact?: boolean }) {
       <PopoverContent className="w-80" align="end">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold">{mode === 'offline' ? 'Offline Mode' : 'Sync Status'}</h4>
+            <h4 className="font-semibold">{mode === 'offline' ? t('offlineMode') : t('syncStatus')}</h4>
             {mode !== 'offline' && syncState?.isConnected && (
               <Button 
                 size="sm" 
@@ -167,24 +169,24 @@ export default function SyncStatus({ compact = false }: { compact?: boolean }) {
                 className="gap-2"
               >
                 <RefreshCw className="h-3 w-3" />
-                Sync Now
+                {t('syncNow')}
               </Button>
             )}
           </div>
 
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
-              <span>Internet Connection</span>
+              <span>{t('internetConnection')}</span>
               <div className="flex items-center gap-1">
                 {isOnline ? (
                   <>
                     <Wifi className="h-3 w-3 text-green-500" />
-                    <span className="text-green-500">Online</span>
+                    <span className="text-green-500">{t('online')}</span>
                   </>
                 ) : (
                   <>
                     <WifiOff className="h-3 w-3 text-red-500" />
-                    <span className="text-red-500">Offline</span>
+                    <span className="text-red-500">{t('offline')}</span>
                   </>
                 )}
               </div>
@@ -193,17 +195,17 @@ export default function SyncStatus({ compact = false }: { compact?: boolean }) {
             {mode !== 'offline' ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span>Cloud Sync</span>
+                  <span>{t('cloudSync')}</span>
                   <div className="flex items-center gap-1">
                     {syncState?.isConnected ? (
                       <>
                         <CheckCircle className="h-3 w-3 text-green-500" />
-                        <span className="text-green-500">Connected</span>
+                        <span className="text-green-500">{t('connected')}</span>
                       </>
                     ) : (
                       <>
                         <CloudOff className="h-3 w-3 text-gray-500" />
-                        <span className="text-gray-500">Disconnected</span>
+                        <span className="text-gray-500">{t('disconnected')}</span>
                       </>
                     )}
                   </div>
@@ -211,7 +213,7 @@ export default function SyncStatus({ compact = false }: { compact?: boolean }) {
 
                 {syncState?.currentUser?.userId && (
                   <div className="flex items-center justify-between">
-                    <span>Signed in as</span>
+                    <span>{t('signedInAs')}</span>
                     <span className="text-xs bg-muted px-2 py-1 rounded">
                       {syncState.currentUser.email}
                     </span>
@@ -220,32 +222,32 @@ export default function SyncStatus({ compact = false }: { compact?: boolean }) {
 
                 {syncState?.currentUser?.userId && (
                   <div className="flex items-center justify-end gap-2">
-                    <Button size="sm" variant="outline" onClick={handleShowModeSelection}>Switch Mode</Button>
-                    <Button size="sm" variant="ghost" onClick={handleLogout}>Sign out</Button>
+                    <Button size="sm" variant="outline" onClick={handleShowModeSelection}>{t('switchMode')}</Button>
+                    <Button size="sm" variant="ghost" onClick={handleLogout}>{t('signOut')}</Button>
                   </div>
                 )}
               </>
             ) : (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  You are using Domus in offline-only mode. To enable sync, switch back to the setup screen.
+                  {t('offlineModeDescription')}
                 </p>
                 <Button size="sm" variant="outline" onClick={handleShowModeSelection}>
-                  Switch to Setup
+                  {t('switchToSetup')}
                 </Button>
               </div>
             )}
 
             {syncError && (
               <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
-                <div className="font-medium">Sync Error:</div>
+                <div className="font-medium">{t('syncError')}</div>
                 {syncError}
               </div>
             )}
 
             {!isOnline && (
               <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-700 text-xs">
-                You&apos;re working offline. Changes will sync when you&apos;re back online.
+                {t('workingOffline')}
               </div>
             )}
           </div>

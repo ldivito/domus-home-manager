@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +24,8 @@ import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 export default function HomePage() {
+  const t = useTranslations('home')
+  const commonT = useTranslations('common')
 
   // Live data queries
   const users = useLiveQuery(() => db.users.toArray(), []) || []
@@ -91,7 +94,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{pendingChores.length}</p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Chores</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{t('widgets.stats.chores')}</p>
                 </div>
               </div>
 
@@ -101,7 +104,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-300">{groceryItems.length}</p>
-                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">Shopping</p>
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">{t('widgets.grocery.title')}</p>
                 </div>
               </div>
 
@@ -111,7 +114,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{todaysMeals.length}</p>
-                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Meals</p>
+                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">{t('widgets.meals.title')}</p>
                 </div>
               </div>
 
@@ -121,7 +124,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{pendingTasks.length}</p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Tasks</p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">{t('widgets.tasks.title')}</p>
                 </div>
               </div>
 
@@ -131,7 +134,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-red-700 dark:text-red-300">{activeProjects.length}</p>
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">Projects</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">{t('widgets.projects.title')}</p>
                 </div>
               </div>
 
@@ -176,7 +179,7 @@ export default function HomePage() {
                   <div className="p-2 bg-blue-500/15 rounded-xl border border-blue-200/50">
                     <CheckSquare className="h-6 w-6 text-blue-600" />
                   </div>
-                  Next Chores
+                  {t('widgets.chores.title')}
                 </CardTitle>
                 <Link href="/chores">
                   <Button variant="ghost" size="lg" className="touch-target">
@@ -195,7 +198,7 @@ export default function HomePage() {
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-blue-500" />
                           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                            {chore.nextDue ? formatCompactDate(new Date(chore.nextDue)) : 'No date'}
+                            {chore.nextDue ? formatCompactDate(new Date(chore.nextDue)) : t('widgets.chores.none')}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -207,7 +210,7 @@ export default function HomePage() {
                             </Avatar>
                           )}
                           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                            {users.find(u => u.id === chore.assignedUserId)?.name || 'Unassigned'}
+                            {users.find(u => u.id === chore.assignedUserId)?.name || commonT('notAssigned')}
                           </span>
                         </div>
                       </div>
@@ -216,7 +219,7 @@ export default function HomePage() {
                   {pendingChores.length > 2 && (
                     <div className="text-center pt-3">
                       <p className="text-sm text-muted-foreground font-medium">
-                        +{pendingChores.length - 2} more chores
+                        +{pendingChores.length - 2} {t('widgets.chores.moreChores')}
                       </p>
                     </div>
                   )}
@@ -226,8 +229,8 @@ export default function HomePage() {
                   <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckSquare className="h-8 w-8 text-blue-500" />
                   </div>
-                  <p className="text-lg font-medium text-muted-foreground">No pending chores</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">You&apos;re all caught up!</p>
+                  <p className="text-lg font-medium text-muted-foreground">{t('widgets.chores.none')}</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">{t('widgets.chores.completed')}</p>
                 </div>
               )}
             </CardContent>
@@ -241,7 +244,7 @@ export default function HomePage() {
                   <div className="p-2 bg-green-500/15 rounded-xl border border-green-200/50">
                     <ShoppingCart className="h-6 w-6 text-green-600" />
                   </div>
-                  Shopping List
+                  {t('widgets.grocery.title')}
                 </CardTitle>
                 <Link href="/grocery">
                   <Button variant="ghost" size="lg" className="touch-target">
@@ -275,7 +278,7 @@ export default function HomePage() {
                   </div>
                   {groceryItems.length > 6 && (
                     <div className="text-center pt-3">
-                      <p className="text-sm text-muted-foreground font-medium">+{groceryItems.length - 6} more items</p>
+                      <p className="text-sm text-muted-foreground font-medium">+{groceryItems.length - 6} {t('widgets.grocery.moreItems')}</p>
                     </div>
                   )}
                 </>
@@ -284,8 +287,8 @@ export default function HomePage() {
                   <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <ShoppingCart className="h-8 w-8 text-green-500" />
                   </div>
-                  <p className="text-lg font-medium text-muted-foreground">Shopping list is empty</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">Add some items to get started</p>
+                  <p className="text-lg font-medium text-muted-foreground">{t('widgets.grocery.empty')}</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">{t('widgets.grocery.addFirst')}</p>
                 </div>
               )}
             </CardContent>
@@ -299,7 +302,7 @@ export default function HomePage() {
                   <div className="p-2 bg-purple-500/15 rounded-xl border border-purple-200/50">
                     <Calendar className="h-6 w-6 text-purple-600" />
                   </div>
-                  Today&apos;s Schedule
+                  {t('widgets.schedule.title')}
                 </CardTitle>
                 <Link href="/planner">
                   <Button variant="ghost" size="lg" className="touch-target">
@@ -319,7 +322,7 @@ export default function HomePage() {
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-purple-500" />
                           <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                            {event.time || 'All day'}
+                            {event.time || t('widgets.schedule.allDay')}
                           </span>
                         </div>
                         <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-sm px-3 py-1">
@@ -348,7 +351,7 @@ export default function HomePage() {
                               </AvatarFallback>
                             </Avatar>
                             <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                              {users.find(u => u.id === meal.assignedUserId)?.name || 'Unassigned'}
+                              {users.find(u => u.id === meal.assignedUserId)?.name || commonT('notAssigned')}
                             </span>
                           </div>
                         )}
@@ -361,8 +364,8 @@ export default function HomePage() {
                   <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="h-8 w-8 text-purple-500" />
                   </div>
-                  <p className="text-lg font-medium text-muted-foreground">No events scheduled</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">Your day is free!</p>
+                  <p className="text-lg font-medium text-muted-foreground">{t('widgets.schedule.none')}</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">{t('widgets.schedule.free')}</p>
                 </div>
               )}
             </CardContent>
@@ -376,7 +379,7 @@ export default function HomePage() {
                   <div className="p-2 bg-amber-500/15 rounded-xl border border-amber-200/50">
                     <Bell className="h-6 w-6 text-amber-600" />
                   </div>
-                  Notifications & Reminders
+                  {t('widgets.notifications.title')}
                 </CardTitle>
                 <Link href="/reminders">
                   <Button variant="ghost" size="lg" className="touch-target">
@@ -394,7 +397,7 @@ export default function HomePage() {
                       <div className="flex items-center gap-3 mb-3">
                         <AlertCircle className="h-5 w-5 text-red-500" />
                         <span className="font-semibold text-base text-red-700 dark:text-red-300">
-                          {overdueChores.length} Overdue Chore{overdueChores.length > 1 ? 's' : ''}
+                          {overdueChores.length} {t('widgets.notifications.overdueChores', { count: overdueChores.length })}
                         </span>
                       </div>
                       <p className="text-sm text-red-600 dark:text-red-400 font-medium">
@@ -410,7 +413,7 @@ export default function HomePage() {
                       <div className="flex items-center gap-3 mb-3">
                         <AlertCircle className="h-5 w-5 text-orange-500" />
                         <span className="font-semibold text-base text-orange-700 dark:text-orange-300">
-                          {highPriorityTasks.length} High Priority Task{highPriorityTasks.length > 1 ? 's' : ''}
+                          {highPriorityTasks.length} {t('widgets.notifications.highPriorityTasks', { count: highPriorityTasks.length })}
                         </span>
                       </div>
                       <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
@@ -441,7 +444,7 @@ export default function HomePage() {
 
                   {upcomingReminders.length > 2 && (
                     <div className="text-center pt-3">
-                      <p className="text-sm text-muted-foreground font-medium">+{upcomingReminders.length - 2} more reminders</p>
+                      <p className="text-sm text-muted-foreground font-medium">+{upcomingReminders.length - 2} {t('widgets.notifications.moreReminders')}</p>
                     </div>
                   )}
                 </div>
@@ -450,8 +453,8 @@ export default function HomePage() {
                   <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Check className="h-10 w-10 text-green-500" />
                   </div>
-                  <p className="text-xl font-semibold text-green-600 mb-2">All caught up!</p>
-                  <p className="text-base text-muted-foreground">No urgent notifications or reminders</p>
+                  <p className="text-xl font-semibold text-green-600 mb-2">{t('widgets.notifications.allCaughtUp')}</p>
+                  <p className="text-base text-muted-foreground">{t('widgets.notifications.noUrgent')}</p>
                 </div>
               )}
             </CardContent>
@@ -464,7 +467,7 @@ export default function HomePage() {
                 <div className="p-2 bg-purple-500/15 rounded-xl border border-purple-200/50">
                   <Activity className="h-6 w-6 text-purple-600" />
                 </div>
-                Quick Stats
+                {t('widgets.stats.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
@@ -475,28 +478,28 @@ export default function HomePage() {
                       {chores.length > 0 ? Math.round((chores.filter(c => c.isCompleted).length / chores.length) * 100) : 0}%
                     </span>
                   </div>
-                  <p className="text-base font-semibold text-blue-700 dark:text-blue-300">Chores Complete</p>
+                  <p className="text-base font-semibold text-blue-700 dark:text-blue-300">{t('widgets.stats.choresComplete')}</p>
                 </div>
 
                 <div className="text-center px-2 py-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/40 rounded-xl border border-green-200/50 transition-all hover:shadow-md">
                   <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <span className="text-white font-bold text-xl">{highPriorityGrocery.length}</span>
                   </div>
-                  <p className="text-base font-semibold text-green-700 dark:text-green-300">Urgent Shopping</p>
+                  <p className="text-base font-semibold text-green-700 dark:text-green-300">{t('widgets.stats.urgentShopping')}</p>
                 </div>
 
                 <div className="text-center px-2 py-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/40 rounded-xl border border-orange-200/50 transition-all hover:shadow-md">
                   <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <span className="text-white font-bold text-xl">{todaysEvents.length + todaysMeals.length}</span>
                   </div>
-                  <p className="text-base font-semibold text-orange-700 dark:text-orange-300">Today&apos;s Events</p>
+                  <p className="text-base font-semibold text-orange-700 dark:text-orange-300">{t('widgets.stats.todaysEvents')}</p>
                 </div>
 
                 <div className="text-center px-2 py-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/40 rounded-xl border border-purple-200/50 transition-all hover:shadow-md">
                   <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <span className="text-white font-bold text-xl">{activeReminders.length}</span>
                   </div>
-                  <p className="text-base font-semibold text-purple-700 dark:text-purple-300">Active Reminders</p>
+                  <p className="text-base font-semibold text-purple-700 dark:text-purple-300">{t('widgets.stats.activeReminders')}</p>
                 </div>
               </div>
             </CardContent>

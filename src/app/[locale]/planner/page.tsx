@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { db, CalendarEvent, User as UserType, Task, Meal, Chore } from "@/lib/db"
+import { useCalendarSettings } from "@/hooks/useCalendarSettings"
 import { AddEventDialog } from "./components/AddEventDialog"
 import { DayView } from "./components/DayView"
 import { WeekView } from "./components/WeekView"
@@ -25,9 +26,19 @@ function toKey(d: Date) {
   return `${y}-${m}-${day}`
 }
 
-function getStartOfWeek(d: Date) {
+function getStartOfWeek(d: Date, startOfWeek: 'sunday' | 'monday' = 'sunday') {
   const x = new Date(d)
-  const delta = x.getDay() // Sunday start
+  const dayOfWeek = x.getDay() // 0 = Sunday, 1 = Monday, etc.
+  
+  let delta: number
+  if (startOfWeek === 'monday') {
+    // Monday start: Sunday (0) becomes 6, Monday (1) becomes 0
+    delta = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  } else {
+    // Sunday start: Sunday (0) becomes 0, Monday (1) becomes 1
+    delta = dayOfWeek
+  }
+  
   x.setDate(x.getDate() - delta)
   x.setHours(0, 0, 0, 0)
   return x
@@ -37,6 +48,7 @@ export default function PlannerPage() {
   const t = useTranslations('planner')
   const locale = useLocale()
   const router = useRouter()
+  const { startOfWeek } = useCalendarSettings()
   const [view, setView] = useState<PlannerView>('week')
   const [cursorDate, setCursorDate] = useState<Date>(() => {
     const now = new Date()
@@ -61,7 +73,7 @@ export default function PlannerPage() {
     if (view === 'day') {
       // same day
     } else if (view === 'week') {
-      const start = getStartOfWeek(cursorDate)
+      const start = getStartOfWeek(cursorDate, startOfWeek)
       from.setTime(start.getTime())
       to.setTime(start.getTime())
       to.setDate(start.getDate() + 6)
@@ -86,7 +98,7 @@ export default function PlannerPage() {
     const from = new Date(cursorDate)
     const to = new Date(cursorDate)
     if (view === 'week') {
-      const start = getStartOfWeek(cursorDate)
+      const start = getStartOfWeek(cursorDate, startOfWeek)
       from.setTime(start.getTime())
       to.setTime(start.getTime())
       to.setDate(start.getDate() + 6)
@@ -108,7 +120,7 @@ export default function PlannerPage() {
     const from = new Date(cursorDate)
     const to = new Date(cursorDate)
     if (view === 'week') {
-      const start = getStartOfWeek(cursorDate)
+      const start = getStartOfWeek(cursorDate, startOfWeek)
       from.setTime(start.getTime())
       to.setTime(start.getTime())
       to.setDate(start.getDate() + 6)
@@ -130,7 +142,7 @@ export default function PlannerPage() {
     const from = new Date(cursorDate)
     const to = new Date(cursorDate)
     if (view === 'week') {
-      const start = getStartOfWeek(cursorDate)
+      const start = getStartOfWeek(cursorDate, startOfWeek)
       from.setTime(start.getTime())
       to.setTime(start.getTime())
       to.setDate(start.getDate() + 6)
@@ -285,7 +297,7 @@ export default function PlannerPage() {
           )}
           {view === 'week' && (
             <WeekView
-              startOfWeek={getStartOfWeek(cursorDate)}
+              startOfWeek={getStartOfWeek(cursorDate, startOfWeek)}
               itemsByDate={itemsByDate}
               usersById={usersById}
               onView={({ event, source }) => {
@@ -307,6 +319,7 @@ export default function PlannerPage() {
               month={cursorDate}
               itemsByDate={itemsByDate}
               usersById={usersById}
+              startOfWeek={startOfWeek}
               onView={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
                 else if (source === 'task') { router.push(`/${locale}/tasks`) }

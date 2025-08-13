@@ -221,6 +221,7 @@ export interface HomeSettings {
     defaultTemperature?: number
     temperatureUnit?: 'celsius' | 'fahrenheit'
     timezone?: string
+    startOfWeek?: 'sunday' | 'monday'
   }
   // Important Information (stored locally only, never exported for security)
   privateInfo?: {

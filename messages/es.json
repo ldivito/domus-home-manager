@@ -64,12 +64,13 @@
     },
     "widgets": {
       "chores": {
-        "title": "Próxima Tarea",
+        "title": "Próximas Tareas",
         "none": "No hay tareas programadas",
         "addFirst": "Agregar Primera Tarea",
         "complete": "Completar",
-        "completed": "¡Tarea completada!",
-        "error": "Error al completar tarea"
+        "completed": "¡Todo al día!",
+        "error": "Error al completar tarea",
+        "moreChores": "más tareas"
       },
       "grocery": {
         "title": "Lista de Compras",
@@ -78,7 +79,8 @@
         "viewAll": "Ver Todos los Artículos",
         "added": "¡Artículo agregado a la lista!",
         "error": "Error al agregar artículo",
-        "moreItems": "más artículos"
+        "moreItems": "más artículos",
+        "addFirst": "Agrega algunos artículos para comenzar"
       },
       "meals": {
         "title": "Comidas de Hoy",
@@ -124,7 +126,27 @@
         "recent": "Reciente",
         "active": "Activo",
         "completed": "Completado",
-        "inProgress": "En Progreso"
+        "inProgress": "En Progreso",
+        "title": "Estadísticas Rápidas",
+        "chores": "Tareas",
+        "choresComplete": "Tareas Completadas",
+        "urgentShopping": "Compras Urgentes",
+        "todaysEvents": "Eventos de Hoy",
+        "activeReminders": "Recordatorios Activos"
+      },
+      "schedule": {
+        "title": "Horario de Hoy",
+        "none": "No hay eventos programados",
+        "free": "¡Tu día está libre!",
+        "allDay": "Todo el día"
+      },
+      "notifications": {
+        "title": "Notificaciones y Recordatorios",
+        "overdueChores": "Tarea{count, plural, one {} other {s}} Vencida{count, plural, one {} other {s}}",
+        "highPriorityTasks": "Tarea{count, plural, one {} other {s}} de Alta Prioridad",
+        "moreReminders": "más recordatorios",
+        "allCaughtUp": "¡Todo al día!",
+        "noUrgent": "No hay notificaciones urgentes o recordatorios"
       }
     },
     "quickActions": {
@@ -432,6 +454,7 @@
       "amountPlaceholder": "ej. 2 tazas, 1 libra",
       "groceryCategory": "Categoría de Compras",
       "selectGroceryCategory": "Selecciona categoría de compras",
+      "selectImportance": "Selecciona importancia",
       "importance": "Prioridad",
       "importanceLow": "Baja",
       "importanceMedium": "Media",
@@ -672,6 +695,20 @@
       "dark": "Oscuro",
       "system": "Sistema"
     },
+    "calendar": {
+      "title": "Configuración de Calendario",
+      "description": "Configura las preferencias de visualización del calendario",
+      "startOfWeek": "Inicio de Semana",
+      "startOfWeekDescription": "Elige con qué día comienza la semana del calendario",
+      "sunday": "Domingo",
+      "monday": "Lunes"
+    },
+    "theme": {
+      "light": "Claro",
+      "dark": "Oscuro", 
+      "system": "Sistema",
+      "toggleTheme": "Cambiar tema"
+    },
     "notifications": {
       "title": "Notificaciones",
       "description": "Gestiona cuándo y cómo recibes notificaciones",
@@ -721,6 +758,17 @@
       "week": "Semana",
       "month": "Mes"
     },
+    "days": {
+      "short": {
+        "sun": "Dom",
+        "mon": "Lun",
+        "tue": "Mar", 
+        "wed": "Mié",
+        "thu": "Jue",
+        "fri": "Vie",
+        "sat": "Sáb"
+      }
+    },
     "addEvent": "Agregar Evento",
     "noUsers": "No hay usuarios disponibles",
     "types": {
@@ -746,7 +794,9 @@
     "delete": "Eliminar",
     "editEvent": "Editar Evento",
     "cancel": "Cancelar",
-    "save": "Guardar"
+    "save": "Guardar",
+    "more": "más",
+    "noEvents": "No hay eventos"
   },
   "cloud": {
     "auth": {
@@ -829,6 +879,7 @@
     "sync": {
       "synced": "Sincronizado",
       "offline": "Sin conexión",
+      "offlineMode": "Solo Sin Conexión",
       "disconnected": "No Sincronizado",
       "error": "Error de Sincronización",
       "syncStatus": "Estado de Sincronización",
@@ -839,7 +890,11 @@
       "connected": "Conectado",
       "signedInAs": "Sesión iniciada como",
       "syncError": "Error de Sincronización:",
-      "workingOffline": "Estás trabajando sin conexión. Los cambios se sincronizarán cuando regreses en línea."
+      "workingOffline": "Estás trabajando sin conexión. Los cambios se sincronizarán cuando regreses en línea.",
+      "offlineModeDescription": "Estás usando Domus en modo solo sin conexión. Para habilitar la sincronización, vuelve a la pantalla de configuración.",
+      "switchMode": "Cambiar Modo",
+      "switchToSetup": "Cambiar a Configuración",
+      "signOut": "Cerrar sesión"
     }
   }
 }

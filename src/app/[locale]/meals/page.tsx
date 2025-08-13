@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useCalendarSettings } from '@/hooks/useCalendarSettings'
 import { AddMealDialog } from './components/AddMealDialog'
 import { ManageMealCategoriesDialog } from './components/ManageMealCategoriesDialog'
 import { ManageSavedMealsDialog } from './components/ManageSavedMealsDialog'
@@ -18,6 +19,8 @@ type ViewType = 'day' | 'week' | 'month'
 
 export default function MealsPage() {
   const t = useTranslations('meals')
+  const plannerT = useTranslations('planner')
+  const { startOfWeek } = useCalendarSettings()
   
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewType, setViewType] = useState<ViewType>('week')
@@ -76,7 +79,16 @@ export default function MealsPage() {
       end.setHours(23, 59, 59, 999)
       return { start, end }
     } else if (viewType === 'week') {
-      start.setDate(start.getDate() - start.getDay())
+      const dayOfWeek = start.getDay() // 0 = Sunday, 1 = Monday, etc.
+      let delta: number
+      if (startOfWeek === 'monday') {
+        // Monday start: Sunday (0) becomes 6, Monday (1) becomes 0
+        delta = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+      } else {
+        // Sunday start: Sunday (0) becomes 0, Monday (1) becomes 1
+        delta = dayOfWeek
+      }
+      start.setDate(start.getDate() - delta)
       start.setHours(0, 0, 0, 0)
       end.setDate(start.getDate() + 6)
       end.setHours(23, 59, 59, 999)
@@ -193,7 +205,19 @@ export default function MealsPage() {
       weekDays.push(day)
     }
 
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    // Create day names array ordered by start of week
+    const sundayFirstDayNames = [
+      plannerT('days.short.sun'),
+      plannerT('days.short.mon'),
+      plannerT('days.short.tue'),
+      plannerT('days.short.wed'),
+      plannerT('days.short.thu'),
+      plannerT('days.short.fri'),
+      plannerT('days.short.sat')
+    ]
+    const dayNames = startOfWeek === 'monday' 
+      ? [...sundayFirstDayNames.slice(1), sundayFirstDayNames[0]] // Move Sunday to the end
+      : sundayFirstDayNames
 
     return (
       <div className="space-y-4">
@@ -207,7 +231,7 @@ export default function MealsPage() {
                   ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300' 
                   : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300'
               }`}>
-                <div className="text-sm font-medium">{dayNames[day.getDay()]}</div>
+                <div className="text-sm font-medium">{dayNames[index]}</div>
                 <div className="text-lg font-semibold">{day.getDate()}</div>
               </div>
             )
@@ -286,10 +310,33 @@ export default function MealsPage() {
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
     const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
+    
+    // Calculate starting day of week based on start of week setting
+    const dayOfWeek = firstDay.getDay() // 0 = Sunday, 1 = Monday, etc.
+    let startingDayOfWeek: number
+    if (startOfWeek === 'monday') {
+      // Monday start: Sunday (0) becomes 6, Monday (1) becomes 0
+      startingDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    } else {
+      // Sunday start: Sunday (0) becomes 0, Monday (1) becomes 1
+      startingDayOfWeek = dayOfWeek
+    }
     
     const days = []
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    
+    // Create day names array ordered by start of week
+    const sundayFirstDayNames = [
+      plannerT('days.short.sun'),
+      plannerT('days.short.mon'),
+      plannerT('days.short.tue'),
+      plannerT('days.short.wed'),
+      plannerT('days.short.thu'),
+      plannerT('days.short.fri'),
+      plannerT('days.short.sat')
+    ]
+    const dayNames = startOfWeek === 'monday' 
+      ? [...sundayFirstDayNames.slice(1), sundayFirstDayNames[0]] // Move Sunday to the end
+      : sundayFirstDayNames
     
     // Add empty cells for days before month starts
     for (let i = 0; i < startingDayOfWeek; i++) {

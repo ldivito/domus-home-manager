@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3 } from "lucide-react"
+import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -640,6 +640,65 @@ export default function SettingsPage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Calendar Settings */}
+          <Card className="glass-card shadow-modern">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center">
+                <Calendar className="mr-3 h-6 w-6 text-primary" />
+                {t('calendar.title')}
+              </CardTitle>
+              <CardDescription>{t('calendar.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-medium">{t('calendar.startOfWeek')}</Label>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{t('calendar.startOfWeekDescription')}</p>
+                  <Select 
+                    value={homeSettings.preferences?.startOfWeek || 'sunday'} 
+                    onValueChange={(value: 'sunday' | 'monday') => {
+                      setHomeSettings({
+                        ...homeSettings,
+                        preferences: {
+                          ...homeSettings.preferences,
+                          startOfWeek: value
+                        }
+                      })
+                      saveHomeSettings({
+                        ...homeSettings,
+                        preferences: {
+                          ...homeSettings.preferences,
+                          startOfWeek: value
+                        }
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="max-w-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sunday">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {t('calendar.sunday')}
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="monday">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {t('calendar.monday')}
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>

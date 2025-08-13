@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
 import { CalendarEvent, User } from "@/lib/db"
 import { EventPill } from "./EventPill"
@@ -9,6 +10,7 @@ interface MonthViewProps {
   month: Date // any date within the month
   itemsByDate: Record<string, PlannerItem[]>
   usersById: Record<number, User>
+  startOfWeek?: 'sunday' | 'monday'
   onView?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
   onEdit?: (payload: { event: CalendarEvent; source: PlannerItem['source'] }) => void
 }
@@ -22,11 +24,21 @@ function startOfMonth(d: Date) {
 
 // endOfMonth was previously used; keeping startOfGrid renders full month grid
 
-function startOfGrid(month: Date) {
+function startOfGrid(month: Date, startOfWeek: 'sunday' | 'monday' = 'sunday') {
   const s = startOfMonth(month)
-  const day = s.getDay() // 0-6 Sunday
+  const dayOfWeek = s.getDay() // 0 = Sunday, 1 = Monday, etc.
+  
+  let delta: number
+  if (startOfWeek === 'monday') {
+    // Monday start: Sunday (0) becomes 6, Monday (1) becomes 0
+    delta = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  } else {
+    // Sunday start: Sunday (0) becomes 0, Monday (1) becomes 1
+    delta = dayOfWeek
+  }
+  
   const gridStart = new Date(s)
-  gridStart.setDate(s.getDate() - day)
+  gridStart.setDate(s.getDate() - delta)
   return gridStart
 }
 
@@ -37,8 +49,9 @@ function formatKey(date: Date) {
   return `${y}-${m}-${d}`
 }
 
-export function MonthView({ month, itemsByDate, usersById, onView, onEdit }: MonthViewProps) {
-  const gridStart = startOfGrid(month)
+export function MonthView({ month, itemsByDate, usersById, startOfWeek = 'sunday', onView, onEdit }: MonthViewProps) {
+  const t = useTranslations('planner')
+  const gridStart = startOfGrid(month, startOfWeek)
   const cells: Date[] = Array.from({ length: 42 }, (_, i) => {
     const d = new Date(gridStart)
     d.setDate(gridStart.getDate() + i)
@@ -46,19 +59,46 @@ export function MonthView({ month, itemsByDate, usersById, onView, onEdit }: Mon
   })
 
   const currentMonth = month.getMonth()
+  
+  // Get day names in the correct order based on start of week
+  const sundayFirstDayNames = [
+    t('days.short.sun'),
+    t('days.short.mon'), 
+    t('days.short.tue'),
+    t('days.short.wed'),
+    t('days.short.thu'),
+    t('days.short.fri'),
+    t('days.short.sat')
+  ]
+  
+  const dayNames = startOfWeek === 'monday'
+    ? [...sundayFirstDayNames.slice(1), sundayFirstDayNames[0]] // Move Sunday to the end
+    : sundayFirstDayNames
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
-      {cells.map((day, idx) => {
+    <div className="space-y-2">
+      {/* Day names header - only show on larger screens where we have 7 columns */}
+      <div className="hidden sm:grid sm:grid-cols-7 gap-2">
+        {dayNames.map((dayName, idx) => (
+          <div key={idx} className="text-center text-sm font-semibold text-muted-foreground p-2">
+            {dayName}
+          </div>
+        ))}
+      </div>
+      
+      {/* Calendar grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
+        {cells.map((day, idx) => {
         const isCurrentMonth = day.getMonth() === currentMonth
         const key = formatKey(day)
         const list = (itemsByDate[key] || []).slice(0, 3)
+        const dayOfWeekIndex = idx % 7 // Get the day of week index (0-6)
         return (
           <Card key={`${key}-${idx}`} className={!isCurrentMonth ? 'opacity-60' : ''}>
             <CardContent className="pt-2 pb-3">
               <div className="flex justify-between items-center mb-1">
                 <div className="text-xs text-muted-foreground">
-                  {day.toLocaleDateString(undefined, { weekday: 'short' })}
+                  {dayNames[dayOfWeekIndex]}
                 </div>
                 <div className="text-sm font-semibold">{day.getDate()}</div>
               </div>
@@ -77,13 +117,14 @@ export function MonthView({ month, itemsByDate, usersById, onView, onEdit }: Mon
                   />
                 ))}
                 {(itemsByDate[key]?.length || 0) > 3 && (
-                  <div className="text-[10px] text-muted-foreground">+{(itemsByDate[key]!.length - 3)} more</div>
+                  <div className="text-[10px] text-muted-foreground">+{(itemsByDate[key]!.length - 3)} {t('more')}</div>
                 )}
               </div>
             </CardContent>
           </Card>
         )
       })}
+      </div>
     </div>
   )
 }

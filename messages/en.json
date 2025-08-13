@@ -64,12 +64,13 @@
     },
     "widgets": {
       "chores": {
-        "title": "Next Chore",
+        "title": "Next Chores",
         "none": "No chores scheduled",
         "addFirst": "Add First Chore",
         "complete": "Complete",
-        "completed": "Chore completed!",
-        "error": "Error completing chore"
+        "completed": "You're all caught up!",
+        "error": "Error completing chore",
+        "moreChores": "more chores"
       },
       "grocery": {
         "title": "Shopping List",
@@ -78,7 +79,8 @@
         "viewAll": "View All Items",
         "added": "Item added to shopping list!",
         "error": "Error adding item",
-        "moreItems": "more items"
+        "moreItems": "more items",
+        "addFirst": "Add some items to get started"
       },
       "meals": {
         "title": "Today's Meals",
@@ -124,7 +126,27 @@
         "recent": "Recent",
         "active": "Active",
         "completed": "Completed",
-        "inProgress": "In Progress"
+        "inProgress": "In Progress",
+        "title": "Quick Stats",
+        "chores": "Chores",
+        "choresComplete": "Chores Complete",
+        "urgentShopping": "Urgent Shopping",
+        "todaysEvents": "Today's Events",
+        "activeReminders": "Active Reminders"
+      },
+      "schedule": {
+        "title": "Today's Schedule",
+        "none": "No events scheduled",
+        "free": "Your day is free!",
+        "allDay": "All day"
+      },
+      "notifications": {
+        "title": "Notifications & Reminders",
+        "overdueChores": "Overdue Chore{count, plural, one {} other {s}}",
+        "highPriorityTasks": "High Priority Task{count, plural, one {} other {s}}",
+        "moreReminders": "more reminders",
+        "allCaughtUp": "All caught up!",
+        "noUrgent": "No urgent notifications or reminders"
       }
     },
     "quickActions": {
@@ -673,6 +695,20 @@
       "dark": "Dark",
       "system": "System"
     },
+    "calendar": {
+      "title": "Calendar Settings",
+      "description": "Configure calendar display preferences",
+      "startOfWeek": "Start of Week",
+      "startOfWeekDescription": "Choose which day the calendar week starts with",
+      "sunday": "Sunday",
+      "monday": "Monday"
+    },
+    "theme": {
+      "light": "Light",
+      "dark": "Dark", 
+      "system": "System",
+      "toggleTheme": "Toggle theme"
+    },
     "notifications": {
       "title": "Notifications",
       "description": "Manage when and how you receive notifications",
@@ -793,7 +829,8 @@
     },
     "sync": {
       "synced": "Synced",
-      "offline": "Offline",
+      "offline": "Offline", 
+      "offlineMode": "Offline Only",
       "disconnected": "Not Synced",
       "error": "Sync Error",
       "syncStatus": "Sync Status",
@@ -804,7 +841,11 @@
       "connected": "Connected",
       "signedInAs": "Signed in as",
       "syncError": "Sync Error:",
-      "workingOffline": "You're working offline. Changes will sync when you're back online."
+      "workingOffline": "You're working offline. Changes will sync when you're back online.",
+      "offlineModeDescription": "You are using Domus in offline-only mode. To enable sync, switch back to the setup screen.",
+      "switchMode": "Switch Mode",
+      "switchToSetup": "Switch to Setup",
+      "signOut": "Sign out"
     }
   },
   "planner": {
@@ -815,6 +856,17 @@
       "day": "Day",
       "week": "Week",
       "month": "Month"
+    },
+    "days": {
+      "short": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue", 
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      }
     },
     "addEvent": "Add Event",
     "noUsers": "No users available",
@@ -841,6 +893,8 @@
     "delete": "Delete",
     "editEvent": "Edit Event",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "more": "more",
+    "noEvents": "No events"
   }
 }

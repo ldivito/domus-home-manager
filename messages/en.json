@@ -138,7 +138,10 @@
         "title": "Today's Schedule",
         "none": "No events scheduled",
         "free": "Your day is free!",
-        "allDay": "All day"
+        "allDay": "All day",
+        "upcomingEvents": "Upcoming",
+        "tomorrow": "Tomorrow",
+        "dayAfterTomorrow": "Day after tomorrow"
       },
       "notifications": {
         "title": "Notifications & Reminders",

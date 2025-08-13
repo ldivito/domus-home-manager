@@ -138,7 +138,10 @@
         "title": "Horario de Hoy",
         "none": "No hay eventos programados",
         "free": "¡Tu día está libre!",
-        "allDay": "Todo el día"
+        "allDay": "Todo el día",
+        "upcomingEvents": "Próximos",
+        "tomorrow": "Mañana",
+        "dayAfterTomorrow": "Pasado mañana"
       },
       "notifications": {
         "title": "Notificaciones y Recordatorios",

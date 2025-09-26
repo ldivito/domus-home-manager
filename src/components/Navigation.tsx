@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
-import { 
+import {
   Home,
   CheckSquare,
   ShoppingCart,
@@ -15,7 +15,8 @@ import {
   Users,
   Settings,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Heart
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -37,6 +38,7 @@ export default function Navigation() {
     { nameKey: 'chores', href: '/chores', icon: CheckSquare },
     { nameKey: 'grocery', href: '/grocery', icon: ShoppingCart },
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },
+    { nameKey: 'keto', href: '/keto', icon: Heart },
     { nameKey: 'planner', href: '/planner', icon: Calendar },
     { nameKey: 'tasks', href: '/tasks', icon: List },
     { nameKey: 'projects', href: '/projects', icon: Hammer },

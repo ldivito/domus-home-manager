@@ -12,10 +12,11 @@
     "home": "Inicio",
     "chores": "Tareas",
     "grocery": "Compras",
+    "meals": "Comidas",
+    "keto": "Keto",
     "planner": "Planificador",
     "tasks": "Pendientes",
     "projects": "Proyectos",
-    "meals": "Comidas",
     "reminders": "Notificaciones",
     "users": "Usuarios",
     "settings": "Configuración"
@@ -898,6 +899,49 @@
       "switchMode": "Cambiar Modo",
       "switchToSetup": "Cambiar a Configuración",
       "signOut": "Cerrar sesión"
+    }
+  },
+  "keto": {
+    "title": "Seguidor Keto",
+    "subtitle": "Rastrea tu progreso de dieta cetogénica y mantente motivado",
+    "stats": {
+      "daysOnKeto": "Días en Keto",
+      "successfulDays": "Días Exitosos",
+      "fastingDays": "Días de Ayuno",
+      "currentStreak": "Racha Actual",
+      "days": "días",
+      "settings": "Configuración"
+    },
+    "calendar": {
+      "title": "Progreso Mensual",
+      "clickToToggle": "Haz clic para alternar: Éxito → Ayuno → Trampa → Limpiar",
+      "success": "Éxito Keto",
+      "fasting": "Día de Ayuno",
+      "cheat": "Día Trampa",
+      "noData": "Sin Datos"
+    },
+    "settings": {
+      "title": "Configuración Keto",
+      "startDate": "Fecha de Inicio",
+      "startDateLabel": "¿Cuándo comenzaste tu dieta keto?",
+      "save": "Guardar Configuración",
+      "cancel": "Cancelar"
+    },
+    "messages": {
+      "dayUpdated": "¡Estado del día actualizado!",
+      "settingsUpdated": "¡Configuración actualizada con éxito!",
+      "error": "Algo salió mal. Por favor inténtalo de nuevo."
+    },
+    "progress": {
+      "weeklySuccess": "Éxito Semanal",
+      "monthlySuccess": "Éxito Mensual",
+      "successRate": "Tasa de Éxito",
+      "fastingRate": "Tasa de Ayuno",
+      "thisWeek": "Esta Semana",
+      "thisMonth": "Este Mes",
+      "cheatDays": "Días Trampa",
+      "insights": "Análisis de Progreso",
+      "insightsSubtitle": "Resumen de tu viaje keto y motivación"
     }
   }
 }

@@ -249,6 +249,25 @@ export interface HomeSettings {
   createdAt: Date
 }
 
+export interface KetoSettings {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this keto plan
+  startDate: Date // When they started the keto diet
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface KetoDay {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this keto plan
+  date: Date // The date for this keto day (date component only)
+  status: 'success' | 'fasting' | 'cheat' // ✓ for success, ✓🕐 for fasting, ✗ for cheat day
+  createdAt: Date
+  updatedAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -265,6 +284,8 @@ export class DomusDatabase extends Dexie {
   reminders!: Table<Reminder>
   calendarEvents!: Table<CalendarEvent>
   homeSettings!: Table<HomeSettings>
+  ketoSettings!: Table<KetoSettings>
+  ketoDays!: Table<KetoDay>
 
   constructor() {
     super('DomusDatabase', { addons: [dexieCloud] })
@@ -278,7 +299,49 @@ export class DomusDatabase extends Dexie {
       customLoginGui: process.env.NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI !== 'false' // Disable default login GUI - we handle it ourselves
     })
 
-    // v11: Add Dexie Cloud support with household management
+    // v13: Add fasting support to Keto tracking
+    this.version(13).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
+    })
+
+    // v12: Add Keto tracking tables (legacy version)
+    this.version(12).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
+    })
+
+    // v11: Add Dexie Cloud support with household management (legacy version)
     this.version(11).stores({
       users: 'id, name, email, color, type, householdId',
       households: 'id, name, owner, createdAt, updatedAt',
@@ -296,7 +359,19 @@ export class DomusDatabase extends Dexie {
       calendarEvents: 'id, title, householdId, date, type',
       homeSettings: 'id, householdId, homeName, lastUpdated, createdAt'
     })
-    
+
+    // Migration for fasting support in Keto tracking (v13 upgrade)
+    this.version(13).upgrade(async () => {
+      console.log('Database upgraded to v13 with fasting support in Keto tracking')
+      // No data migration needed - existing success/cheat statuses remain valid
+    })
+
+    // Migration for Keto tracking feature (v12 upgrade)
+    this.version(12).upgrade(async () => {
+      console.log('Database upgraded to v12 with Keto tracking support')
+      // No data migration needed for new tables
+    })
+
     // Migration from local storage to cloud (v11 upgrade)
     this.version(11).upgrade(async () => {
       // This migration will handle transitioning from local-only to cloud-enabled
@@ -560,12 +635,14 @@ export class LocalDomusDatabase extends Dexie {
   reminders!: Table<Reminder>
   calendarEvents!: Table<CalendarEvent>
   homeSettings!: Table<HomeSettings>
+  ketoSettings!: Table<KetoSettings>
+  ketoDays!: Table<KetoDay>
 
   constructor() {
     super('DomusLocalDatabase')
 
-    // Use same v11 schema but without cloud
-    this.version(11).stores({
+    // Use same v13 schema but without cloud
+    this.version(13).stores({
       users: 'id, name, email, color, type, householdId',
       households: 'id, name, owner, createdAt, updatedAt',
       householdMembers: 'id, householdId, userId, role, joinedAt',
@@ -580,7 +657,9 @@ export class LocalDomusDatabase extends Dexie {
       savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
       reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
       calendarEvents: 'id, title, householdId, date, type',
-      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt'
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
     })
 
     this.on('ready', async () => {

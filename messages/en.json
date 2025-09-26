@@ -12,10 +12,11 @@
     "home": "Home",
     "chores": "Chores",
     "grocery": "Grocery",
+    "meals": "Meals",
+    "keto": "Keto",
     "planner": "Planner",
     "tasks": "Tasks",
     "projects": "Projects",
-    "meals": "Meals",
     "reminders": "Notifications",
     "users": "Users",
     "settings": "Settings"
@@ -899,5 +900,48 @@
     "save": "Save",
     "more": "more",
     "noEvents": "No events"
+  },
+  "keto": {
+    "title": "Keto Tracker",
+    "subtitle": "Track your ketogenic diet progress and stay motivated",
+    "stats": {
+      "daysOnKeto": "Days on Keto",
+      "successfulDays": "Successful Days",
+      "fastingDays": "Fasting Days",
+      "currentStreak": "Current Streak",
+      "days": "days",
+      "settings": "Settings"
+    },
+    "calendar": {
+      "title": "Monthly Progress",
+      "clickToToggle": "Click to cycle through: Success → Fasting → Cheat → Clear",
+      "success": "Keto Success",
+      "fasting": "Fasting Day",
+      "cheat": "Cheat Day",
+      "noData": "No Data"
+    },
+    "settings": {
+      "title": "Keto Settings",
+      "startDate": "Start Date",
+      "startDateLabel": "When did you start your keto diet?",
+      "save": "Save Settings",
+      "cancel": "Cancel"
+    },
+    "messages": {
+      "dayUpdated": "Day status updated!",
+      "settingsUpdated": "Settings updated successfully!",
+      "error": "Something went wrong. Please try again."
+    },
+    "progress": {
+      "weeklySuccess": "Weekly Success",
+      "monthlySuccess": "Monthly Success",
+      "successRate": "Success Rate",
+      "fastingRate": "Fasting Rate",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "cheatDays": "Cheat Days",
+      "insights": "Progress Insights",
+      "insightsSubtitle": "Your keto journey overview and motivation"
+    }
   }
 }

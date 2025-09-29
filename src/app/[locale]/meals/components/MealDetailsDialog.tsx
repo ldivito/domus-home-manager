@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -66,6 +66,12 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
     dinner: 'bg-purple-100 text-purple-800 border-purple-200',
     snack: 'bg-green-100 text-green-800 border-green-200'
   }
+
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
 
   const getMealIngredients = () => {
     if (!meal?.ingredients) return []

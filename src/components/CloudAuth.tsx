@@ -358,7 +358,11 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
     setError(null)
 
     try {
-      await db.createHousehold(householdName)
+      if ('createHousehold' in db && typeof db.createHousehold === 'function') {
+        await db.createHousehold(householdName)
+      } else {
+        throw new Error('Household creation is unavailable in offline mode')
+      }
       toast.success('Household created!')
     } catch (error: unknown) {
       console.error('Household creation error:', error)

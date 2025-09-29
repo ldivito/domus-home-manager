@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -41,6 +41,12 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
     () => db.mealCategories.orderBy('name').toArray(),
     []
   ) || []
+
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
 
   const translateCategoryName = (categoryName: string) => {
     if (categoryName.startsWith('defaultMealCategories.')) {

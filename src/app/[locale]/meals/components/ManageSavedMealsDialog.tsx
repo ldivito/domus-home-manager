@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -51,6 +51,12 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
     () => db.savedGroceryItems.toArray(),
     []
   ) || []
+
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
 
   const translateCategoryName = (categoryName: string) => {
     if (categoryName.startsWith('defaultMealCategories.')) {

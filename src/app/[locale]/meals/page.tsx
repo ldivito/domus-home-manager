@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UtensilsCrossed, Plus, Settings2, Calendar, List, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db } from '@/lib/db'
+import { db, MealIngredient } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCalendarSettings } from '@/hooks/useCalendarSettings'
 import { AddMealDialog } from './components/AddMealDialog'
@@ -34,8 +34,14 @@ export default function MealsPage() {
     name: string
     description?: string
     category: string
-    ingredients: string[]
+    ingredients: MealIngredient[]
   } | undefined>(undefined)
+
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
 
   const meals = useLiveQuery(
     () => db.meals.orderBy('date').toArray(),
@@ -55,10 +61,14 @@ export default function MealsPage() {
 
   // Helper function to get ingredients for a meal
   const getMealIngredients = (meal: typeof meals[0]) => {
-    if (!meal.ingredientIds) return []
-    return meal.ingredientIds
-      .map(id => savedGroceryItems.find(item => item.id === id))
-      .filter(Boolean) as NonNullable<typeof savedGroceryItems[0]>[]
+    if (!meal.ingredients) return []
+    return meal.ingredients
+      .map(ingredient => {
+        const savedItem = savedGroceryItems.find(item => item.id === ingredient.savedGroceryItemId)
+        if (!savedItem) return null
+        return { savedItem, ingredient }
+      })
+      .filter(Boolean) as { savedItem: typeof savedGroceryItems[number]; ingredient: MealIngredient }[]
   }
 
   const mealTypeColors = {
@@ -136,11 +146,11 @@ export default function MealsPage() {
     }
   }
 
-  const handleAddIngredientsToGrocery = async (ingredientIds: string[]) => {
+  const handleAddIngredientsToGrocery = async (ingredients: MealIngredient[]) => {
     try {
-      for (const ingredientId of ingredientIds) {
+      for (const ingredient of ingredients) {
         // Get the saved grocery item
-        const savedItem = await db.savedGroceryItems.get(ingredientId)
+        const savedItem = await db.savedGroceryItems.get(ingredient.savedGroceryItemId)
         if (!savedItem) continue
 
         // Add to current grocery list
@@ -153,10 +163,12 @@ export default function MealsPage() {
         })
 
         // Update usage stats in saved item
-        await db.savedGroceryItems.update(ingredientId, {
-          timesUsed: savedItem.timesUsed + 1,
-          lastUsed: new Date()
-        })
+        if (savedItem.id) {
+          await db.savedGroceryItems.update(savedItem.id, {
+            timesUsed: savedItem.timesUsed + 1,
+            lastUsed: new Date()
+          })
+        }
       }
     } catch (error) {
       console.error('Error adding ingredients to grocery list:', error)
@@ -186,7 +198,7 @@ export default function MealsPage() {
     name: string
     description?: string
     category: string
-    ingredients: string[]
+    ingredients: MealIngredient[]
   }, selectedDate?: string) => {
     setPreSelectedTemplate(template)
     setPreSelectedDate(selectedDate)
@@ -508,9 +520,12 @@ export default function MealsPage() {
                       <div>
                         <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm">{t('ingredients')}:</h4>
                         <div className="flex flex-wrap gap-1">
-                          {ingredients.map((ingredient) => (
-                            <span key={ingredient.id} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-xs dark:text-gray-300">
-                              {ingredient.name}
+                          {ingredients.map(({ savedItem, ingredient }, idx) => (
+                            <span
+                              key={`${savedItem.id}-${ingredient.id ?? idx}`}
+                              className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-xs dark:text-gray-300"
+                            >
+                              {savedItem.name}
                               {ingredient.amount && ` (${ingredient.amount})`}
                             </span>
                           ))}
@@ -518,12 +533,12 @@ export default function MealsPage() {
                       </div>
                     )
                   })()}
-                  {meal.ingredientIds && meal.ingredientIds.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                  {meal.ingredients && meal.ingredients.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full"
-                      onClick={() => handleAddIngredientsToGrocery(meal.ingredientIds!)}
+                      onClick={() => handleAddIngredientsToGrocery(meal.ingredients!)}
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       {t('addToGrocery')}

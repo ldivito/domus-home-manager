@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie'
 import dexieCloud from 'dexie-cloud-addon'
+import { generateId } from './utils'
 
 export interface User {
   id?: string // Changed to string for cloud compatibility
@@ -67,6 +68,13 @@ export interface SavedGroceryItem {
   createdAt: Date
 }
 
+export interface MealIngredient {
+  id?: string
+  savedGroceryItemId: string
+  amount?: string
+  usageNotes?: string
+}
+
 export interface Task {
   id?: string
   title: string
@@ -99,7 +107,7 @@ export interface Meal {
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   householdId?: string
   assignedUserId?: string
-  ingredientIds?: string[] // Array of SavedGroceryItem IDs
+  ingredients?: MealIngredient[]
   createdAt: Date
 }
 
@@ -119,7 +127,7 @@ export interface SavedMeal {
   description?: string
   category: string
   householdId?: string
-  ingredientIds: string[] // Array of SavedGroceryItem IDs
+  ingredients: MealIngredient[]
   timesUsed: number
   lastUsed?: Date
   createdAt: Date
@@ -286,6 +294,8 @@ export class DomusDatabase extends Dexie {
   homeSettings!: Table<HomeSettings>
   ketoSettings!: Table<KetoSettings>
   ketoDays!: Table<KetoDay>
+  private legacyMealIngredientMigrationComplete = false
+  private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase', { addons: [dexieCloud] })
@@ -513,7 +523,7 @@ export class DomusDatabase extends Dexie {
     // Initialize cloud connection and sync
     this.on('ready', async () => {
       console.log('Database ready with Dexie Cloud support')
-      
+
       try {
         // Ensure cloud sync is enabled
         const url = this.cloud?.options?.databaseUrl
@@ -523,7 +533,92 @@ export class DomusDatabase extends Dexie {
       } catch (error) {
         console.warn('Dexie Cloud connection issue:', error)
       }
+
+      try {
+        await this.ensureMealIngredientStructure()
+      } catch (error) {
+        console.warn('Meal ingredient migration issue:', error)
+      }
     })
+  }
+
+  async ensureMealIngredientStructure(): Promise<void> {
+    if (this.legacyMealIngredientMigrationComplete) return
+    if (this.legacyMealIngredientMigrationPromise) {
+      return this.legacyMealIngredientMigrationPromise
+    }
+
+    type LegacyIngredientRecord = {
+      ingredientIds?: string[]
+      ingredients?: MealIngredient[]
+    }
+
+    const migration = this.transaction('rw', this.savedGroceryItems, this.meals, this.savedMeals, async () => {
+      const savedItems = await this.savedGroceryItems.toArray()
+      const savedItemMap = new Map<string, SavedGroceryItem>()
+
+      for (const item of savedItems) {
+        if (item.id) {
+          savedItemMap.set(String(item.id), item)
+        }
+      }
+
+      const convertLegacyIngredients = (ids?: string[]) => {
+        if (!ids?.length) return []
+
+        return ids.map((id) => ({
+          id: generateId('ing'),
+          savedGroceryItemId: String(id),
+          amount: savedItemMap.get(String(id))?.amount || undefined,
+        }))
+      }
+
+      const migrateRecords = async <T extends { id?: string }>(table: Table<T, string>) => {
+        const records = await table.toArray()
+
+        for (const record of records) {
+          const legacyRecord = record as T & LegacyIngredientRecord
+          const id = legacyRecord.id
+          if (!id) continue
+          const recordId = id
+
+          const hasStructuredIngredients = Array.isArray(legacyRecord.ingredients) && legacyRecord.ingredients.length > 0
+          const legacyIds = legacyRecord.ingredientIds
+          if (!legacyIds?.length) continue
+
+          if (!hasStructuredIngredients) {
+            const converted = convertLegacyIngredients(legacyIds)
+            if (converted.length > 0) {
+              await table.update(recordId, { ingredients: converted } as Partial<T>)
+            }
+          }
+
+          await table
+            .where('id')
+            .equals(recordId)
+            .modify((entry) => {
+              delete (entry as LegacyIngredientRecord).ingredientIds
+            })
+        }
+      }
+
+      await migrateRecords(this.meals)
+      await migrateRecords(this.savedMeals)
+    })
+
+    this.legacyMealIngredientMigrationPromise = migration
+      .then(() => {
+        this.legacyMealIngredientMigrationComplete = true
+      })
+      .catch((error) => {
+        console.error('Error migrating legacy meal ingredients:', error)
+        throw error
+      })
+      .finally(() => {
+        this.legacyMealIngredientMigrationPromise = undefined
+      })
+
+    return this.legacyMealIngredientMigrationPromise
   }
 
   // Helper methods for household management
@@ -637,6 +732,8 @@ export class LocalDomusDatabase extends Dexie {
   homeSettings!: Table<HomeSettings>
   ketoSettings!: Table<KetoSettings>
   ketoDays!: Table<KetoDay>
+  private legacyMealIngredientMigrationComplete = false
+  private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusLocalDatabase')
@@ -664,12 +761,90 @@ export class LocalDomusDatabase extends Dexie {
 
     this.on('ready', async () => {
       try {
-        // Optional: seed nothing by default; users can create their own
-        // console.log('Local database ready')
+        await this.ensureMealIngredientStructure()
       } catch (err) {
         console.warn('Local DB init error:', err)
       }
     })
+  }
+
+  async ensureMealIngredientStructure(): Promise<void> {
+    if (this.legacyMealIngredientMigrationComplete) return
+    if (this.legacyMealIngredientMigrationPromise) {
+      return this.legacyMealIngredientMigrationPromise
+    }
+
+    type LegacyIngredientRecord = {
+      ingredientIds?: string[]
+      ingredients?: MealIngredient[]
+    }
+
+    const migration = this.transaction('rw', this.savedGroceryItems, this.meals, this.savedMeals, async () => {
+      const savedItems = await this.savedGroceryItems.toArray()
+      const savedItemMap = new Map<string, SavedGroceryItem>()
+
+      for (const item of savedItems) {
+        if (item.id) {
+          savedItemMap.set(String(item.id), item)
+        }
+      }
+
+      const convertLegacyIngredients = (ids?: string[]) => {
+        if (!ids?.length) return []
+
+        return ids.map((id) => ({
+          id: generateId('ing'),
+          savedGroceryItemId: String(id),
+          amount: savedItemMap.get(String(id))?.amount || undefined,
+        }))
+      }
+
+      const migrateRecords = async <T extends { id?: string }>(table: Table<T, string>) => {
+        const records = await table.toArray()
+
+        for (const record of records) {
+          const legacyRecord = record as T & LegacyIngredientRecord
+          const id = legacyRecord.id
+          if (!id) continue
+          const recordId = id
+
+          const hasStructuredIngredients = Array.isArray(legacyRecord.ingredients) && legacyRecord.ingredients.length > 0
+          const legacyIds = legacyRecord.ingredientIds
+          if (!legacyIds?.length) continue
+
+          if (!hasStructuredIngredients) {
+            const converted = convertLegacyIngredients(legacyIds)
+            if (converted.length > 0) {
+              await table.update(recordId, { ingredients: converted } as Partial<T>)
+            }
+          }
+
+          await table
+            .where('id')
+            .equals(recordId)
+            .modify((entry) => {
+              delete (entry as LegacyIngredientRecord).ingredientIds
+            })
+        }
+      }
+
+      await migrateRecords(this.meals)
+      await migrateRecords(this.savedMeals)
+    })
+
+    this.legacyMealIngredientMigrationPromise = migration
+      .then(() => {
+        this.legacyMealIngredientMigrationComplete = true
+      })
+      .catch((error) => {
+        console.error('Error migrating legacy meal ingredients (local):', error)
+        throw error
+      })
+      .finally(() => {
+        this.legacyMealIngredientMigrationPromise = undefined
+      })
+
+    return this.legacyMealIngredientMigrationPromise
   }
 }
 

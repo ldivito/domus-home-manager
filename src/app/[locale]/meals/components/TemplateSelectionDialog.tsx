@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -42,6 +42,12 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
     []
   ) || []
 
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
+
   const translateCategoryName = (categoryName: string) => {
     if (categoryName.startsWith('defaultMealCategories.')) {
       const key = categoryName.replace('defaultMealCategories.', '')
@@ -70,15 +76,22 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
   const filteredMeals = savedMeals.filter(meal => {
     const matchesName = meal.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesDescription = meal.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    // Check if any ingredient names match the search term
-    const ingredients = (meal.ingredientIds || [])
-      .map(id => savedGroceryItems.find(item => item.id === id))
-      .filter(Boolean)
-    const matchesIngredient = ingredients.some(ing => 
-      ing && ing.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    
+
+    const ingredientDetails = (meal.ingredients || [])
+      .map(ingredient => {
+        const savedItem = savedGroceryItems.find(item => item.id === ingredient.savedGroceryItemId)
+        if (!savedItem) return null
+        return { savedItem, ingredient }
+      })
+      .filter(Boolean) as { savedItem: typeof savedGroceryItems[number]; ingredient: NonNullable<typeof meal.ingredients>[number] }[]
+
+    const lowerSearch = searchTerm.toLowerCase()
+    const matchesIngredient = ingredientDetails.some(({ savedItem, ingredient }) => {
+      const nameMatches = savedItem.name.toLowerCase().includes(lowerSearch)
+      const usageMatches = ingredient.usageNotes?.toLowerCase().includes(lowerSearch)
+      return nameMatches || !!usageMatches
+    })
+
     return matchesName || matchesDescription || matchesIngredient
   })
 
@@ -140,68 +153,76 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMeals.map((meal) => (
-                <Card 
-                  key={meal.id} 
-                  className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02] border-2 hover:border-blue-200"
-                  onClick={() => handleSelectTemplate(meal)}
-                >
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Header */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-gray-900 truncate">{meal.name}</h3>
-                          <span 
-                            className="px-2 py-1 rounded-full text-white text-xs font-medium shrink-0 ml-2"
-                            style={{ backgroundColor: getCategoryColor(meal.category) }}
-                          >
-                            {translateCategoryName(meal.category)}
-                          </span>
-                        </div>
-                        
-                        {meal.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">{meal.description}</p>
-                        )}
-                      </div>
+              {filteredMeals.map((meal) => {
+                const ingredientDetails = (meal.ingredients || [])
+                  .map(ingredient => {
+                    const savedItem = savedGroceryItems.find(item => item.id === ingredient.savedGroceryItemId)
+                    if (!savedItem) return null
+                    return { savedItem, ingredient }
+                  })
+                  .filter(Boolean) as { savedItem: typeof savedGroceryItems[number]; ingredient: NonNullable<typeof meal.ingredients>[number] }[]
 
-                      {/* Stats */}
-                      <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        <span>Used {meal.timesUsed} times</span>
-                        <span>•</span>
-                        <span>{(meal.ingredientIds || []).length} ingredients</span>
-                      </div>
+                return (
+                  <Card
+                    key={meal.id}
+                    className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02] border-2 hover:border-blue-200"
+                    onClick={() => handleSelectTemplate(meal)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Header */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-gray-900 truncate">{meal.name}</h3>
+                            <span
+                              className="px-2 py-1 rounded-full text-white text-xs font-medium shrink-0 ml-2"
+                              style={{ backgroundColor: getCategoryColor(meal.category) }}
+                            >
+                              {translateCategoryName(meal.category)}
+                            </span>
+                          </div>
 
-                      {/* Ingredients Preview */}
-                      <div>
-                        <p className="text-xs font-medium text-gray-700 mb-1">Ingredients:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {(meal.ingredientIds || []).slice(0, 4).map((ingredientId) => {
-                            const ingredient = savedGroceryItems.find(item => item.id === ingredientId)
-                            return ingredient ? (
-                              <Badge key={ingredientId} variant="secondary" className="text-xs">
-                                {ingredient.name}
-                              </Badge>
-                            ) : null
-                          })}
-                          {(meal.ingredientIds || []).length > 4 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{(meal.ingredientIds || []).length - 4} more
-                            </Badge>
+                          {meal.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">{meal.description}</p>
                           )}
                         </div>
-                      </div>
 
-                      {/* Last used */}
-                      <div className="text-xs text-gray-500 pt-2 border-t">
-                        Last used: {meal.lastUsed 
-                          ? new Date(meal.lastUsed).toLocaleDateString() 
-                          : 'Never'}
+                        {/* Stats */}
+                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                          <span>Used {meal.timesUsed} times</span>
+                          <span>•</span>
+                          <span>{ingredientDetails.length} ingredients</span>
+                        </div>
+
+                        {/* Ingredients Preview */}
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 mb-1">Ingredients:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {ingredientDetails.slice(0, 4).map(({ savedItem, ingredient }, idx) => (
+                              <Badge key={`${savedItem.id}-${ingredient.id ?? idx}`} variant="secondary" className="text-xs">
+                                {savedItem.name}
+                                {ingredient.amount ? ` (${ingredient.amount})` : ''}
+                              </Badge>
+                            ))}
+                            {ingredientDetails.length > 4 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{ingredientDetails.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Last used */}
+                        <div className="text-xs text-gray-500 pt-2 border-t">
+                          Last used: {meal.lastUsed
+                            ? new Date(meal.lastUsed).toLocaleDateString()
+                            : 'Never'}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>

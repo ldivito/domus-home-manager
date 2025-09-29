@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -16,14 +16,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Plus, Edit3, X, Search } from "lucide-react"
-import { db, SavedMeal, MealCategory } from '@/lib/db'
+import { db, SavedMeal, MealCategory, MealIngredient } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 interface TemplateData {
   name: string
   description?: string
   category: string
-  ingredients: string[]
+  ingredients: MealIngredient[]
 }
 
 interface ManageSavedMealsDialogProps {
@@ -51,6 +51,12 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
     () => db.savedGroceryItems.toArray(),
     []
   ) || []
+
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
 
   const translateCategoryName = (categoryName: string) => {
     if (categoryName.startsWith('defaultMealCategories.')) {
@@ -126,16 +132,20 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
       name: meal.name,
       description: meal.description,
       category: meal.category,
-      ingredients: savedGroceryItems.filter(item => (meal.ingredientIds || []).includes(item.id!)).map(item => item.name)
+      ingredients: (meal.ingredients || []).map((ingredient) => ({ ...ingredient }))
     }
 
     onAddMealWithTemplate?.(template)
   }
 
   const getMealIngredients = (meal: SavedMeal) => {
-    return (meal.ingredientIds || [])
-      .map(id => savedGroceryItems.find(item => item.id === id))
-      .filter(Boolean) as NonNullable<typeof savedGroceryItems[0]>[]
+    return (meal.ingredients || [])
+      .map(ingredient => {
+        const savedItem = savedGroceryItems.find(item => item.id === ingredient.savedGroceryItemId)
+        if (!savedItem) return null
+        return { savedItem, ingredient }
+      })
+      .filter(Boolean) as { savedItem: typeof savedGroceryItems[number]; ingredient: MealIngredient }[]
   }
 
   const filteredMeals = savedMeals.filter(meal => {
@@ -144,7 +154,9 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
     const query = searchQuery.toLowerCase()
     const name = meal.name.toLowerCase()
     const description = (meal.description || '').toLowerCase()
-    const ingredients = getMealIngredients(meal).map(ing => ing.name.toLowerCase()).join(' ')
+    const ingredients = getMealIngredients(meal)
+      .map(({ savedItem, ingredient }) => `${savedItem.name.toLowerCase()} ${ingredient.amount?.toLowerCase() || ''} ${ingredient.usageNotes?.toLowerCase() || ''}`)
+      .join(' ')
     
     return name.includes(query) || description.includes(query) || ingredients.includes(query)
   })
@@ -262,12 +274,12 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
                         <div className="text-xs text-gray-500 space-y-1">
                           <div className="flex justify-between">
                             <span>{t('usedTimes', { count: meal.timesUsed })}</span>
-                            <span>{(meal.ingredientIds || []).length} ingredients</span>
+                            <span>{ingredients.length} ingredients</span>
                           </div>
-                          <div>{t('lastUsed', { 
-                            date: meal.lastUsed 
-                              ? new Date(meal.lastUsed).toLocaleDateString() 
-                              : t('never') 
+                          <div>{t('lastUsed', {
+                            date: meal.lastUsed
+                              ? new Date(meal.lastUsed).toLocaleDateString()
+                              : t('never')
                           })}</div>
                         </div>
                         
@@ -275,9 +287,10 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
                         {ingredients.length > 0 && (
                           <div>
                             <div className="flex flex-wrap gap-1 max-h-16 overflow-hidden">
-                              {ingredients.slice(0, 3).map((ingredient) => (
-                                <span key={ingredient.id} className="px-2 py-1 bg-gray-100 rounded text-xs">
-                                  {ingredient.name}
+                              {ingredients.slice(0, 3).map(({ savedItem, ingredient }, idx) => (
+                                <span key={`${savedItem.id}-${ingredient.id ?? idx}`} className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                  {savedItem.name}
+                                  {ingredient.amount ? ` (${ingredient.amount})` : ''}
                                 </span>
                               ))}
                               {ingredients.length > 3 && (

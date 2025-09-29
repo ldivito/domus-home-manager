@@ -67,8 +67,8 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
   // Determine authentication state
   // For Dexie Cloud: user is fully authenticated when they have userId and email
   const isFullyAuthenticated = !!(currentUser && currentUser.userId && currentUser.email)
-  const needsSetup = isFullyAuthenticated && (!userProfile || !userProfile.householdId)
-  const isSetupComplete = isFullyAuthenticated && !!(userProfile && userProfile.householdId)
+  const needsSetup = isFullyAuthenticated && (!userProfile || !userProfile.householdId || userHousehold === null)
+  const isSetupComplete = isFullyAuthenticated && !!(userProfile && userProfile.householdId) && userHousehold !== null
   
   // Resolve profile after auth to prevent showing setup if profile exists but hasn't synced into IndexedDB yet
   useEffect(() => {
@@ -110,14 +110,14 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
     }
     resolve()
     return () => { cancelled = true }
-  }, [isFullyAuthenticated, userProfile?.id, userProfile?.householdId])
+  }, [isFullyAuthenticated, userProfile])
 
   // If profile exists but household is missing, default setup tab to Household
   useEffect(() => {
     if (isFullyAuthenticated && userProfile && !userProfile.householdId) {
       setActiveTab('household')
     }
-  }, [isFullyAuthenticated, userProfile?.householdId])
+  }, [isFullyAuthenticated, userProfile])
 
   // If user is fully set up, call success callback
   useEffect(() => {
@@ -425,13 +425,15 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
   }
 
   // While finishing post-auth (waiting for wrapper or profile to settle), show a small loader
-  if (postAuthInProgress) {
+  if (postAuthInProgress || resolvingProfile) {
     return (
       <div className="max-w-sm mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Signing you in…</CardTitle>
-            <CardDescription>Please wait</CardDescription>
+            <CardTitle>{resolvingProfile ? 'Syncing your profile…' : 'Signing you in…'}</CardTitle>
+            <CardDescription>
+              {resolvingProfile ? 'Checking for your latest cloud data' : 'Please wait'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -575,13 +577,29 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
           </Alert>
         )}
 
-        <div className="mt-6">
-          <Button 
-            variant="ghost" 
+        <div className="mt-6 space-y-2">
+          <Button
+            variant="ghost"
             onClick={onBackToModeSelection}
             className="w-full"
           >
             Back to Mode Selection
+          </Button>
+          {onBackToOffline && (
+            <Button
+              variant="outline"
+              onClick={onBackToOffline}
+              className="w-full"
+            >
+              Switch to Offline Mode
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="w-full"
+          >
+            Sign Out
           </Button>
         </div>
       </div>
@@ -711,6 +729,16 @@ export default function CloudAuth({ onAuthSuccess, onBackToOffline, onBackToMode
             )}
           </CardContent>
         </Card>
+
+        {onBackToOffline && (
+          <Button
+            variant="ghost"
+            onClick={onBackToOffline}
+            className="w-full"
+          >
+            Continue in offline mode
+          </Button>
+        )}
 
 
         {/* OTP Dialog */}

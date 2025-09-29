@@ -586,18 +586,19 @@ export class DomusDatabase extends Dexie {
           const legacyIds = legacyRecord.ingredientIds
           if (!legacyIds?.length) continue
 
-          if (!hasStructuredIngredients) {
-            const converted = convertLegacyIngredients(legacyIds)
-            if (converted.length > 0) {
-              await table.update(recordId, { ingredients: converted } as Partial<T>)
-            }
-          }
+          const converted = !hasStructuredIngredients
+            ? convertLegacyIngredients(legacyIds)
+            : undefined
 
           await table
             .where('id')
             .equals(recordId)
             .modify((entry) => {
-              delete (entry as LegacyIngredientRecord).ingredientIds
+              const legacyEntry = entry as LegacyIngredientRecord
+              if (converted?.length) {
+                legacyEntry.ingredients = converted
+              }
+              delete legacyEntry.ingredientIds
             })
         }
       }
@@ -812,18 +813,19 @@ export class LocalDomusDatabase extends Dexie {
           const legacyIds = legacyRecord.ingredientIds
           if (!legacyIds?.length) continue
 
-          if (!hasStructuredIngredients) {
-            const converted = convertLegacyIngredients(legacyIds)
-            if (converted.length > 0) {
-              await table.update(recordId, { ingredients: converted } as Partial<T>)
-            }
-          }
+          const converted = !hasStructuredIngredients
+            ? convertLegacyIngredients(legacyIds)
+            : undefined
 
           await table
             .where('id')
             .equals(recordId)
             .modify((entry) => {
-              delete (entry as LegacyIngredientRecord).ingredientIds
+              const legacyEntry = entry as LegacyIngredientRecord
+              if (converted?.length) {
+                legacyEntry.ingredients = converted
+              }
+              delete legacyEntry.ingredientIds
             })
         }
       }
@@ -859,7 +861,7 @@ let currentDb: DomusDatabase | LocalDomusDatabase =
   currentMode === 'offline' ? new LocalDomusDatabase() : new DomusDatabase()
 
 // Proxy so `db.*` always routes to the active database instance
-export const db = new Proxy({} as DomusDatabase & LocalDomusDatabase, {
+export const db = new Proxy({} as DomusDatabase | LocalDomusDatabase, {
   get(_target, prop) {
     return (currentDb as unknown as Record<string | symbol, unknown>)[prop as string]
   },

@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie'
 import dexieCloud from 'dexie-cloud-addon'
+import { generateId } from './utils'
 
 export interface User {
   id?: string // Changed to string for cloud compatibility
@@ -67,6 +68,13 @@ export interface SavedGroceryItem {
   createdAt: Date
 }
 
+export interface MealIngredient {
+  id?: string
+  savedGroceryItemId: string
+  amount?: string
+  usageNotes?: string
+}
+
 export interface Task {
   id?: string
   title: string
@@ -99,7 +107,7 @@ export interface Meal {
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   householdId?: string
   assignedUserId?: string
-  ingredientIds?: string[] // Array of SavedGroceryItem IDs
+  ingredients?: MealIngredient[]
   createdAt: Date
 }
 
@@ -119,7 +127,7 @@ export interface SavedMeal {
   description?: string
   category: string
   householdId?: string
-  ingredientIds: string[] // Array of SavedGroceryItem IDs
+  ingredients: MealIngredient[]
   timesUsed: number
   lastUsed?: Date
   createdAt: Date
@@ -297,6 +305,74 @@ export class DomusDatabase extends Dexie {
       requireAuth: process.env.NEXT_PUBLIC_DEXIE_REQUIRE_AUTH !== 'false', // Require authentication for all operations
       unsyncedTables: process.env.NEXT_PUBLIC_DEXIE_UNSYNCED_TABLES?.split(',').filter(Boolean) || [], // All tables are synced by default
       customLoginGui: process.env.NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI !== 'false' // Disable default login GUI - we handle it ourselves
+    })
+
+    // v14: Introduce structured meal ingredients
+    this.version(14).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
+    })
+
+    this.version(14).upgrade(async (tx) => {
+      type LegacyMeal = Meal & { ingredientIds?: string[] }
+      type LegacySavedMeal = Omit<SavedMeal, 'ingredients'> & {
+        ingredientIds?: string[]
+        ingredients?: MealIngredient[]
+      }
+
+      const savedItems = await tx.table('savedGroceryItems').toArray()
+      const savedItemMap = new Map<string, typeof savedItems[number]>
+      for (const item of savedItems) {
+        if (item.id) {
+          savedItemMap.set(String(item.id), item)
+        }
+      }
+
+      const convertIngredients = (ids?: string[]) => {
+        if (!ids?.length) return undefined
+        return ids.map((id) => ({
+          id: generateId('ing'),
+          savedGroceryItemId: String(id),
+          amount: savedItemMap.get(String(id))?.amount || undefined
+        }))
+      }
+
+      const meals = await tx.table('meals').toArray() as LegacyMeal[]
+      for (const meal of meals) {
+        if (meal.ingredientIds?.length) {
+          const ingredients = convertIngredients(meal.ingredientIds)
+          await tx.table('meals').update(meal.id, {
+            ingredients,
+            ingredientIds: Dexie.delete()
+          })
+        }
+      }
+
+      const savedMeals = await tx.table('savedMeals').toArray() as LegacySavedMeal[]
+      for (const savedMeal of savedMeals) {
+        if (savedMeal.ingredientIds?.length) {
+          const ingredients = convertIngredients(savedMeal.ingredientIds)
+          await tx.table('savedMeals').update(savedMeal.id, {
+            ingredients,
+            ingredientIds: Dexie.delete()
+          })
+        }
+      }
     })
 
     // v13: Add fasting support to Keto tracking

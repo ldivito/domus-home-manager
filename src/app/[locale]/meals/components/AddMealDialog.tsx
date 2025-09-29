@@ -86,6 +86,12 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
     []
   ) || []
 
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
+
   // Handle pre-selected values when dialog opens
   useEffect(() => {
     if (open) {

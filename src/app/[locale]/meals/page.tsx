@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UtensilsCrossed, Plus, Settings2, Calendar, List, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react"
@@ -36,6 +36,12 @@ export default function MealsPage() {
     category: string
     ingredients: MealIngredient[]
   } | undefined>(undefined)
+
+  useEffect(() => {
+    db.ensureMealIngredientStructure().catch((error) => {
+      console.error('Failed to ensure meal ingredient structure:', error)
+    })
+  }, [])
 
   const meals = useLiveQuery(
     () => db.meals.orderBy('date').toArray(),

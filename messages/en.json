@@ -456,6 +456,12 @@
       "detailedAdd": "Detailed Add",
       "amount": "Amount",
       "amountPlaceholder": "e.g. 2 cups, 1 lb",
+      "recipeAmount": "Recipe amount",
+      "recipeAmountPlaceholder": "e.g. 1 tsp, 200 g",
+      "usageNotes": "Step / Notes",
+      "usageNotesPlaceholder": "Describe how this ingredient is used",
+      "purchaseAmount": "Typical purchase amount",
+      "purchaseAmountPlaceholder": "e.g. 1 L bottle",
       "groceryCategory": "Grocery Category",
       "selectGroceryCategory": "Select grocery category",
       "selectImportance": "Select importance",
@@ -474,7 +480,10 @@
       "planMeal": "Plan Meal",
       "cancel": "Cancel",
       "save": "Save",
-      "usedTimes": "Used {count} times"
+      "usedTimes": "Used {count} times",
+      "unknownIngredient": "Unknown ingredient",
+      "purchaseAmountLabel": "Usually bought: {amount}",
+      "removeIngredient": "Remove ingredient"
     },
     "categories": {
       "manage": "Manage Meal Categories",

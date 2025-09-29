@@ -456,6 +456,12 @@
       "detailedAdd": "Agregar Detallado",
       "amount": "Cantidad",
       "amountPlaceholder": "ej. 2 tazas, 1 libra",
+      "recipeAmount": "Cantidad para la receta",
+      "recipeAmountPlaceholder": "ej. 1 cdta, 200 g",
+      "usageNotes": "Paso / Notas",
+      "usageNotesPlaceholder": "Describe cómo se usa este ingrediente",
+      "purchaseAmount": "Cantidad típica de compra",
+      "purchaseAmountPlaceholder": "ej. botella de 1 L",
       "groceryCategory": "Categoría de Compras",
       "selectGroceryCategory": "Selecciona categoría de compras",
       "selectImportance": "Selecciona importancia",
@@ -474,7 +480,10 @@
       "planMeal": "Planificar Comida",
       "cancel": "Cancelar",
       "save": "Guardar",
-      "usedTimes": "Usado {count} veces"
+      "usedTimes": "Usado {count} veces",
+      "unknownIngredient": "Ingrediente desconocido",
+      "purchaseAmountLabel": "Se suele comprar: {amount}",
+      "removeIngredient": "Eliminar ingrediente"
     },
     "categories": {
       "manage": "Gestionar Categorías de Comidas",

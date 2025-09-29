@@ -27,11 +27,11 @@ export default function KetoPage() {
   const { startOfWeek } = useCalendarSettings()
 
   // Get users from database
-  const users = useLiveQuery(() => db.users.toArray()) || []
+  const users = useLiveQuery(() => db.users.toArray())
 
   // Get current user's keto settings
   const ketoSettings = useLiveQuery(() => {
-    if (!selectedUser) return null
+    if (!selectedUser) return undefined
     return db.ketoSettings.where('userId').equals(selectedUser).first()
   }, [selectedUser])
 
@@ -43,10 +43,13 @@ export default function KetoPage() {
 
   // Set default user to first user
   useEffect(() => {
-    if (users && users.length > 0 && !selectedUser) {
-      setSelectedUser(users[0].id!)
+    if (!selectedUser && users?.length) {
+      const firstUser = users[0]
+      if (firstUser?.id) {
+        setSelectedUser(firstUser.id)
+      }
     }
-  }, [users, selectedUser])
+  }, [selectedUser, users])
 
   // Generate calendar days for current month
   const generateCalendarDays = (): DayStatus[] => {

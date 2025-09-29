@@ -354,23 +354,37 @@ export class DomusDatabase extends Dexie {
 
       const meals = await tx.table('meals').toArray() as LegacyMeal[]
       for (const meal of meals) {
+        if (!meal.id) continue
         if (meal.ingredientIds?.length) {
           const ingredients = convertIngredients(meal.ingredientIds)
           await tx.table('meals').update(meal.id, {
-            ingredients,
-            ingredientIds: Dexie.delete()
+            ingredients
           })
+          await tx
+            .table('meals')
+            .where('id')
+            .equals(meal.id)
+            .modify((record) => {
+              delete (record as LegacyMeal).ingredientIds
+            })
         }
       }
 
       const savedMeals = await tx.table('savedMeals').toArray() as LegacySavedMeal[]
       for (const savedMeal of savedMeals) {
+        if (!savedMeal.id) continue
         if (savedMeal.ingredientIds?.length) {
           const ingredients = convertIngredients(savedMeal.ingredientIds)
           await tx.table('savedMeals').update(savedMeal.id, {
-            ingredients,
-            ingredientIds: Dexie.delete()
+            ingredients
           })
+          await tx
+            .table('savedMeals')
+            .where('id')
+            .equals(savedMeal.id)
+            .modify((record) => {
+              delete (record as LegacySavedMeal).ingredientIds
+            })
         }
       }
     })

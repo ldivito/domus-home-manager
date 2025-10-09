@@ -21,7 +21,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
-import SyncStatus from './SyncStatus'
+import SyncButton from './SyncButton'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
 
@@ -153,13 +153,13 @@ export default function Navigation() {
               <ThemeToggle />
               <LanguageSelector />
             </div>
-            <SyncStatus />
+            <SyncButton />
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <ThemeToggle />
             <LanguageSelector />
-            <SyncStatus compact />
+            <SyncButton compact />
           </div>
         )}
       </div>

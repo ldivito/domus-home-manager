@@ -43,6 +43,8 @@ export default function AuthPage() {
 
       if (response.ok) {
         toast.success(t('loginSuccess'))
+        // Trigger auth refresh event for Navigation component
+        window.dispatchEvent(new CustomEvent('auth-changed'))
         router.push('/')
       } else {
         toast.error(data.error || t('loginFailed'))
@@ -74,6 +76,8 @@ export default function AuthPage() {
 
       if (response.ok) {
         toast.success(t('registerSuccess'))
+        // Trigger auth refresh event for Navigation component
+        window.dispatchEvent(new CustomEvent('auth-changed'))
         router.push('/')
       } else {
         toast.error(data.error || t('registerFailed'))
@@ -97,22 +101,32 @@ export default function AuthPage() {
           <p className="text-muted-foreground">{t('subtitle')}</p>
         </div>
 
-        <Card>
+        <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-modern">
           <CardHeader>
-            <CardTitle>{t('welcome')}</CardTitle>
+            <CardTitle className="text-2xl">{t('welcome')}</CardTitle>
             <CardDescription>{t('signInDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">{t('signIn')}</TabsTrigger>
-                <TabsTrigger value="register">{t('register')}</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 p-1 bg-muted/50 backdrop-blur-sm">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200"
+                >
+                  {t('signIn')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="register"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200"
+                >
+                  {t('register')}
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="login">
+              <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">{t('email')}</Label>
+                    <Label htmlFor="login-email" className="text-sm font-medium">{t('email')}</Label>
                     <Input
                       id="login-email"
                       type="email"
@@ -121,11 +135,12 @@ export default function AuthPage() {
                       onChange={(e) => setLoginEmail(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">{t('password')}</Label>
+                    <Label htmlFor="login-password" className="text-sm font-medium">{t('password')}</Label>
                     <Input
                       id="login-password"
                       type="password"
@@ -135,12 +150,13 @@ export default function AuthPage() {
                       required
                       disabled={isLoading}
                       minLength={8}
+                      className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full h-11 shadow-md hover:shadow-lg transition-all duration-200 mt-6"
                     disabled={isLoading}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -149,10 +165,10 @@ export default function AuthPage() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="register">
+              <TabsContent value="register" className="mt-0">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="register-name">{t('name')}</Label>
+                    <Label htmlFor="register-name" className="text-sm font-medium">{t('name')}</Label>
                     <Input
                       id="register-name"
                       type="text"
@@ -161,11 +177,12 @@ export default function AuthPage() {
                       onChange={(e) => setRegisterName(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-email">{t('email')}</Label>
+                    <Label htmlFor="register-email" className="text-sm font-medium">{t('email')}</Label>
                     <Input
                       id="register-email"
                       type="email"
@@ -174,11 +191,12 @@ export default function AuthPage() {
                       onChange={(e) => setRegisterEmail(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-password">{t('password')}</Label>
+                    <Label htmlFor="register-password" className="text-sm font-medium">{t('password')}</Label>
                     <Input
                       id="register-password"
                       type="password"
@@ -188,13 +206,14 @@ export default function AuthPage() {
                       required
                       disabled={isLoading}
                       minLength={8}
+                      className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                     />
-                    <p className="text-xs text-muted-foreground">{t('passwordRequirement')}</p>
+                    <p className="text-xs text-muted-foreground mt-1.5">{t('passwordRequirement')}</p>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full h-11 shadow-md hover:shadow-lg transition-all duration-200 mt-6"
                     disabled={isLoading}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -1,26 +1,15 @@
 import { NextResponse } from 'next/server'
-import { verifyPassword, createToken, createSessionCookie } from '@/lib/auth'
-
-// Import in-memory storage (replace with D1 in production)
-// This will be shared across routes
-const users = new Map<string, {
-  id: string
-  email: string
-  password: string
-  name: string
-  householdId?: string
-  createdAt: Date
-}>()
-
-// Function to get user store (to avoid circular dependencies)
-function getUserStore() {
-  return users
-}
+import { verifyPassword, createToken, createSessionCookie, storeSession } from '@/lib/auth'
+import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { email, password } = body
+
+    // Get Cloudflare bindings (or use in-memory fallback)
+    const env = (request as unknown as { env?: CloudflareEnv }).env
+    const db = getDB(env)
 
     // Validation
     if (!email || !password) {
@@ -31,8 +20,16 @@ export async function POST(request: Request) {
     }
 
     // Find user by email
-    const userStore = getUserStore()
-    const user = Array.from(userStore.values()).find(u => u.email === email)
+    const user = await db
+      .prepare('SELECT id, email, password, name, householdId FROM users WHERE email = ?')
+      .bind(email)
+      .first<{
+        id: string
+        email: string
+        password: string
+        name: string
+        householdId: string
+      }>()
 
     if (!user) {
       return NextResponse.json(
@@ -57,6 +54,13 @@ export async function POST(request: Request) {
       householdId: user.householdId
     })
 
+    // Store session in KV
+    await storeSession(
+      token,
+      { userId: user.id, email: user.email, householdId: user.householdId },
+      env
+    )
+
     // Create response with session cookie
     const response = NextResponse.json({
       success: true,
@@ -79,5 +83,3 @@ export async function POST(request: Request) {
     )
   }
 }
-
-export { users }

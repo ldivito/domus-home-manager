@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
+import { getKV, type CloudflareEnv } from './cloudflare'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
@@ -58,8 +59,12 @@ export async function verifyToken(token: string): Promise<SessionData | null> {
 
 /**
  * Get user session from request cookies
+ * Verifies JWT token and optionally checks KV storage
  */
-export async function getUserFromRequest(request: Request): Promise<SessionData | null> {
+export async function getUserFromRequest(
+  request: Request,
+  env?: CloudflareEnv
+): Promise<SessionData | null> {
   const cookieHeader = request.headers.get('cookie')
   if (!cookieHeader) return null
 
@@ -73,7 +78,18 @@ export async function getUserFromRequest(request: Request): Promise<SessionData 
   const token = cookies['session']
   if (!token) return null
 
-  return verifyToken(token)
+  // First verify JWT signature
+  const jwtData = await verifyToken(token)
+  if (!jwtData) return null
+
+  // If KV is available, also check if session exists
+  // This handles logout scenarios where session is deleted from KV
+  if (env) {
+    const kvSession = await getSession(token, env)
+    if (!kvSession) return null
+  }
+
+  return jwtData
 }
 
 /**
@@ -89,4 +105,51 @@ export function createSessionCookie(token: string): string {
  */
 export function clearSessionCookie(): string {
   return 'session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0'
+}
+
+/**
+ * Store session in KV
+ */
+export async function storeSession(
+  token: string,
+  session: UserPayload,
+  env?: CloudflareEnv
+): Promise<void> {
+  const kv = getKV(env)
+  const sessionKey = `session:${token}`
+  const ttl = 60 * 60 * 24 * 7 // 7 days
+
+  await kv.put(sessionKey, JSON.stringify(session), { expirationTtl: ttl })
+}
+
+/**
+ * Get session from KV
+ */
+export async function getSession(
+  token: string,
+  env?: CloudflareEnv
+): Promise<UserPayload | null> {
+  const kv = getKV(env)
+  const sessionKey = `session:${token}`
+
+  const data = await kv.get(sessionKey)
+  if (!data) return null
+
+  try {
+    return JSON.parse(data) as UserPayload
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Delete session from KV
+ */
+export async function deleteSession(
+  token: string,
+  env?: CloudflareEnv
+): Promise<void> {
+  const kv = getKV(env)
+  const sessionKey = `session:${token}`
+  await kv.delete(sessionKey)
 }

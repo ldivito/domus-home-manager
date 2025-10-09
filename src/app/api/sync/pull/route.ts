@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
+import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import type { SyncRecord } from '@/lib/sync'
-
-// In-memory storage (same as push route)
-const syncedData = new Map<string, Map<string, SyncRecord>>()
 
 export async function GET(request: Request) {
   try {
+    // Get Cloudflare bindings (or use in-memory fallback)
+    const env = (request as unknown as { env?: CloudflareEnv }).env
+    const db = getDB(env)
+
     // Check authentication
-    const session = await getUserFromRequest(request)
+    const session = await getUserFromRequest(request, env)
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -19,27 +21,39 @@ export async function GET(request: Request) {
     // Parse query parameters
     const { searchParams } = new URL(request.url)
     const sinceParam = searchParams.get('since')
-    const since = sinceParam ? new Date(sinceParam) : null
 
-    // Collect changes from all tables
-    const changes: SyncRecord[] = []
+    // Build query based on whether we have a timestamp filter
+    let query = `
+      SELECT tableName, recordId, operation, data, updatedAt
+      FROM sync_metadata
+      WHERE userId = ? AND deletedAt IS NULL
+    `
+    const params = [session.userId]
 
-    for (const tableData of syncedData.values()) {
-      for (const record of tableData.values()) {
-        // Filter by timestamp if provided
-        if (since && record.updatedAt <= since) {
-          continue
-        }
-
-        // Filter by user (only return user's data)
-        const recordData = record.data as { userId?: string }
-        if (recordData.userId && recordData.userId !== session.userId) {
-          continue
-        }
-
-        changes.push(record)
-      }
+    if (sinceParam) {
+      query += ' AND updatedAt > ?'
+      params.push(sinceParam)
     }
+
+    query += ' ORDER BY updatedAt ASC'
+
+    // Fetch changes from D1
+    const result = await db.prepare(query).bind(...params).all<{
+      tableName: string
+      recordId: string
+      operation: string
+      data: string
+      updatedAt: string
+    }>()
+
+    // Transform results into SyncRecord format
+    const changes: SyncRecord[] = (result.results || []).map(row => ({
+      id: row.recordId,
+      table: row.tableName,
+      operation: row.operation as 'insert' | 'update' | 'delete',
+      data: JSON.parse(row.data),
+      updatedAt: new Date(row.updatedAt)
+    }))
 
     return NextResponse.json({
       success: true,
@@ -55,5 +69,3 @@ export async function GET(request: Request) {
     )
   }
 }
-
-export { syncedData }

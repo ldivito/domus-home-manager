@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
+import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import type { SyncRecord } from '@/lib/sync'
-
-// In-memory storage for synced data (replace with Cloudflare D1 in production)
-const syncedData = new Map<string, Map<string, SyncRecord>>()
 
 export async function POST(request: Request) {
   try {
+    // Get Cloudflare bindings (or use in-memory fallback)
+    const env = (request as unknown as { env?: CloudflareEnv }).env
+    const db = getDB(env)
+
     // Check authentication
-    const session = await getUserFromRequest(request)
+    const session = await getUserFromRequest(request, env)
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -27,21 +29,30 @@ export async function POST(request: Request) {
       )
     }
 
-    // Store changes in memory (simulate D1)
+    // Store changes in D1
     let pushed = 0
     for (const change of changes) {
-      // Get or create table storage
-      if (!syncedData.has(change.table)) {
-        syncedData.set(change.table, new Map())
-      }
-      const tableData = syncedData.get(change.table)!
+      const recordId = `sync_${crypto.randomUUID()}`
+      const now = new Date().toISOString()
 
-      // Store the change
-      tableData.set(change.id, {
-        ...change,
-        // Add userId for authorization
-        data: { ...change.data, userId: session.userId }
-      })
+      await db
+        .prepare(`
+          INSERT OR REPLACE INTO sync_metadata
+          (id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          recordId,
+          session.userId,
+          session.householdId || '',
+          change.table,
+          change.id,
+          change.operation || 'update',
+          JSON.stringify(change.data),
+          now,
+          now
+        )
+        .run()
 
       pushed++
     }
@@ -59,6 +70,3 @@ export async function POST(request: Request) {
     )
   }
 }
-
-// Export for access by pull route
-export { syncedData }

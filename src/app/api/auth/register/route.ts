@@ -1,21 +1,15 @@
 import { NextResponse } from 'next/server'
-import { hashPassword, createToken, createSessionCookie } from '@/lib/auth'
-
-// In-memory user storage (replace with Cloudflare D1 in production)
-// This is just for development/testing
-const users = new Map<string, {
-  id: string
-  email: string
-  password: string
-  name: string
-  householdId?: string
-  createdAt: Date
-}>()
+import { hashPassword, createToken, createSessionCookie, storeSession } from '@/lib/auth'
+import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { email, password, name } = body
+
+    // Get Cloudflare bindings (or use in-memory fallback)
+    const env = (request as unknown as { env?: CloudflareEnv }).env
+    const db = getDB(env)
 
     // Validation
     if (!email || !password || !name) {
@@ -33,7 +27,11 @@ export async function POST(request: Request) {
     }
 
     // Check if user already exists
-    const existingUser = Array.from(users.values()).find(u => u.email === email)
+    const existingUser = await db
+      .prepare('SELECT id FROM users WHERE email = ?')
+      .bind(email)
+      .first()
+
     if (existingUser) {
       return NextResponse.json(
         { error: 'User already exists' },
@@ -43,18 +41,24 @@ export async function POST(request: Request) {
 
     // Create new user
     const userId = `usr_${crypto.randomUUID()}`
+    const householdId = `hh_${crypto.randomUUID()}`
     const hashedPassword = await hashPassword(password)
+    const now = new Date().toISOString()
 
-    users.set(userId, {
-      id: userId,
-      email,
-      password: hashedPassword,
-      name,
-      createdAt: new Date()
-    })
+    // Insert user into database
+    await db
+      .prepare(`
+        INSERT INTO users (id, email, password, name, householdId, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(userId, email, hashedPassword, name, householdId, now, now)
+      .run()
 
     // Create session token
-    const token = await createToken({ userId, email })
+    const token = await createToken({ userId, email, householdId })
+
+    // Store session in KV
+    await storeSession(token, { userId, email, householdId }, env)
 
     // Create response with session cookie
     const response = NextResponse.json({
@@ -62,7 +66,8 @@ export async function POST(request: Request) {
       user: {
         id: userId,
         email,
-        name
+        name,
+        householdId
       }
     })
 
@@ -77,6 +82,3 @@ export async function POST(request: Request) {
     )
   }
 }
-
-// Export users map for other routes to access
-export { users }

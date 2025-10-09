@@ -167,22 +167,198 @@ class InMemoryKV implements KVNamespace {
   }
 }
 
-// Global instances for in-memory fallback
+// Cloudflare REST API clients for localhost development
+class CloudflareD1REST implements D1Database {
+  constructor(
+    private accountId: string,
+    private databaseId: string,
+    private apiToken: string
+  ) {}
+
+  prepare(query: string): D1PreparedStatement {
+    return new CloudflareD1RESTStatement(query, this.accountId, this.databaseId, this.apiToken)
+  }
+
+  async exec(query: string): Promise<D1ExecResult> {
+    await this.prepare(query).run()
+    return { count: 0, duration: 0 }
+  }
+
+  async batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
+    const results: D1Result<T>[] = []
+    for (const stmt of statements) {
+      const result = await stmt.run()
+      results.push(result as D1Result<T>)
+    }
+    return results
+  }
+}
+
+class CloudflareD1RESTStatement implements D1PreparedStatement {
+  private values: unknown[] = []
+
+  constructor(
+    private query: string,
+    private accountId: string,
+    private databaseId: string,
+    private apiToken: string
+  ) {}
+
+  bind(...values: unknown[]): D1PreparedStatement {
+    this.values = values
+    return this
+  }
+
+  async first<T = unknown>(): Promise<T | null> {
+    const result = await this.all<T>()
+    return result.results?.[0] || null
+  }
+
+  async run(): Promise<D1Result> {
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sql: this.query,
+          params: this.values
+        })
+      }
+    )
+
+    const data = await response.json() as {
+      success: boolean
+      result?: Array<{ results: unknown[], success: boolean, meta: D1Result['meta'] }>
+      errors?: Array<{ message: string }>
+    }
+
+    if (!data.success || !data.result?.[0]) {
+      return {
+        success: false,
+        error: data.errors?.[0]?.message || 'Unknown error'
+      }
+    }
+
+    return {
+      success: data.result[0].success,
+      results: data.result[0].results,
+      meta: data.result[0].meta
+    }
+  }
+
+  async all<T = unknown>(): Promise<D1Result<T>> {
+    const result = await this.run()
+    return result as D1Result<T>
+  }
+}
+
+class CloudflareKVREST implements KVNamespace {
+  constructor(
+    private accountId: string,
+    private namespaceId: string,
+    private apiToken: string
+  ) {}
+
+  async get(key: string): Promise<string | null> {
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${this.apiToken}`
+        }
+      }
+    )
+
+    if (response.status === 404) {
+      return null
+    }
+
+    if (!response.ok) {
+      throw new Error(`KV GET failed: ${response.statusText}`)
+    }
+
+    return await response.text()
+  }
+
+  async put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void> {
+    const url = new URL(
+      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`
+    )
+
+    if (options?.expirationTtl) {
+      url.searchParams.set('expiration_ttl', options.expirationTtl.toString())
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+        'Content-Type': 'text/plain'
+      },
+      body: value
+    })
+
+    if (!response.ok) {
+      throw new Error(`KV PUT failed: ${response.statusText}`)
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.apiToken}`
+        }
+      }
+    )
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`KV DELETE failed: ${response.statusText}`)
+    }
+  }
+}
+
+// Global instances
 let inMemoryDB: D1Database | null = null
 let inMemoryKV: KVNamespace | null = null
+let cloudflareRESTDB: D1Database | null = null
+let cloudflareRESTKV: KVNamespace | null = null
 
 /**
  * Get D1 database instance
- * In production (Cloudflare Pages), returns actual D1 binding
- * In development, returns in-memory fallback
+ * Priority:
+ * 1. Cloudflare Pages binding (production)
+ * 2. Cloudflare REST API (localhost with credentials)
+ * 3. In-memory fallback (localhost without credentials)
  */
 export function getDB(env?: CloudflareEnv): D1Database {
+  // 1. Use native binding if available (Cloudflare Pages)
   if (env?.domus_db) {
     return env.domus_db
   }
-  
-  // Fallback to in-memory for local development
+
+  // 2. Use REST API if credentials are available (localhost)
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const databaseId = process.env.DATABASE_ID
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN
+
+  if (accountId && databaseId && apiToken) {
+    if (!cloudflareRESTDB) {
+      console.log('[Cloudflare] Using D1 REST API for localhost')
+      cloudflareRESTDB = new CloudflareD1REST(accountId, databaseId, apiToken)
+    }
+    return cloudflareRESTDB
+  }
+
+  // 3. Fallback to in-memory for local development
   if (!inMemoryDB) {
+    console.log('[Cloudflare] Using in-memory D1 fallback')
     inMemoryDB = new InMemoryD1()
   }
   return inMemoryDB
@@ -190,16 +366,33 @@ export function getDB(env?: CloudflareEnv): D1Database {
 
 /**
  * Get KV namespace instance
- * In production (Cloudflare Pages), returns actual KV binding
- * In development, returns in-memory fallback
+ * Priority:
+ * 1. Cloudflare Pages binding (production)
+ * 2. Cloudflare REST API (localhost with credentials)
+ * 3. In-memory fallback (localhost without credentials)
  */
 export function getKV(env?: CloudflareEnv): KVNamespace {
+  // 1. Use native binding if available (Cloudflare Pages)
   if (env?.KV) {
     return env.KV
   }
-  
-  // Fallback to in-memory for local development
+
+  // 2. Use REST API if credentials are available (localhost)
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const namespaceId = process.env.KV_NAMESPACE_ID
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN
+
+  if (accountId && namespaceId && apiToken) {
+    if (!cloudflareRESTKV) {
+      console.log('[Cloudflare] Using KV REST API for localhost')
+      cloudflareRESTKV = new CloudflareKVREST(accountId, namespaceId, apiToken)
+    }
+    return cloudflareRESTKV
+  }
+
+  // 3. Fallback to in-memory for local development
   if (!inMemoryKV) {
+    console.log('[Cloudflare] Using in-memory KV fallback')
     inMemoryKV = new InMemoryKV()
   }
   return inMemoryKV

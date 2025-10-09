@@ -7,7 +7,7 @@ binding = "domus_db"
 database_name = "domus-db"
 database_id = "f0a3fa06-72f6-4463-aab0-a8a2685d040a"
 
-# KV Namespace binding (add after creating KV namespace)
-# [[kv_namespaces]]
-# binding = "KV"
-# id = "your_kv_id_here"
+# KV Namespace binding for session storage
+[[kv_namespaces]]
+binding = "KV"
+id = "b587e9a7f15245d8bc0333047e1d01d9"

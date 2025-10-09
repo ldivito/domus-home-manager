@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { hashPassword, createToken, createSessionCookie, storeSession } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
-import { generateInviteCode } from '@/lib/utils'
 
 export async function POST(request: Request) {
   try {
@@ -43,8 +42,8 @@ export async function POST(request: Request) {
     const userId = `usr_${crypto.randomUUID()}`
     const hashedPassword = await hashPassword(password)
     const now = new Date().toISOString()
-    let householdId: string
-    let role: 'owner' | 'member' = 'owner'
+    let householdId: string | null = null
+    let role: 'owner' | 'member' = 'member'
 
     // If invite code provided, join existing household
     if (inviteCode) {
@@ -62,22 +61,31 @@ export async function POST(request: Request) {
 
       householdId = household.id
       role = 'member'
-    } else {
-      // Create new household
-      householdId = `hh_${crypto.randomUUID()}`
-      const newInviteCode = generateInviteCode()
-      const householdName = `${name}'s Household`
 
+      // Add user to household_members table
+      const memberId = `hm_${crypto.randomUUID()}`
       await db
         .prepare(`
-          INSERT INTO households (id, name, ownerId, inviteCode, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO household_members (
+            id, householdId, userId, role, joinedAt,
+            canManageMembers, canManageSettings, canDeleteItems
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `)
-        .bind(householdId, householdName, userId, newInviteCode, now, now)
+        .bind(
+          memberId,
+          householdId,
+          userId,
+          role,
+          now,
+          0, // canManageMembers
+          0, // canManageSettings
+          1  // canDeleteItems
+        )
         .run()
     }
 
-    // Insert user into database
+    // Insert user into database (without household if no invite code)
     await db
       .prepare(`
         INSERT INTO users (id, email, password, name, householdId, createdAt, updatedAt)
@@ -86,37 +94,22 @@ export async function POST(request: Request) {
       .bind(userId, email, hashedPassword, name, householdId, now, now)
       .run()
 
-    // Add user to household_members table
-    const memberId = `hm_${crypto.randomUUID()}`
-    const permissions = role === 'owner'
-      ? { canManageMembers: 1, canManageSettings: 1, canDeleteItems: 1 }
-      : { canManageMembers: 0, canManageSettings: 0, canDeleteItems: 1 }
-
-    await db
-      .prepare(`
-        INSERT INTO household_members (
-          id, householdId, userId, role, joinedAt,
-          canManageMembers, canManageSettings, canDeleteItems
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .bind(
-        memberId,
-        householdId,
-        userId,
-        role,
-        now,
-        permissions.canManageMembers,
-        permissions.canManageSettings,
-        permissions.canDeleteItems
-      )
-      .run()
-
-    // Create session token
-    const token = await createToken({ userId, email, householdId })
+    // Create session token (householdId can be null)
+    const token = await createToken({
+      userId,
+      email,
+      ...(householdId && { householdId })
+    })
 
     // Store session in KV
-    await storeSession(token, { userId, email, householdId }, env)
+    const sessionData: { userId: string; email: string; householdId?: string } = {
+      userId,
+      email
+    }
+    if (householdId) {
+      sessionData.householdId = householdId
+    }
+    await storeSession(token, sessionData, env)
 
     // Create response with session cookie
     const response = NextResponse.json({

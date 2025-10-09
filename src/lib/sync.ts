@@ -1,10 +1,12 @@
-import { db } from './db'
+import { db, getDatabase } from './db'
+import { checkMigrationNeeded, performMigration } from './migration'
 
 export interface SyncStatus {
   lastSyncAt: Date | null
   isSyncing: boolean
   error: string | null
   pendingChanges: number
+  needsMigration?: boolean
 }
 
 export interface SyncRecord {
@@ -65,12 +67,17 @@ export function setLastSyncTime(date: Date): void {
 /**
  * Get sync status from localStorage
  */
-export function getSyncStatus(): SyncStatus {
+export async function getSyncStatus(): Promise<SyncStatus> {
+  const migrationStatus = await checkMigrationNeeded()
+
   return {
     lastSyncAt: getLastSyncTime(),
     isSyncing: false,
-    error: null,
-    pendingChanges: 0
+    error: migrationStatus.needsMigration
+      ? 'Database migration required. Please sync to migrate your data.'
+      : null,
+    pendingChanges: 0,
+    needsMigration: migrationStatus.needsMigration
   }
 }
 
@@ -221,6 +228,19 @@ export async function performSync(): Promise<SyncResult> {
   }
 
   try {
+    // 0. Check if migration is needed before syncing
+    const migrationStatus = await checkMigrationNeeded()
+    if (migrationStatus.needsMigration) {
+      console.log('Migration needed before sync, performing migration...')
+      const migrationResult = await performMigration()
+      if (!migrationResult.success) {
+        result.error = `Migration failed: ${migrationResult.error}. Please refresh the page.`
+        return result
+      }
+      // Wait for database to reinitialize
+      await getDatabase()
+    }
+
     // 1. Collect local changes
     const localChanges = await collectLocalChanges(lastSync)
 

@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie'
 import { generateId } from './utils'
+import { checkMigrationNeeded, performMigration, importMigratedData, isMigrationCompleted } from './migration'
 
 export interface User {
   id?: string
@@ -412,6 +413,13 @@ export class DomusDatabase extends Dexie {
       console.log('Database ready - local IndexedDB mode')
 
       try {
+        // Check if we have migrated data to import
+        await importMigratedData(this)
+      } catch (error) {
+        console.error('Error importing migrated data:', error)
+      }
+
+      try {
         await this.ensureMealIngredientStructure()
       } catch (error) {
         console.warn('Meal ingredient migration issue:', error)
@@ -545,5 +553,46 @@ export class DomusDatabase extends Dexie {
   }
 }
 
-// Export a single database instance
+/**
+ * Initialize database with migration check
+ */
+async function initializeDatabase(): Promise<DomusDatabase> {
+  // Check if migration is needed BEFORE opening database
+  if (!isMigrationCompleted()) {
+    const migrationStatus = await checkMigrationNeeded()
+    if (migrationStatus.needsMigration) {
+      console.log('Legacy database detected, performing migration...')
+      const migrationResult = await performMigration()
+      if (!migrationResult.success) {
+        console.error('Migration failed:', migrationResult.error)
+        // Continue anyway to try opening the database
+      } else {
+        console.log('Migration successful:', migrationResult)
+      }
+    }
+  }
+
+  // Now create and return the database instance
+  return new DomusDatabase()
+}
+
+// Export a single database instance (lazily initialized)
+let dbInstance: DomusDatabase | null = null
+let dbInitPromise: Promise<DomusDatabase> | null = null
+
+export async function getDatabase(): Promise<DomusDatabase> {
+  if (dbInstance) return dbInstance
+
+  if (!dbInitPromise) {
+    dbInitPromise = initializeDatabase().then(instance => {
+      dbInstance = instance
+      return instance
+    })
+  }
+
+  return dbInitPromise
+}
+
+// Export synchronous instance for backward compatibility
+// NOTE: This will not have migration support, use getDatabase() for full migration support
 export const db = new DomusDatabase()

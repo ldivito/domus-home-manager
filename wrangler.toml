@@ -1,0 +1,13 @@
+name = "domus-app"
+compatibility_date = "2024-01-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "domus_db"
+database_name = "domus-db"
+database_id = "f0a3fa06-72f6-4463-aab0-a8a2685d040a"
+
+# KV Namespace binding (add after creating KV namespace)
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "your_kv_id_here"

@@ -46,3 +46,6 @@ claude.json
 dexie-cloud.key
 .claude
 
+# wrangler
+.wrangler/
+

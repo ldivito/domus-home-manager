@@ -967,5 +967,25 @@
     "minutesAgo": "{count, plural, one {hace 1 minuto} other {hace {count} minutos}}",
     "hoursAgo": "{count, plural, one {hace 1 hora} other {hace {count} horas}}",
     "error": "Error de sincronización"
+  },
+  "auth": {
+    "welcome": "Bienvenido a Domus",
+    "subtitle": "Gestión del Hogar Simplificada",
+    "signInDescription": "Inicia sesión para sincronizar tus datos entre dispositivos",
+    "signIn": "Iniciar Sesión",
+    "register": "Registrarse",
+    "email": "Correo Electrónico",
+    "emailPlaceholder": "tu.correo@ejemplo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "passwordRequirement": "La contraseña debe tener al menos 8 caracteres",
+    "name": "Nombre",
+    "namePlaceholder": "Tu nombre",
+    "loginSuccess": "¡Sesión iniciada con éxito!",
+    "loginFailed": "Error al iniciar sesión. Verifica tus credenciales.",
+    "registerSuccess": "¡Cuenta creada con éxito!",
+    "registerFailed": "Error al registrarse. Inténtalo de nuevo.",
+    "signOut": "Cerrar Sesión",
+    "signedInAs": "Sesión iniciada como"
   }
 }

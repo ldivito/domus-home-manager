@@ -967,5 +967,25 @@
     "minutesAgo": "{count, plural, one {1 minute ago} other {{count} minutes ago}}",
     "hoursAgo": "{count, plural, one {1 hour ago} other {{count} hours ago}}",
     "error": "Sync Error"
+  },
+  "auth": {
+    "welcome": "Welcome to Domus",
+    "subtitle": "Home Management Made Easy",
+    "signInDescription": "Sign in to sync your data across devices",
+    "signIn": "Sign In",
+    "register": "Register",
+    "email": "Email",
+    "emailPlaceholder": "your.email@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "passwordRequirement": "Password must be at least 8 characters",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "loginSuccess": "Successfully logged in!",
+    "loginFailed": "Login failed. Please check your credentials.",
+    "registerSuccess": "Account created successfully!",
+    "registerFailed": "Registration failed. Please try again.",
+    "signOut": "Sign Out",
+    "signedInAs": "Signed in as"
   }
 }

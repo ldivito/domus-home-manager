@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
 import { Button } from './ui/button'
-import { Cloud, CloudOff, RefreshCw, Check, AlertCircle } from 'lucide-react'
+import { Cloud, RefreshCw, Check, AlertCircle, LogIn } from 'lucide-react'
 import { performSync, isAuthenticated, getSyncStatus } from '@/lib/sync'
 import { toast } from 'sonner'
 
 export default function SyncButton({ compact = false }: { compact?: boolean }) {
   const t = useTranslations('sync')
+  const tAuth = useTranslations('auth')
+  const router = useRouter()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isAuth, setIsAuth] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
@@ -26,11 +29,15 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     setIsAuth(authenticated)
   }
 
-  const handleSync = async () => {
+  const handleClick = async () => {
     if (!isAuth) {
-      toast.error('Please log in to sync')
+      router.push('/auth')
       return
     }
+    await handleSync()
+  }
+
+  const handleSync = async () => {
 
     setIsSyncing(true)
     setError(null)
@@ -57,7 +64,7 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
   const getIcon = () => {
     if (isSyncing) return <RefreshCw className="h-4 w-4 animate-spin" />
     if (error) return <AlertCircle className="h-4 w-4 text-destructive" />
-    if (!isAuth) return <CloudOff className="h-4 w-4" />
+    if (!isAuth) return <LogIn className="h-4 w-4" />
     if (lastSyncAt) return <Check className="h-4 w-4 text-green-500" />
     return <Cloud className="h-4 w-4" />
   }
@@ -65,7 +72,7 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
   const getStatusText = () => {
     if (isSyncing) return t('syncing')
     if (error) return t('error')
-    if (!isAuth) return t('notLoggedIn')
+    if (!isAuth) return tAuth('signIn')
     if (lastSyncAt) {
       const now = new Date()
       const diff = now.getTime() - lastSyncAt.getTime()
@@ -83,8 +90,8 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleSync}
-        disabled={isSyncing || !isAuth}
+        onClick={handleClick}
+        disabled={isSyncing}
         title={getStatusText()}
       >
         {getIcon()}
@@ -96,8 +103,8 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     <Button
       variant="ghost"
       size="sm"
-      onClick={handleSync}
-      disabled={isSyncing || !isAuth}
+      onClick={handleClick}
+      disabled={isSyncing}
       className="gap-2"
     >
       {getIcon()}

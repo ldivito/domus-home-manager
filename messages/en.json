@@ -958,5 +958,14 @@
       "insights": "Progress Insights",
       "insightsSubtitle": "Your keto journey overview and motivation"
     }
+  },
+  "sync": {
+    "syncing": "Syncing...",
+    "notLoggedIn": "Not Logged In",
+    "notSynced": "Not Synced",
+    "justNow": "Just now",
+    "minutesAgo": "{count, plural, one {1 minute ago} other {{count} minutes ago}}",
+    "hoursAgo": "{count, plural, one {1 hour ago} other {{count} hours ago}}",
+    "error": "Sync Error"
   }
 }

@@ -3,7 +3,6 @@ import "../globals.css";
 import Navigation from "@/components/Navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import AuthWrapper from "@/components/AuthWrapper";
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -49,14 +48,12 @@ export default async function LocaleLayout({
       <body className="font-sans antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            <AuthWrapper>
-              <div className="flex h-screen bg-background">
-                <Navigation />
-                <main className="flex-1 overflow-auto">
-                  {children}
-                </main>
-              </div>
-            </AuthWrapper>
+            <div className="flex h-screen bg-background">
+              <Navigation />
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
             <Toaster />
           </NextIntlClientProvider>
         </ThemeProvider>

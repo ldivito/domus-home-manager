@@ -1,15 +1,14 @@
 import Dexie, { Table } from 'dexie'
-import dexieCloud from 'dexie-cloud-addon'
 import { generateId } from './utils'
 
 export interface User {
-  id?: string // Changed to string for cloud compatibility
+  id?: string
   name: string
-  email?: string // For cloud authentication
+  email?: string
   avatar?: string
   color: string
   type: 'resident' | 'guest'
-  householdId?: string // Link to household
+  householdId?: string
   createdAt: Date
 }
 
@@ -162,7 +161,7 @@ export interface CalendarEvent {
 }
 
 export interface Household {
-  id?: string // Cloud ID for household
+  id?: string
   name: string
   description?: string
   owner?: string // User ID of the household owner
@@ -186,8 +185,8 @@ export interface HouseholdMember {
 }
 
 export interface HomeSettings {
-  id?: string // Changed to string for cloud compatibility
-  householdId?: string // Link to household
+  id?: string
+  householdId?: string
   // Basic Home Information
   homeName?: string
   homeType?: 'house' | 'apartment' | 'condo' | 'townhouse' | 'other'
@@ -298,16 +297,7 @@ export class DomusDatabase extends Dexie {
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
-    super('DomusDatabase', { addons: [dexieCloud] })
-    
-    // Configure Dexie Cloud
-    this.cloud.configure({
-      databaseUrl: process.env.NEXT_PUBLIC_DEXIE_CLOUD_URL || 'https://zjuoc6zhr.dexie.cloud',
-      tryUseServiceWorker: process.env.NEXT_PUBLIC_DEXIE_USE_SERVICE_WORKER === 'true' || false, // Disable for Next.js compatibility
-      requireAuth: process.env.NEXT_PUBLIC_DEXIE_REQUIRE_AUTH !== 'false', // Require authentication for all operations
-      unsyncedTables: process.env.NEXT_PUBLIC_DEXIE_UNSYNCED_TABLES?.split(',').filter(Boolean) || [], // All tables are synced by default
-      customLoginGui: process.env.NEXT_PUBLIC_DEXIE_CUSTOM_LOGIN_GUI !== 'false' // Disable default login GUI - we handle it ourselves
-    })
+    super('DomusDatabase')
 
     // v14: Introduce structured meal ingredients
     this.version(14).stores({
@@ -412,215 +402,23 @@ export class DomusDatabase extends Dexie {
       ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
     })
 
-    // v12: Add Keto tracking tables (legacy version)
-    this.version(12).stores({
-      users: 'id, name, email, color, type, householdId',
-      households: 'id, name, owner, createdAt, updatedAt',
-      householdMembers: 'id, householdId, userId, role, joinedAt',
-      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
-      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
-      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
-      meals: 'id, title, householdId, date, mealType, assignedUserId',
-      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
-      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
-      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
-      calendarEvents: 'id, title, householdId, date, type',
-      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
-      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
-      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
-    })
-
-    // v11: Add Dexie Cloud support with household management (legacy version)
-    this.version(11).stores({
-      users: 'id, name, email, color, type, householdId',
-      households: 'id, name, owner, createdAt, updatedAt',
-      householdMembers: 'id, householdId, userId, role, joinedAt',
-      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
-      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
-      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
-      meals: 'id, title, householdId, date, mealType, assignedUserId',
-      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
-      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
-      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
-      calendarEvents: 'id, title, householdId, date, type',
-      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt'
-    })
-
     // Migration for fasting support in Keto tracking (v13 upgrade)
     this.version(13).upgrade(async () => {
       console.log('Database upgraded to v13 with fasting support in Keto tracking')
-      // No data migration needed - existing success/cheat statuses remain valid
     })
 
-    // Migration for Keto tracking feature (v12 upgrade)
-    this.version(12).upgrade(async () => {
-      console.log('Database upgraded to v12 with Keto tracking support')
-      // No data migration needed for new tables
-    })
-
-    // Migration from local storage to cloud (v11 upgrade)
-    this.version(11).upgrade(async () => {
-      // This migration will handle transitioning from local-only to cloud-enabled
-      // Users will need to authenticate and create/join households
-      console.log('Database upgraded to v11 with Dexie Cloud support')
-    })
-    
-    // v10: Add home settings for personalization (legacy version)
-    this.version(10).stores({
-      users: '++id, name, color, type',
-      chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: '++id, name, category, importance, addedBy, createdAt',
-      groceryCategories: '++id, name, isDefault, locale, createdAt',
-      savedGroceryItems: '++id, name, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: '++id, title, status, assignedUserId, priority, createdAt',
-      meals: '++id, title, date, mealType, assignedUserId',
-      mealCategories: '++id, name, isDefault, locale, createdAt',
-      savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
-      reminders: '++id, title, reminderTime, isCompleted, userId, type',
-      // Index by date and type for efficient filtering
-      calendarEvents: '++id, title, date, type',
-      homeSettings: '++id, homeName, lastUpdated, createdAt'
-    })
-
-    // v9: Add multi-user support and time for calendar events
-    this.version(9).stores({
-      users: '++id, name, color, type',
-      chores: '++id, title, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: '++id, name, category, importance, addedBy, createdAt',
-      groceryCategories: '++id, name, isDefault, locale, createdAt',
-      savedGroceryItems: '++id, name, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: '++id, title, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: '++id, title, status, assignedUserId, priority, createdAt',
-      meals: '++id, title, date, mealType, assignedUserId',
-      mealCategories: '++id, name, isDefault, locale, createdAt',
-      savedMeals: '++id, name, category, timesUsed, lastUsed, createdAt',
-      reminders: '++id, title, reminderTime, isCompleted, userId, type',
-      // Index by date and type for efficient filtering
-      calendarEvents: '++id, title, date, type'
-    })
-
-    // Upgrade existing calendar events to new structure
-    this.version(9).upgrade(async (tx) => {
-      type LegacyEvent = CalendarEvent & { userId?: number; userIds?: number[]; createdAt?: Date }
-      const events = await tx.table('calendarEvents').toArray() as LegacyEvent[]
-      for (const evt of events) {
-        const updates: Partial<CalendarEvent> = {}
-        if (evt.userId && !evt.userIds) {
-          updates.userIds = [String(evt.userId)]
-        }
-        if (!evt.createdAt) {
-          updates.createdAt = new Date()
-        }
-        if (Object.keys(updates).length > 0) {
-          await tx.table('calendarEvents').update(evt.id, updates)
-        }
-      }
-    })
-
-    // Add createdAt to existing home improvements (version 8 upgrade)
-    this.version(8).upgrade(async (tx) => {
-      const homeImprovements = await tx.table('homeImprovements').toArray()
-      
-      // Add createdAt to home improvements that don't have it
-      for (const project of homeImprovements) {
-        if (!project.createdAt) {
-          await tx.table('homeImprovements').update(project.id, { createdAt: new Date() })
-        }
-      }
-    })
-
-    // Add createdAt to existing tasks (version 7 upgrade)
-    this.version(7).upgrade(async (tx) => {
-      const tasks = await tx.table('tasks').toArray()
-      
-      // Add createdAt to tasks that don't have it
-      for (const task of tasks) {
-        if (!task.createdAt) {
-          await tx.table('tasks').update(task.id, { createdAt: new Date() })
-        }
-      }
-    })
-
-    // Fix invalid meal categories that use meal types instead of categories
-    this.version(6).upgrade(async (tx) => {
-      const savedMeals = await tx.table('savedMeals').toArray()
-      const validMealCategories = [
-        'defaultMealCategories.meat', 'defaultMealCategories.vegetarian', 'defaultMealCategories.seafood',
-        'defaultMealCategories.pasta', 'defaultMealCategories.salad', 'defaultMealCategories.soup',
-        'defaultMealCategories.dessert', 'defaultMealCategories.healthy', 'defaultMealCategories.comfort',
-        'defaultMealCategories.international'
-      ]
-
-      // Fix saved meals with invalid categories (especially breakfast/snack which are meal types)
-      for (const savedMeal of savedMeals) {
-        if (!validMealCategories.includes(savedMeal.category)) {
-          // Default to meat category if category is invalid
-          await tx.table('savedMeals').update(savedMeal.id, { category: 'defaultMealCategories.meat' })
-        }
-      }
-    })
-
-    // Migrate existing categories to use translation keys
-    this.version(3).upgrade(async (tx) => {
-      const categories = await tx.table('groceryCategories').toArray()
-      
-      // Migration mapping for old bilingual names to translation keys
-      const migrationMap: Record<string, string> = {
-        'Produce / Productos': 'defaultCategories.produce',
-        'Dairy / Lácteos': 'defaultCategories.dairy',
-        'Meat & Fish / Carnes y Pescado': 'defaultCategories.meatFish',
-        'Bakery / Panadería': 'defaultCategories.bakery',
-        'Pantry / Despensa': 'defaultCategories.pantry',
-        'Frozen / Congelados': 'defaultCategories.frozen',
-        'Beverages / Bebidas': 'defaultCategories.beverages',
-        'Snacks / Aperitivos': 'defaultCategories.snacks',
-        'Health & Beauty / Salud y Belleza': 'defaultCategories.healthBeauty',
-        'Household / Hogar': 'defaultCategories.household'
-      }
-
-      // Update existing categories
-      for (const category of categories) {
-        const newName = migrationMap[category.name]
-        if (newName) {
-          await tx.table('groceryCategories').update(category.id, { name: newName })
-          
-          // Also update grocery items that use this category
-          const itemsWithCategory = await tx.table('groceryItems')
-            .where('category').equals(category.name).toArray()
-          
-          for (const item of itemsWithCategory) {
-            await tx.table('groceryItems').update(item.id, { category: newName })
-          }
-        }
-      }
-    })
-
-    // Initialize cloud connection and sync
+    // Database ready handler
     this.on('ready', async () => {
-      console.log('Database ready with Dexie Cloud support')
-
-      try {
-        // Ensure cloud sync is enabled
-        const url = this.cloud?.options?.databaseUrl
-        if (url && !url.includes('localhost')) {
-          console.log('Connecting to Dexie Cloud:', url)
-        }
-      } catch (error) {
-        console.warn('Dexie Cloud connection issue:', error)
-      }
+      console.log('Database ready - local IndexedDB mode')
 
       try {
         await this.ensureMealIngredientStructure()
       } catch (error) {
         console.warn('Meal ingredient migration issue:', error)
       }
+
+      // Seed default categories if needed
+      await this.seedDefaultCategoriesIfNeeded()
     })
   }
 
@@ -704,269 +502,48 @@ export class DomusDatabase extends Dexie {
     return this.legacyMealIngredientMigrationPromise
   }
 
-  // Helper methods for household management
-  async getCurrentUserHouseholdId(): Promise<string | null> {
+  // Helper method to seed default categories for new databases
+  async seedDefaultCategoriesIfNeeded(): Promise<void> {
     try {
-      const currentUser = this.cloud.currentUser.value
-      if (!currentUser?.userId) return null
-      
-      const user = await this.users.get(`usr_${currentUser.userId}`)
-      return user?.householdId || null
+      const categoryCount = await this.groceryCategories.count()
+      if (categoryCount > 0) return // Already seeded
+
+      const now = new Date()
+
+      // Add default grocery categories
+      await this.groceryCategories.bulkAdd([
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.produce', color: '#10b981', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, locale: undefined, createdAt: now },
+        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.household', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
+      ])
+
+      // Add default meal categories
+      await this.mealCategories.bulkAdd([
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: now },
+        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
+      ])
+
+      console.log('Default categories seeded successfully')
     } catch (error) {
-      console.error('Error getting current user household:', error)
-      return null
+      console.error('Error seeding default categories:', error)
     }
   }
-
-  async createHousehold(name: string, description?: string): Promise<string> {
-    const currentUser = this.cloud.currentUser.value
-    if (!currentUser?.userId) {
-      throw new Error('User must be authenticated to create household')
-    }
-
-    const householdId = `hsh_${crypto.randomUUID()}`
-    const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase()
-    const now = new Date()
-
-    // Create household
-    await this.households.add({
-      id: householdId,
-      name,
-      description,
-      owner: currentUser.userId,
-      members: [currentUser.userId],
-      inviteCode,
-      createdAt: now,
-      updatedAt: now
-    })
-
-    // Add user as household owner
-    await this.householdMembers.add({
-      id: `hmbr_${crypto.randomUUID()}`,
-      householdId,
-      userId: currentUser.userId,
-      role: 'owner',
-      joinedAt: now,
-      permissions: {
-        canManageMembers: true,
-        canManageSettings: true,
-        canDeleteItems: true
-      }
-    })
-
-    // Update user's household ID
-    await this.users.update(`usr_${currentUser.userId}`, { householdId })
-
-    // Create default categories for this household
-    await this.seedDefaultCategories(householdId)
-
-    return householdId
-  }
-
-  async seedDefaultCategories(householdId: string): Promise<void> {
-    const now = new Date()
-    
-    // Add default grocery categories
-    await this.groceryCategories.bulkAdd([
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.produce', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.household', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
-    ])
-
-    // Add default meal categories
-    await this.mealCategories.bulkAdd([
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, householdId, locale: undefined, createdAt: now },
-      { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, householdId, locale: undefined, createdAt: now }
-    ])
-  }
 }
 
-// Local-only database (no cloud addon). Used when in offline mode.
-export class LocalDomusDatabase extends Dexie {
-  users!: Table<User>
-  households!: Table<Household>
-  householdMembers!: Table<HouseholdMember>
-  chores!: Table<Chore>
-  groceryItems!: Table<GroceryItem>
-  groceryCategories!: Table<GroceryCategory>
-  savedGroceryItems!: Table<SavedGroceryItem>
-  tasks!: Table<Task>
-  homeImprovements!: Table<HomeImprovement>
-  meals!: Table<Meal>
-  mealCategories!: Table<MealCategory>
-  savedMeals!: Table<SavedMeal>
-  reminders!: Table<Reminder>
-  calendarEvents!: Table<CalendarEvent>
-  homeSettings!: Table<HomeSettings>
-  ketoSettings!: Table<KetoSettings>
-  ketoDays!: Table<KetoDay>
-  private legacyMealIngredientMigrationComplete = false
-  private legacyMealIngredientMigrationPromise?: Promise<void>
-
-  constructor() {
-    super('DomusLocalDatabase')
-
-    // Use same v13 schema but without cloud
-    this.version(13).stores({
-      users: 'id, name, email, color, type, householdId',
-      households: 'id, name, owner, createdAt, updatedAt',
-      householdMembers: 'id, householdId, userId, role, joinedAt',
-      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
-      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
-      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
-      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
-      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
-      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
-      meals: 'id, title, householdId, date, mealType, assignedUserId',
-      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
-      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
-      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
-      calendarEvents: 'id, title, householdId, date, type',
-      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
-      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
-      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt'
-    })
-
-    this.on('ready', async () => {
-      try {
-        await this.ensureMealIngredientStructure()
-      } catch (err) {
-        console.warn('Local DB init error:', err)
-      }
-    })
-  }
-
-  async ensureMealIngredientStructure(): Promise<void> {
-    if (this.legacyMealIngredientMigrationComplete) return
-    if (this.legacyMealIngredientMigrationPromise) {
-      return this.legacyMealIngredientMigrationPromise
-    }
-
-    type LegacyIngredientRecord = {
-      ingredientIds?: string[]
-      ingredients?: MealIngredient[]
-    }
-
-    const migration = this.transaction('rw', this.savedGroceryItems, this.meals, this.savedMeals, async () => {
-      const savedItems = await this.savedGroceryItems.toArray()
-      const savedItemMap = new Map<string, SavedGroceryItem>()
-
-      for (const item of savedItems) {
-        if (item.id) {
-          savedItemMap.set(String(item.id), item)
-        }
-      }
-
-      const convertLegacyIngredients = (ids?: string[]) => {
-        if (!ids?.length) return []
-
-        return ids.map((id) => ({
-          id: generateId('ing'),
-          savedGroceryItemId: String(id),
-          amount: savedItemMap.get(String(id))?.amount || undefined,
-        }))
-      }
-
-      const migrateRecords = async <T extends { id?: string }>(table: Table<T, string>) => {
-        const records = await table.toArray()
-
-        for (const record of records) {
-          const legacyRecord = record as T & LegacyIngredientRecord
-          const id = legacyRecord.id
-          if (!id) continue
-          const recordId = id
-
-          const hasStructuredIngredients = Array.isArray(legacyRecord.ingredients) && legacyRecord.ingredients.length > 0
-          const legacyIds = legacyRecord.ingredientIds
-          if (!legacyIds?.length) continue
-
-          const converted = !hasStructuredIngredients
-            ? convertLegacyIngredients(legacyIds)
-            : undefined
-
-          await table
-            .where('id')
-            .equals(recordId)
-            .modify((entry) => {
-              const legacyEntry = entry as LegacyIngredientRecord
-              if (converted?.length) {
-                legacyEntry.ingredients = converted
-              }
-              delete legacyEntry.ingredientIds
-            })
-        }
-      }
-
-      await migrateRecords(this.meals)
-      await migrateRecords(this.savedMeals)
-    })
-
-    this.legacyMealIngredientMigrationPromise = migration
-      .then(() => {
-        this.legacyMealIngredientMigrationComplete = true
-      })
-      .catch((error) => {
-        console.error('Error migrating legacy meal ingredients (local):', error)
-        throw error
-      })
-      .finally(() => {
-        this.legacyMealIngredientMigrationPromise = undefined
-      })
-
-    return this.legacyMealIngredientMigrationPromise
-  }
-}
-
-function getInitialMode(): 'cloud' | 'offline' {
-  if (typeof window === 'undefined') return 'cloud'
-  const mode = localStorage.getItem('domusMode')
-  return mode === 'offline' ? 'offline' : 'cloud'
-}
-
-let currentMode: 'cloud' | 'offline' = getInitialMode()
-let currentDb: DomusDatabase | LocalDomusDatabase =
-  currentMode === 'offline' ? new LocalDomusDatabase() : new DomusDatabase()
-
-// Proxy so `db.*` always routes to the active database instance
-export const db = new Proxy({} as DomusDatabase | LocalDomusDatabase, {
-  get(_target, prop) {
-    return (currentDb as unknown as Record<string | symbol, unknown>)[prop as string]
-  },
-  set(_target, prop, value) {
-    ;(currentDb as unknown as Record<string | symbol, unknown>)[prop as string] = value
-    return true
-  },
-})
-
-export function switchDbMode(mode: 'cloud' | 'offline') {
-  if (mode === currentMode) return
-  try { localStorage.setItem('domusMode', mode) } catch {}
-  try {
-    // Close previous instance to free resources
-    ;(currentDb as unknown as { close?: () => void }).close?.()
-  } catch {}
-  currentDb = mode === 'offline' ? new LocalDomusDatabase() : new DomusDatabase()
-  currentMode = mode
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('domus:db-switched', { detail: { mode } }))
-  }
-}
-
-export function getDbMode() {
-  return currentMode
-}
+// Export a single database instance
+export const db = new DomusDatabase()

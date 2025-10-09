@@ -80,7 +80,10 @@ export default function KetoPage() {
     // Generate 42 days (6 weeks)
     for (let i = 0; i < 42; i++) {
       const dayKey = formatDateKey(currentDay)
-      const ketoDay = ketoDays?.find(day => formatDateKey(day.date) === dayKey)
+      const ketoDay = ketoDays?.find(day => {
+        const dayDate = day.date instanceof Date ? day.date : new Date(day.date)
+        return formatDateKey(dayDate) === dayKey
+      })
 
       days.push({
         date: new Date(currentDay),
@@ -109,7 +112,10 @@ export default function KetoPage() {
       }
     }
 
-    const startDate = ketoSettings.startDate
+    // Ensure startDate is a Date object
+    const startDate = ketoSettings.startDate instanceof Date
+      ? ketoSettings.startDate
+      : new Date(ketoSettings.startDate)
     const today = new Date()
     const msPerDay = 24 * 60 * 60 * 1000
 
@@ -127,6 +133,10 @@ export default function KetoPage() {
     // Calculate current streak
     let currentStreak = 0
     const sortedDays = ketoDays
+      .map(day => ({
+        ...day,
+        date: day.date instanceof Date ? day.date : new Date(day.date)
+      }))
       .sort((a, b) => b.date.getTime() - a.date.getTime())
 
     for (const day of sortedDays) {
@@ -141,9 +151,10 @@ export default function KetoPage() {
     const weekAgo = new Date(today)
     weekAgo.setDate(today.getDate() - 6) // Last 7 days including today
 
-    const weeklyKetoDays = ketoDays.filter(day =>
-      day.date >= weekAgo && day.date <= today
-    )
+    const weeklyKetoDays = ketoDays.filter(day => {
+      const dayDate = day.date instanceof Date ? day.date : new Date(day.date)
+      return dayDate >= weekAgo && dayDate <= today
+    })
     const weeklySuccessful = weeklyKetoDays.filter(day =>
       day.status === 'success' || day.status === 'fasting'
     ).length
@@ -153,9 +164,10 @@ export default function KetoPage() {
     const monthAgo = new Date(today)
     monthAgo.setDate(today.getDate() - 29) // Last 30 days including today
 
-    const monthlyKetoDays = ketoDays.filter(day =>
-      day.date >= monthAgo && day.date <= today
-    )
+    const monthlyKetoDays = ketoDays.filter(day => {
+      const dayDate = day.date instanceof Date ? day.date : new Date(day.date)
+      return dayDate >= monthAgo && dayDate <= today
+    })
     const monthlySuccessful = monthlyKetoDays.filter(day =>
       day.status === 'success' || day.status === 'fasting'
     ).length
@@ -176,7 +188,10 @@ export default function KetoPage() {
 
     try {
       const dayKey = formatDateKey(day.date)
-      const existingDay = ketoDays?.find(kd => formatDateKey(kd.date) === dayKey)
+      const existingDay = ketoDays?.find(kd => {
+        const dayDate = kd.date instanceof Date ? kd.date : new Date(kd.date)
+        return formatDateKey(dayDate) === dayKey
+      })
 
       if (!existingDay) {
         // Create new entry with success status
@@ -547,7 +562,10 @@ export default function KetoPage() {
                     const date = new Date()
                     date.setDate(date.getDate() - date.getDay() + i) // Start from Sunday
                     const dayKey = formatDateKey(date)
-                    const ketoDay = ketoDays?.find(day => formatDateKey(day.date) === dayKey)
+                    const ketoDay = ketoDays?.find(day => {
+                      const dayDate = day.date instanceof Date ? day.date : new Date(day.date)
+                      return formatDateKey(dayDate) === dayKey
+                    })
                     const isCurrentDay = isToday(date)
 
                     return (

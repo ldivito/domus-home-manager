@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Link, usePathname } from '@/i18n/navigation'
+import { Link, usePathname, useRouter } from '@/i18n/navigation'
 import {
   Home,
   CheckSquare,
@@ -16,23 +16,80 @@ import {
   Settings,
   ChevronRight,
   ChevronLeft,
-  Heart
+  Heart,
+  LogOut,
+  User
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
 import SyncButton from './SyncButton'
+import { Button } from './ui/button'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
+import { toast } from 'sonner'
 
 export default function Navigation() {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [user, setUser] = useState<{ email: string; userId: string } | null>(null)
   const pathname = usePathname()
+  const router = useRouter()
   const t = useTranslations('navigation')
-  
+  const tAuth = useTranslations('auth')
+
   // Get household/home name from database
   const homeSettings = useLiveQuery(() => db.homeSettings.orderBy('lastUpdated').last())
   const householdName = homeSettings?.homeName || 'Home'
+
+  // Check authentication status on mount and when auth changes
+  useEffect(() => {
+    checkAuthStatus()
+
+    // Listen for auth changes (login/logout events)
+    const handleAuthChange = () => {
+      checkAuthStatus()
+    }
+
+    window.addEventListener('auth-changed', handleAuthChange)
+    return () => window.removeEventListener('auth-changed', handleAuthChange)
+  }, [])
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      } else {
+        setUser(null)
+      }
+    } catch {
+      setUser(null)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        setUser(null)
+        toast.success(tAuth('signOut') + ' successful')
+        // Trigger auth refresh event
+        window.dispatchEvent(new CustomEvent('auth-changed'))
+        router.push('/')
+      } else {
+        toast.error('Failed to logout')
+      }
+    } catch {
+      toast.error('Failed to logout')
+    }
+  }
 
   const navigationItems = [
     { nameKey: 'chores', href: '/chores', icon: CheckSquare },
@@ -146,7 +203,49 @@ export default function Navigation() {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-border/50">
+      <div className="p-2 border-t border-border/50 space-y-2">
+        {/* User Profile Section - Show when logged in */}
+        {user && (
+          <div className={cn(
+            "border-b border-border/50 pb-2",
+            isExpanded ? "px-1" : "px-0"
+          )}>
+            {isExpanded ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground truncate">{user.email}</span>
+                </div>
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-8 text-xs"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  {tAuth('signOut')}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title={tAuth('signOut')}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Controls */}
         {isExpanded ? (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">

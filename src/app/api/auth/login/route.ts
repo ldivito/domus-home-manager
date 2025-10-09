@@ -47,6 +47,18 @@ export async function POST(request: Request) {
       )
     }
 
+    // Get household member info
+    const member = await db
+      .prepare('SELECT role FROM household_members WHERE householdId = ? AND userId = ?')
+      .bind(user.householdId, user.id)
+      .first<{ role: string }>()
+
+    // Get household info
+    const household = await db
+      .prepare('SELECT name, inviteCode FROM households WHERE id = ?')
+      .bind(user.householdId)
+      .first<{ name: string; inviteCode: string }>()
+
     // Create session token
     const token = await createToken({
       userId: user.id,
@@ -68,7 +80,12 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         name: user.name,
-        householdId: user.householdId
+        householdId: user.householdId,
+        role: member?.role || 'member',
+        household: household ? {
+          name: household.name,
+          inviteCode: household.inviteCode
+        } : undefined
       }
     })
 

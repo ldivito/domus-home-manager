@@ -10,6 +10,7 @@ export interface UserPayload {
   userId: string
   email: string
   householdId?: string
+  [key: string]: unknown
 }
 
 export interface SessionData extends UserPayload {

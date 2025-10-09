@@ -85,17 +85,17 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
     if (!table) continue
 
     try {
-      let records = await table.toArray()
+      const allRecords = await table.toArray()
 
       // Filter records modified since last sync
-      if (since) {
-        records = records.filter(record => {
-          const updatedAt = (record as {updatedAt?: Date; createdAt?: Date}).updatedAt
-            || (record as {updatedAt?: Date; createdAt?: Date}).createdAt
-          if (!updatedAt) return false
-          return new Date(updatedAt) > since
-        })
-      }
+      const records = since
+        ? allRecords.filter(record => {
+            const updatedAt = (record as {updatedAt?: Date; createdAt?: Date}).updatedAt
+              || (record as {updatedAt?: Date; createdAt?: Date}).createdAt
+            if (!updatedAt) return false
+            return new Date(updatedAt) > since
+          })
+        : allRecords
 
       // Add to changes array
       for (const record of records) {
@@ -136,7 +136,8 @@ async function applyRemoteChanges(changes: SyncRecord[]): Promise<number> {
         await table.delete(change.id)
       } else {
         // Handle upsert
-        await table.put(change.data)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await table.put(change.data as any)
       }
       applied++
     } catch (error) {

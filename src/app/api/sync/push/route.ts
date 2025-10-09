@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     for (const change of changes) {
       const recordId = `sync_${crypto.randomUUID()}`
       const now = new Date().toISOString()
+      const operation = change.deletedAt ? 'delete' : 'upsert'
 
       await db
         .prepare(`
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
           session.householdId || '',
           change.table,
           change.id,
-          change.operation || 'update',
+          operation,
           JSON.stringify(change.data),
           now,
           now

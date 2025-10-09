@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
 import SyncButton from './SyncButton'
+import SyncLoadingScreen from './SyncLoadingScreen'
 import { Button } from './ui/button'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
@@ -32,6 +33,7 @@ import { toast } from 'sonner'
 export default function Navigation() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [user, setUser] = useState<{ email: string; userId: string } | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const t = useTranslations('navigation')
@@ -71,6 +73,18 @@ export default function Navigation() {
   }
 
   const handleLogout = async () => {
+    // Show sync screen before logging out
+    setIsSyncing(true)
+  }
+
+  const handleSyncComplete = async (success: boolean) => {
+    setIsSyncing(false)
+
+    if (!success) {
+      toast.warning('Sync encountered issues during logout')
+    }
+
+    // Proceed with logout after sync completes
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -103,6 +117,11 @@ export default function Navigation() {
     { nameKey: 'users', href: '/users', icon: Users },
     { nameKey: 'settings', href: '/settings', icon: Settings },
   ]
+
+  // Show sync screen while syncing on logout
+  if (isSyncing) {
+    return <SyncLoadingScreen onComplete={handleSyncComplete} action="logout" />
+  }
 
   return (
     <nav aria-label="Sidebar" className={cn(

@@ -10,11 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { Home, Loader2 } from 'lucide-react'
+import SyncLoadingScreen from '@/components/SyncLoadingScreen'
 
 export default function AuthPage() {
   const t = useTranslations('auth')
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('')
@@ -53,16 +55,27 @@ export default function AuthPage() {
         toast.success(t('loginSuccess'))
         // Trigger auth refresh event for Navigation component
         window.dispatchEvent(new CustomEvent('auth-changed'))
-        router.push('/')
+
+        // Show sync screen before navigating
+        setIsLoading(false)
+        setIsSyncing(true)
       } else {
         toast.error(data.error || t('loginFailed'))
+        setIsLoading(false)
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_error) {
       toast.error(t('loginFailed'))
-    } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSyncComplete = (success: boolean) => {
+    setIsSyncing(false)
+    if (!success) {
+      toast.warning('Sync encountered issues, but you can continue working')
+    }
+    router.push('/')
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -86,14 +99,17 @@ export default function AuthPage() {
         toast.success(t('registerSuccess'))
         // Trigger auth refresh event for Navigation component
         window.dispatchEvent(new CustomEvent('auth-changed'))
-        router.push('/')
+
+        // Show sync screen before navigating
+        setIsLoading(false)
+        setIsSyncing(true)
       } else {
         toast.error(data.error || t('registerFailed'))
+        setIsLoading(false)
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_error) {
       toast.error(t('registerFailed'))
-    } finally {
       setIsLoading(false)
     }
   }
@@ -149,16 +165,24 @@ export default function AuthPage() {
         toast.success(t('joinSuccess'))
         // Trigger auth refresh event for Navigation component
         window.dispatchEvent(new CustomEvent('auth-changed'))
-        router.push('/')
+
+        // Show sync screen before navigating
+        setIsLoading(false)
+        setIsSyncing(true)
       } else {
         toast.error(data.error || t('joinFailed'))
+        setIsLoading(false)
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_error) {
       toast.error(t('joinFailed'))
-    } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show sync screen while syncing
+  if (isSyncing) {
+    return <SyncLoadingScreen onComplete={handleSyncComplete} action="login" />
   }
 
   return (

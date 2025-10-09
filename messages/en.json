@@ -968,6 +968,15 @@
     "hoursAgo": "{count, plural, one {1 hour ago} other {{count} hours ago}}",
     "error": "Sync Error"
   },
+  "syncScreen": {
+    "syncingLogin": "Syncing your data...",
+    "syncingLogout": "Syncing before signing out...",
+    "syncComplete": "Sync Complete",
+    "syncFailed": "Sync Failed",
+    "syncSuccess": "Synced {pushed} changes, pulled {pulled} updates",
+    "syncError": "Unable to sync data",
+    "pleaseWait": "Please wait while we sync your data"
+  },
   "auth": {
     "welcome": "Welcome to Domus",
     "subtitle": "Home Management Made Easy",

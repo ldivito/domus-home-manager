@@ -968,6 +968,15 @@
     "hoursAgo": "{count, plural, one {hace 1 hora} other {hace {count} horas}}",
     "error": "Error de sincronización"
   },
+  "syncScreen": {
+    "syncingLogin": "Sincronizando tus datos...",
+    "syncingLogout": "Sincronizando antes de cerrar sesión...",
+    "syncComplete": "Sincronización Completa",
+    "syncFailed": "Sincronización Fallida",
+    "syncSuccess": "Sincronizados {pushed} cambios, descargados {pulled} actualizaciones",
+    "syncError": "No se pudo sincronizar los datos",
+    "pleaseWait": "Por favor espera mientras sincronizamos tus datos"
+  },
   "auth": {
     "welcome": "Bienvenido a Domus",
     "subtitle": "Gestión del Hogar Simplificada",

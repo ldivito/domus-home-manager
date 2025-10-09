@@ -675,7 +675,8 @@
         "postalCode": "Postal Code",
         "emergencyName": "Name",
         "emergencyPhone": "Phone Number",
-        "emergencyRelationship": "Relationship"
+        "emergencyRelationship": "Relationship",
+        "optional": "(Optional)"
       },
       "placeholders": {
         "homeName": "e.g., The Johnson Family Home",
@@ -968,6 +969,18 @@
     "hoursAgo": "{count, plural, one {1 hour ago} other {{count} hours ago}}",
     "error": "Sync Error"
   },
+  "migration": {
+    "title": "Database Migration Required",
+    "description": "Your database needs to be updated to work with the latest version of Domus. This will preserve all your data.",
+    "warning": "This process will take a few moments. Please do not close the app.",
+    "startMigration": "Start Migration",
+    "migrating": "Migrating your data...",
+    "success": "Migration successful!",
+    "migrated": "Migrated {records} records across {tables} tables",
+    "reloading": "Reloading the app...",
+    "failed": "Migration failed",
+    "retry": "Retry Migration"
+  },
   "syncScreen": {
     "syncingLogin": "Syncing your data...",
     "syncingLogout": "Syncing before signing out...",
@@ -1048,6 +1061,10 @@
     "noHousehold": "No household information available",
     "loading": "Loading",
     "shareCode": "Share this code with family members to let them join your household",
-    "createdAt": "Created"
+    "createdAt": "Created",
+    "createHousehold": "Create Household",
+    "createHouseholdDescription": "Create a household to start managing your home with family members",
+    "householdNameRequired": "Household name is required",
+    "householdCreated": "Household created successfully!"
   }
 }

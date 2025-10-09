@@ -20,9 +20,16 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
   // Check auth status and sync status on mount
   useEffect(() => {
     checkAuthStatus()
-    const status = getSyncStatus()
-    setLastSyncAt(status.lastSyncAt)
+    loadSyncStatus()
   }, [])
+
+  const loadSyncStatus = async () => {
+    const status = await getSyncStatus()
+    setLastSyncAt(status.lastSyncAt)
+    if (status.needsMigration) {
+      setError(status.error || 'Migration required')
+    }
+  }
 
   const checkAuthStatus = async () => {
     const authenticated = await isAuthenticated()

@@ -675,7 +675,8 @@
         "postalCode": "Código Postal",
         "emergencyName": "Nombre",
         "emergencyPhone": "Número de Teléfono",
-        "emergencyRelationship": "Parentesco"
+        "emergencyRelationship": "Parentesco",
+        "optional": "(Opcional)"
       },
       "placeholders": {
         "homeName": "ej., La Casa Familiar de los Johnson",
@@ -968,6 +969,18 @@
     "hoursAgo": "{count, plural, one {hace 1 hora} other {hace {count} horas}}",
     "error": "Error de sincronización"
   },
+  "migration": {
+    "title": "Migración de Base de Datos Requerida",
+    "description": "Tu base de datos necesita ser actualizada para funcionar con la última versión de Domus. Esto preservará todos tus datos.",
+    "warning": "Este proceso tomará unos momentos. Por favor no cierres la aplicación.",
+    "startMigration": "Iniciar Migración",
+    "migrating": "Migrando tus datos...",
+    "success": "¡Migración exitosa!",
+    "migrated": "Se migraron {records} registros en {tables} tablas",
+    "reloading": "Recargando la aplicación...",
+    "failed": "Migración fallida",
+    "retry": "Reintentar Migración"
+  },
   "syncScreen": {
     "syncingLogin": "Sincronizando tus datos...",
     "syncingLogout": "Sincronizando antes de cerrar sesión...",
@@ -1048,6 +1061,10 @@
     "noHousehold": "No hay información del hogar disponible",
     "loading": "Cargando",
     "shareCode": "Comparte este código con miembros de la familia para que se unan a tu hogar",
-    "createdAt": "Creado"
+    "createdAt": "Creado",
+    "createHousehold": "Crear Hogar",
+    "createHouseholdDescription": "Crea un hogar para comenzar a gestionar tu casa con miembros de la familia",
+    "householdNameRequired": "El nombre del hogar es obligatorio",
+    "householdCreated": "¡Hogar creado exitosamente!"
   }
 }

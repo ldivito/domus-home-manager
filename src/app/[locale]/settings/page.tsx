@@ -68,6 +68,10 @@ export default function SettingsPage() {
   const [editedHouseholdDescription, setEditedHouseholdDescription] = useState('')
   const [isLoadingHousehold, setIsLoadingHousehold] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
+  // Create household state
+  const [isCreatingHousehold, setIsCreatingHousehold] = useState(false)
+  const [newHouseholdName, setNewHouseholdName] = useState('')
+  const [newHouseholdDescription, setNewHouseholdDescription] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -297,9 +301,16 @@ export default function SettingsPage() {
         setHouseholdMembers(data.members || [])
         setEditedHouseholdName(data.household.name)
         setEditedHouseholdDescription(data.household.description || '')
+      } else if (response.status === 404) {
+        // No household found - this is fine, user can create one
+        setHouseholdInfo(null)
+        setHouseholdMembers([])
       }
     } catch (error) {
-      console.error('Error loading household info:', error)
+      // Silently handle errors - user might not be logged in or household API might not be available
+      console.log('Household info not available:', error)
+      setHouseholdInfo(null)
+      setHouseholdMembers([])
     } finally {
       setIsLoadingHousehold(false)
     }
@@ -386,6 +397,49 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Error removing member:', error)
       toast.error(th('insufficientPermissions'))
+    }
+  }
+
+  const handleCreateHousehold = async () => {
+    if (!newHouseholdName.trim()) {
+      toast.error(th('householdNameRequired') || 'Household name is required')
+      return
+    }
+
+    setIsCreatingHousehold(true)
+
+    try {
+      const response = await fetch('/api/households/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newHouseholdName,
+          description: newHouseholdDescription
+        })
+      })
+
+      if (response.ok) {
+        toast.success(th('householdCreated'))
+        setNewHouseholdName('')
+        setNewHouseholdDescription('')
+
+        // Trigger auth refresh event for Navigation component
+        window.dispatchEvent(new CustomEvent('auth-changed'))
+
+        // Reload household info to display the newly created household
+        await loadHouseholdInfo()
+
+        // Force a page refresh to ensure everything is updated
+        router.refresh()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to create household')
+      }
+    } catch (error) {
+      console.error('Error creating household:', error)
+      toast.error('Failed to create household')
+    } finally {
+      setIsCreatingHousehold(false)
     }
   }
 
@@ -922,8 +976,49 @@ export default function SettingsPage() {
                   )}
                 </>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  {th('noHousehold')}
+                <div className="space-y-6">
+                  <div className="text-center py-4">
+                    <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">{th('noHousehold')}</h3>
+                    <p className="text-sm text-muted-foreground mb-6">{th('createHouseholdDescription') || 'Create a household to start managing your home with family members'}</p>
+                  </div>
+
+                  {/* Create Household Form */}
+                  <div className="space-y-4 max-w-md mx-auto">
+                    <div className="space-y-2">
+                      <Label htmlFor="newHouseholdName">{th('householdName')}</Label>
+                      <Input
+                        id="newHouseholdName"
+                        value={newHouseholdName}
+                        onChange={(e) => setNewHouseholdName(e.target.value)}
+                        placeholder={th('householdNamePlaceholder')}
+                        disabled={isCreatingHousehold}
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="newHouseholdDescription">{th('householdDescription')} {t('homeSettings.fields.optional') || '(Optional)'}</Label>
+                      <Textarea
+                        id="newHouseholdDescription"
+                        value={newHouseholdDescription}
+                        onChange={(e) => setNewHouseholdDescription(e.target.value)}
+                        placeholder={th('householdDescriptionPlaceholder')}
+                        disabled={isCreatingHousehold}
+                        rows={3}
+                        className="resize-none"
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handleCreateHousehold}
+                      disabled={isCreatingHousehold || !newHouseholdName.trim()}
+                      className="w-full h-11 shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      {isCreatingHousehold && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                      {th('createHousehold') || 'Create Household'}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

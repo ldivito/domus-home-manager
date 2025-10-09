@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar } from "lucide-react"
+import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar, Users, Copy, RefreshCw, UserMinus, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -17,8 +17,33 @@ import { generateId } from '@/lib/utils'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 
+interface HouseholdInfo {
+  id: string
+  name: string
+  description: string | null
+  ownerId: string
+  inviteCode: string
+  createdAt: string
+  isOwner: boolean
+}
+
+interface HouseholdMember {
+  id: string
+  userId: string
+  name: string
+  email: string
+  role: string
+  joinedAt: string
+  permissions: {
+    canManageMembers: boolean
+    canManageSettings: boolean
+    canDeleteItems: boolean
+  }
+}
+
 export default function SettingsPage() {
   const t = useTranslations('settings')
+  const th = useTranslations('household')
   const { theme, setTheme } = useTheme()
   const locale = useLocale()
   const router = useRouter()
@@ -35,11 +60,21 @@ export default function SettingsPage() {
   const [homeSettings, setHomeSettings] = useState<Partial<HomeSettings>>({})
   const [isEditingHome, setIsEditingHome] = useState(false)
 
+  // Household management state
+  const [householdInfo, setHouseholdInfo] = useState<HouseholdInfo | null>(null)
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([])
+  const [isEditingHousehold, setIsEditingHousehold] = useState(false)
+  const [editedHouseholdName, setEditedHouseholdName] = useState('')
+  const [editedHouseholdDescription, setEditedHouseholdDescription] = useState('')
+  const [isLoadingHousehold, setIsLoadingHousehold] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
+
   useEffect(() => {
     setMounted(true)
     loadDatabaseStats()
     loadNotificationSettings()
     loadHomeSettings()
+    loadHouseholdInfo()
   }, [])
 
   const loadDatabaseStats = async () => {
@@ -248,6 +283,109 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Reset error:', error)
       toast.error(t('resetError'))
+    }
+  }
+
+  // Household management functions
+  const loadHouseholdInfo = async () => {
+    setIsLoadingHousehold(true)
+    try {
+      const response = await fetch('/api/households/info')
+      if (response.ok) {
+        const data = await response.json()
+        setHouseholdInfo(data.household)
+        setHouseholdMembers(data.members || [])
+        setEditedHouseholdName(data.household.name)
+        setEditedHouseholdDescription(data.household.description || '')
+      }
+    } catch (error) {
+      console.error('Error loading household info:', error)
+    } finally {
+      setIsLoadingHousehold(false)
+    }
+  }
+
+  const handleUpdateHousehold = async () => {
+    if (!householdInfo) return
+
+    try {
+      const response = await fetch('/api/households/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editedHouseholdName,
+          description: editedHouseholdDescription
+        })
+      })
+
+      if (response.ok) {
+        toast.success(th('householdUpdated'))
+        setIsEditingHousehold(false)
+        await loadHouseholdInfo()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || th('insufficientPermissions'))
+      }
+    } catch (error) {
+      console.error('Error updating household:', error)
+      toast.error(th('insufficientPermissions'))
+    }
+  }
+
+  const handleCopyInviteCode = async () => {
+    if (!householdInfo) return
+
+    try {
+      await navigator.clipboard.writeText(householdInfo.inviteCode)
+      setCopiedCode(true)
+      toast.success(th('inviteCodeCopied'))
+      setTimeout(() => setCopiedCode(false), 2000)
+    } catch (error) {
+      console.error('Error copying invite code:', error)
+    }
+  }
+
+  const handleRegenerateInviteCode = async () => {
+    if (!householdInfo || !confirm(th('regenerateCodeConfirm'))) return
+
+    try {
+      const response = await fetch('/api/households/regenerate-code', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        toast.success(th('codeRegenerated'))
+        await loadHouseholdInfo()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || th('insufficientPermissions'))
+      }
+    } catch (error) {
+      console.error('Error regenerating invite code:', error)
+      toast.error(th('insufficientPermissions'))
+    }
+  }
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!confirm(th('removeMemberConfirm'))) return
+
+    try {
+      const response = await fetch('/api/households/remove-member', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+
+      if (response.ok) {
+        toast.success(th('memberRemoved'))
+        await loadHouseholdInfo()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || th('insufficientPermissions'))
+      }
+    } catch (error) {
+      console.error('Error removing member:', error)
+      toast.error(th('insufficientPermissions'))
     }
   }
 
@@ -575,6 +713,217 @@ export default function SettingsPage() {
                       {t('homeSettings.cancel')}
                     </Button>
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Household Management */}
+          <Card className="glass-card shadow-modern">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl flex items-center">
+                    <Users className="mr-3 h-6 w-6 text-primary" />
+                    {th('title')}
+                  </CardTitle>
+                  <CardDescription>{th('description')}</CardDescription>
+                </div>
+                {householdInfo && (householdInfo.isOwner || householdMembers.find(m => m.userId === householdInfo.ownerId)?.permissions?.canManageSettings) && (
+                  <Button
+                    variant={isEditingHousehold ? "default" : "outline"}
+                    onClick={() => {
+                      if (isEditingHousehold) {
+                        handleUpdateHousehold()
+                      } else {
+                        setIsEditingHousehold(true)
+                      }
+                    }}
+                    className="shrink-0"
+                  >
+                    {isEditingHousehold ? (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        {t('homeSettings.save')}
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        {t('homeSettings.edit')}
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {isLoadingHousehold ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {th('loading')}...
+                </div>
+              ) : householdInfo ? (
+                <>
+                  {/* Household Information */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <Home className="h-5 w-5 text-primary" />
+                      <Label className="text-lg font-semibold">{th('householdInfo')}</Label>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 pl-8">
+                      <div className="space-y-2">
+                        <Label htmlFor="householdName">{th('householdName')}</Label>
+                        {isEditingHousehold ? (
+                          <Input
+                            id="householdName"
+                            value={editedHouseholdName}
+                            onChange={(e) => setEditedHouseholdName(e.target.value)}
+                            placeholder={th('householdNamePlaceholder')}
+                          />
+                        ) : (
+                          <p className="text-muted-foreground">{householdInfo.name}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="householdDescription">{th('householdDescription')}</Label>
+                        {isEditingHousehold ? (
+                          <Textarea
+                            id="householdDescription"
+                            value={editedHouseholdDescription}
+                            onChange={(e) => setEditedHouseholdDescription(e.target.value)}
+                            placeholder={th('householdDescriptionPlaceholder')}
+                            rows={3}
+                            className="resize-none"
+                          />
+                        ) : (
+                          <p className="text-muted-foreground">{householdInfo.description || th('noDescription')}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Invite Code Section */}
+                  <div className="border-t border-border pt-6">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3">
+                        <Copy className="h-5 w-5 text-primary" />
+                        <Label className="text-lg font-semibold">{th('inviteCode')}</Label>
+                      </div>
+
+                      <div className="pl-8 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 max-w-md">
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 px-4 py-3 bg-muted rounded-lg font-mono text-lg tracking-wider border border-border">
+                                {householdInfo.inviteCode}
+                              </code>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleCopyInviteCode}
+                                className="h-11 w-11"
+                              >
+                                {copiedCode ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {th('inviteCodeDescription')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {householdInfo.isOwner && (
+                          <Button
+                            variant="outline"
+                            onClick={handleRegenerateInviteCode}
+                            className="gap-2"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            {th('regenerateCode')}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Members List */}
+                  <div className="border-t border-border pt-6">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-primary" />
+                        <Label className="text-lg font-semibold">{th('members')} ({householdMembers.length})</Label>
+                      </div>
+
+                      <div className="pl-8 space-y-3">
+                        {householdMembers.map((member) => {
+                          const currentUserMember = householdMembers.find(m => m.userId === householdInfo.ownerId)
+                          const canRemove = currentUserMember && (
+                            currentUserMember.role === 'owner' ||
+                            (currentUserMember.permissions.canManageMembers && member.role !== 'admin' && member.role !== 'owner')
+                          )
+
+                          return (
+                            <div
+                              key={member.id}
+                              className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium text-foreground">{member.name}</p>
+                                  <Badge variant={member.role === 'owner' ? 'default' : member.role === 'admin' ? 'secondary' : 'outline'}>
+                                    {th(member.role)}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground truncate">{member.email}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {th('joinedOn')} {new Date(member.joinedAt).toLocaleDateString(locale)}
+                                </p>
+                              </div>
+
+                              {canRemove && member.role !== 'owner' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveMember(member.userId)}
+                                  className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <UserMinus className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cancel Button in Edit Mode */}
+                  {isEditingHousehold && (
+                    <div className="border-t border-border pt-6">
+                      <div className="flex justify-end gap-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditingHousehold(false)
+                            setEditedHouseholdName(householdInfo.name)
+                            setEditedHouseholdDescription(householdInfo.description || '')
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          {t('homeSettings.cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  {th('noHousehold')}
                 </div>
               )}
             </CardContent>

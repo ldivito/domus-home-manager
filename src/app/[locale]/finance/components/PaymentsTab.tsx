@@ -11,7 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Check, Clock, AlertTriangle } from 'lucide-react'
+import { Calendar, Check, Clock, AlertTriangle, Trash2, MoreHorizontal, Undo2 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -211,6 +217,39 @@ export function PaymentsTab({
     }
   }
 
+  const handleDeletePayment = async (paymentId: string) => {
+    try {
+      await db.expensePayments.delete(paymentId)
+      toast.success(tMessages('paymentDeleted'))
+    } catch (error) {
+      console.error('Error deleting payment:', error)
+      toast.error(tMessages('error'))
+    }
+  }
+
+  const handleUnmarkPaid = async (payment: ExpensePayment) => {
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const dueDate = new Date(payment.dueDate)
+      dueDate.setHours(0, 0, 0, 0)
+
+      const newStatus = dueDate < today ? 'overdue' : 'pending'
+
+      await db.expensePayments.update(payment.id!, {
+        status: newStatus,
+        paidByUserId: undefined,
+        paidDate: undefined,
+        notes: undefined,
+        updatedAt: new Date()
+      })
+      toast.success(tMessages('paymentUnmarked'))
+    } catch (error) {
+      console.error('Error unmarking payment:', error)
+      toast.error(tMessages('error'))
+    }
+  }
+
   const getExpense = (expenseId: string) => {
     return expenses.find(e => e.id === expenseId)
   }
@@ -312,7 +351,14 @@ export function PaymentsTab({
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div>
-                          <p className="font-medium text-lg">{getExpenseName(payment.recurringExpenseId)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-lg">{getExpenseName(payment.recurringExpenseId)}</p>
+                            {!expense && (
+                              <Badge variant="outline" className="text-xs text-amber-600 border-amber-600">
+                                {t('expenseDeleted')}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{t('dueDate', { date: format(new Date(payment.dueDate), 'MMM d, yyyy') })}</span>
                             {expense?.currency === 'USD' && (
@@ -326,6 +372,28 @@ export function PaymentsTab({
                       <div className="flex items-center gap-4">
                         <p className="text-2xl font-bold">$ {formatARS(amountARS)}</p>
                         {getStatusBadge(payment.status)}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {payment.status === 'paid' && (
+                              <DropdownMenuItem onClick={() => handleUnmarkPaid(payment)}>
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                {t('unmarkPaid')}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDeletePayment(payment.id!)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
 

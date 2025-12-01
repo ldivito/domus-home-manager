@@ -1232,6 +1232,9 @@
       "noPayments": "No payments for this period",
       "noPaymentsDescription": "Payments will appear here when recurring expenses are due",
       "markPaid": "Mark as Paid",
+      "unmarkPaid": "Unmark as Paid",
+      "delete": "Delete Payment",
+      "expenseDeleted": "Expense deleted",
       "dueDate": "Due {date}",
       "paidOn": "Paid on {date}",
       "paidBy": "Paid by {name}",
@@ -1294,6 +1297,8 @@
       "expenseUpdated": "Expense updated successfully",
       "expenseDeleted": "Expense deleted successfully",
       "paymentMarkedPaid": "Payment marked as paid",
+      "paymentUnmarked": "Payment unmarked successfully",
+      "paymentDeleted": "Payment deleted successfully",
       "error": "An error occurred"
     }
   }

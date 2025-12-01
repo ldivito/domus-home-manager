@@ -404,6 +404,81 @@ export interface DocumentTag {
   createdAt: Date
 }
 
+// Maintenance Scheduler Module interfaces
+export type MaintenanceItemType = 'appliance' | 'hvac' | 'plumbing' | 'electrical' |
+  'vehicle' | 'roof' | 'exterior' | 'landscaping' | 'pool' | 'security' | 'other'
+
+export type MaintenanceFrequency = 'once' | 'weekly' | 'monthly' | 'quarterly' |
+  'biannually' | 'yearly' | 'custom'
+
+export interface MaintenanceItem {
+  id?: string
+  name: string
+  description?: string
+  type: MaintenanceItemType
+  location?: string              // Where in the home (e.g., "Kitchen", "Garage")
+  brand?: string
+  model?: string
+  serialNumber?: string
+  purchaseDate?: Date
+  warrantyExpirationDate?: Date
+  // Cross-module linking
+  linkedDocumentIds?: string[]   // Manuals, warranties, receipts
+  notes?: string
+  imageData?: string             // Base64 encoded photo
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MaintenanceTask {
+  id?: string
+  maintenanceItemId: string      // Reference to MaintenanceItem
+  name: string
+  description?: string
+  frequency: MaintenanceFrequency
+  customFrequencyDays?: number   // For 'custom' frequency
+  lastCompleted?: Date
+  nextDue: Date
+  reminderEnabled: boolean
+  reminderDaysBefore?: number
+  estimatedCostMin?: number
+  estimatedCostMax?: number
+  estimatedCurrency?: 'ARS' | 'USD'
+  estimatedDurationMinutes?: number
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  assignedUserId?: string
+  // Service provider info
+  preferredProvider?: string
+  providerPhone?: string
+  providerEmail?: string
+  notes?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MaintenanceLog {
+  id?: string
+  maintenanceItemId: string      // Reference to MaintenanceItem
+  maintenanceTaskId?: string     // Optional reference to MaintenanceTask
+  title: string                  // What was done
+  description?: string
+  completedDate: Date
+  completedByUserId?: string
+  // Cost tracking
+  actualCost?: number
+  costCurrency?: 'ARS' | 'USD'
+  // Service provider
+  serviceProvider?: string
+  isExternalService: boolean     // DIY vs hired professional
+  // Attachments
+  linkedDocumentIds?: string[]   // Receipts, invoices
+  notes?: string
+  householdId?: string
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -433,11 +508,51 @@ export class DomusDatabase extends Dexie {
   documents!: Table<Document>
   documentFolders!: Table<DocumentFolder>
   documentTags!: Table<DocumentTag>
+  // Maintenance Scheduler tables
+  maintenanceItems!: Table<MaintenanceItem>
+  maintenanceTasks!: Table<MaintenanceTask>
+  maintenanceLogs!: Table<MaintenanceLog>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase')
+
+    // v20: Add Maintenance Scheduler module tables
+    this.version(20).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt',
+      settlementPayments: 'id, fromUserId, toUserId, [month+year], householdId, createdAt',
+      // Document Vault tables
+      documents: 'id, name, category, expirationDate, uploadedByUserId, householdId, createdAt, *tags',
+      documentFolders: 'id, name, parentFolderId, householdId, createdAt',
+      documentTags: 'id, name, householdId, createdAt',
+      // Maintenance Scheduler tables
+      maintenanceItems: 'id, name, type, location, householdId, createdAt',
+      maintenanceTasks: 'id, maintenanceItemId, name, nextDue, priority, assignedUserId, householdId, createdAt',
+      maintenanceLogs: 'id, maintenanceItemId, maintenanceTaskId, completedDate, completedByUserId, householdId, createdAt'
+    })
 
     // v19: Add Document Vault module tables
     this.version(19).stores({

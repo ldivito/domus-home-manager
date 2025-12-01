@@ -711,6 +711,12 @@
       "updateTask": "Actualizar Tarea",
       "updating": "Actualizando..."
     },
+    "pagination": {
+      "task": "tarea",
+      "tasks": "tareas",
+      "page": "Página",
+      "of": "de"
+    },
     "import": {
       "button": "Importar",
       "title": "Importar Tareas",

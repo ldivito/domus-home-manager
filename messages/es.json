@@ -735,6 +735,15 @@
       "completed": "Completados",
       "estimatedCost": "Costo Estimado"
     },
+    "detail": {
+      "createdAt": "Creado",
+      "linkedTasks": "Tareas Vinculadas",
+      "completed": "completadas",
+      "noLinkedTasks": "Sin tareas vinculadas",
+      "noLinkedTasksHint": "Vincula tareas a este proyecto desde la página de Tareas",
+      "pendingTasks": "Pendientes",
+      "completedTasks": "Completadas"
+    },
     "form": {
       "name": "Nombre del Proyecto",
       "namePlaceholder": "Ingresa el nombre del proyecto",

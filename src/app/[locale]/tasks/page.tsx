@@ -3,27 +3,31 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle } from "lucide-react"
+import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle, Tag, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db, Task, HomeImprovement } from '@/lib/db'
+import { db, Task, HomeImprovement, TaskCategory } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddTaskDialog } from './components/AddTaskDialog'
 import { EditTaskDialog } from './components/EditTaskDialog'
+import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
 
 export default function TasksPage() {
   const t = useTranslations('tasks')
   const tCommon = useTranslations('common')
+  const tCat = useTranslations('tasks.defaultTaskCategories')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [projectFilter, setProjectFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const tasks = useLiveQuery(
     () => db.tasks.orderBy('createdAt').reverse().toArray(),
@@ -40,10 +44,33 @@ export default function TasksPage() {
     []
   ) || []
 
+  const categories = useLiveQuery(
+    () => db.taskCategories.toArray(),
+    []
+  ) || []
+
   const priorityColors = {
     high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
     medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+  }
+
+  const translateCategoryName = (categoryName: string) => {
+    if (categoryName.startsWith('defaultTaskCategories.')) {
+      const key = categoryName.replace('defaultTaskCategories.', '')
+      const categoryMap: Record<string, string> = {
+        'personal': tCat('personal'),
+        'work': tCat('work'),
+        'home': tCat('home'),
+        'shopping': tCat('shopping'),
+        'health': tCat('health'),
+        'finance': tCat('finance'),
+        'errands': tCat('errands'),
+        'other': tCat('other')
+      }
+      return categoryMap[key] || categoryName
+    }
+    return categoryName
   }
 
   const handleMarkComplete = async (taskId: string) => {
@@ -77,6 +104,11 @@ export default function TasksPage() {
     if (!projectId) return null
     const project = projects.find(p => p.id === projectId)
     return project?.title || null
+  }
+
+  const getCategory = (categoryId?: string) => {
+    if (!categoryId) return null
+    return categories.find(c => c.id === categoryId) || null
   }
 
   const getBlockerTask = (blockerTaskId?: string) => {
@@ -115,8 +147,11 @@ export default function TasksPage() {
     const matchesProject = projectFilter === 'all' ||
       (projectFilter === 'none' && !task.linkedProjectId) ||
       task.linkedProjectId?.toString() === projectFilter
+    const matchesCategory = categoryFilter === 'all' ||
+      (categoryFilter === 'none' && !task.category) ||
+      task.category?.toString() === categoryFilter
 
-    return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesProject
+    return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesProject && matchesCategory
   })
 
   return (
@@ -127,10 +162,16 @@ export default function TasksPage() {
             <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('title')}</h1>
             <p className="text-xl text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
-          <Button size="lg" className="h-14 px-8 text-lg" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-6 w-6" />
-            {t('addTask')}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="lg" className="h-14" onClick={() => setCategoriesDialogOpen(true)}>
+              <Settings className="mr-2 h-5 w-5" />
+              {t('manageCategories')}
+            </Button>
+            <Button size="lg" className="h-14 px-8 text-lg" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="mr-2 h-6 w-6" />
+              {t('addTask')}
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -146,6 +187,28 @@ export default function TasksPage() {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-40">
+                  <Tag className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder={t('filters.category')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tCommon('all')}</SelectItem>
+                  <SelectItem value="none">{t('form.noCategory')}</SelectItem>
+                  {categories.map((category: TaskCategory) => (
+                    <SelectItem key={category.id} value={category.id!.toString()}>
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color || '#6b7280' }}
+                        />
+                        <span>{translateCategoryName(category.name)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger className="w-36">
                   <Filter className="mr-2 h-4 w-4" />
@@ -235,6 +298,7 @@ export default function TasksPage() {
           ) : (
             filteredTasks.map((task) => {
               const projectName = getProjectName(task.linkedProjectId)
+              const category = getCategory(task.category)
               const estimatedTimeStr = formatEstimatedTime(task.estimatedTime)
               const blockerTask = getBlockerTask(task.blockedByTaskId)
               const isBlocked = isBlockedByIncompleteTask(task)
@@ -258,6 +322,12 @@ export default function TasksPage() {
                           <CardDescription className="text-base mt-2">{task.description}</CardDescription>
                         )}
                         <div className="flex items-center gap-4 mt-3 flex-wrap">
+                          {category && (
+                            <div className="flex items-center text-sm" style={{ color: category.color || '#6b7280' }}>
+                              <Tag className="mr-1 h-4 w-4" />
+                              <span>{translateCategoryName(category.name)}</span>
+                            </div>
+                          )}
                           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                             <User className="mr-1 h-4 w-4" />
                             <span>{getUserName(task.assignedUserId)}</span>
@@ -344,6 +414,7 @@ export default function TasksPage() {
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           users={users}
+          categories={categories}
         />
 
         <EditTaskDialog
@@ -351,6 +422,13 @@ export default function TasksPage() {
           onOpenChange={setEditDialogOpen}
           task={editingTask}
           users={users}
+          categories={categories}
+        />
+
+        <ManageTaskCategoriesDialog
+          open={categoriesDialogOpen}
+          onOpenChange={setCategoriesDialogOpen}
+          categories={categories}
         />
       </div>
     </div>

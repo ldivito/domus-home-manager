@@ -492,9 +492,11 @@ export interface Subscription {
   name: string
   description?: string
   category: SubscriptionCategory
-  // Billing info
-  amount: number
-  currency: 'ARS' | 'USD'
+  // Billing info - support both currencies
+  amount: number                // Legacy field, primary amount
+  currency: 'ARS' | 'USD'       // Legacy field, primary currency
+  amountARS?: number            // Amount in Argentine Pesos
+  amountUSD?: number            // Amount in US Dollars
   billingCycle: SubscriptionBillingCycle
   billingDay: number            // Day of month/week for billing
   nextBillingDate: Date

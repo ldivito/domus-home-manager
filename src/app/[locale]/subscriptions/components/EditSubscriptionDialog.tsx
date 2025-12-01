@@ -46,8 +46,8 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription }: Edi
     name: '',
     description: '',
     category: 'streaming' as SubscriptionCategory,
-    amount: '',
-    currency: 'ARS' as 'ARS' | 'USD',
+    amountARS: '',
+    amountUSD: '',
     billingCycle: 'monthly' as SubscriptionBillingCycle,
     billingDay: '1',
     nextBillingDate: new Date().toISOString().split('T')[0],
@@ -64,12 +64,20 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription }: Edi
 
   useEffect(() => {
     if (subscription) {
+      // Load amounts - prefer new fields, fallback to legacy
+      const amountARS = subscription.amountARS !== undefined
+        ? subscription.amountARS.toString()
+        : (subscription.currency === 'ARS' ? subscription.amount.toString() : '')
+      const amountUSD = subscription.amountUSD !== undefined
+        ? subscription.amountUSD.toString()
+        : (subscription.currency === 'USD' ? subscription.amount.toString() : '')
+
       setFormData({
         name: subscription.name,
         description: subscription.description || '',
         category: subscription.category,
-        amount: subscription.amount.toString(),
-        currency: subscription.currency,
+        amountARS,
+        amountUSD,
         billingCycle: subscription.billingCycle,
         billingDay: subscription.billingDay.toString(),
         nextBillingDate: new Date(subscription.nextBillingDate).toISOString().split('T')[0],
@@ -92,10 +100,19 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription }: Edi
       toast.error(t('validation.nameRequired'))
       return
     }
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+
+    const amountARS = formData.amountARS ? parseFloat(formData.amountARS) : undefined
+    const amountUSD = formData.amountUSD ? parseFloat(formData.amountUSD) : undefined
+
+    // At least one amount must be provided
+    if (!amountARS && !amountUSD) {
       toast.error(t('validation.amountRequired'))
       return
     }
+
+    // Determine primary amount and currency for legacy fields
+    const primaryAmount = amountARS || amountUSD || 0
+    const primaryCurrency = amountARS ? 'ARS' : 'USD'
 
     setIsSubmitting(true)
     try {
@@ -103,8 +120,10 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription }: Edi
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         category: formData.category,
-        amount: parseFloat(formData.amount),
-        currency: formData.currency,
+        amount: primaryAmount,
+        currency: primaryCurrency,
+        amountARS: amountARS,
+        amountUSD: amountUSD,
         billingCycle: formData.billingCycle,
         billingDay: parseInt(formData.billingDay),
         nextBillingDate: new Date(formData.nextBillingDate),
@@ -188,33 +207,39 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription }: Edi
               </Select>
             </div>
 
-            {/* Amount and Currency */}
+            {/* Amount in ARS */}
             <div className="space-y-2">
-              <Label htmlFor="amount">{t('form.amount')} *</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                placeholder="0"
-                step="0.01"
-              />
+              <Label htmlFor="amountARS">{t('form.amountARS')}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">ARS</span>
+                <Input
+                  id="amountARS"
+                  type="number"
+                  value={formData.amountARS}
+                  onChange={(e) => setFormData({ ...formData, amountARS: e.target.value })}
+                  placeholder="0"
+                  step="0.01"
+                  className="pl-12"
+                />
+              </div>
             </div>
 
+            {/* Amount in USD */}
             <div className="space-y-2">
-              <Label htmlFor="currency">{t('form.currency')}</Label>
-              <Select
-                value={formData.currency}
-                onValueChange={(value) => setFormData({ ...formData, currency: value as 'ARS' | 'USD' })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ARS">ARS</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="amountUSD">{t('form.amountUSD')}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">USD</span>
+                <Input
+                  id="amountUSD"
+                  type="number"
+                  value={formData.amountUSD}
+                  onChange={(e) => setFormData({ ...formData, amountUSD: e.target.value })}
+                  placeholder="0"
+                  step="0.01"
+                  className="pl-12"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{t('form.amountHint')}</p>
             </div>
 
             {/* Billing Cycle and Next Billing Date */}

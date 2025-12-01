@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { db, RecurringExpense, ExpensePayment, User, MonthlyIncome } from '@/lib/db'
-import { generateId } from '@/lib/utils'
+import { db, RecurringExpense, ExpensePayment, User, MonthlyIncome, MonthlyExchangeRate } from '@/lib/db'
+import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Check, Clock, AlertTriangle, DollarSign } from 'lucide-react'
+import { Calendar, Check, Clock, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -22,6 +22,7 @@ interface PaymentsTabProps {
   incomes: MonthlyIncome[]
   currentMonth: number
   currentYear: number
+  exchangeRate?: MonthlyExchangeRate
 }
 
 export function PaymentsTab({
@@ -30,7 +31,8 @@ export function PaymentsTab({
   users,
   incomes,
   currentMonth,
-  currentYear
+  currentYear,
+  exchangeRate
 }: PaymentsTabProps) {
   const t = useTranslations('finance.payments')
   const tMessages = useTranslations('finance.messages')
@@ -43,23 +45,52 @@ export function PaymentsTab({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'overdue'>('all')
 
-  // Calculate total income for percentage
-  const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0)
+  // Track which payments we've already generated to prevent duplicates
+  const generatedPaymentsRef = useRef<Set<string>>(new Set())
 
-  // Get user income percentages
+  const rate = exchangeRate?.rate || 1
+
+  // Calculate total income in ARS for percentage
+  const totalIncomeARS = incomes.reduce((sum, inc) => {
+    if (inc.currency === 'USD') {
+      return sum + (inc.amount * rate)
+    }
+    return sum + inc.amount
+  }, 0)
+
+  // Get user income percentage (based on ARS values)
   const getUserPercentage = (userId: string) => {
     const userIncome = incomes.find(inc => inc.userId === userId)
-    if (!userIncome || totalIncome === 0) return 0
-    return (userIncome.amount / totalIncome) * 100
+    if (!userIncome || totalIncomeARS === 0) return 0
+    const userIncomeARS = userIncome.currency === 'USD'
+      ? userIncome.amount * rate
+      : userIncome.amount
+    return (userIncomeARS / totalIncomeARS) * 100
   }
 
-  // Auto-generate payments for active expenses
+  // Get expense amount in ARS
+  const getExpenseAmountARS = (expense: RecurringExpense | undefined): number => {
+    if (!expense) return 0
+    if (expense.currency === 'USD') {
+      return expense.amount * rate
+    }
+    return expense.amount
+  }
+
+  // Auto-generate payments for active expenses (only once per expense per month)
   useEffect(() => {
     const generatePayments = async () => {
       const activeExpenses = expenses.filter(e => e.isActive)
 
       for (const expense of activeExpenses) {
-        // Check if payment already exists for this month
+        const paymentKey = `${expense.id}-${currentMonth}-${currentYear}`
+
+        // Skip if we already generated this payment in this session
+        if (generatedPaymentsRef.current.has(paymentKey)) {
+          continue
+        }
+
+        // Check if payment already exists in database for this month
         const existingPayment = payments.find(p =>
           p.recurringExpenseId === expense.id &&
           new Date(p.dueDate).getMonth() + 1 === currentMonth &&
@@ -67,24 +98,37 @@ export function PaymentsTab({
         )
 
         if (!existingPayment) {
+          // Mark as generated before adding to prevent race conditions
+          generatedPaymentsRef.current.add(paymentKey)
+
           // Create payment for this month
           const dueDate = new Date(currentYear, currentMonth - 1, expense.dueDay)
 
           // Determine status
           const today = new Date()
+          today.setHours(0, 0, 0, 0)
           let status: 'pending' | 'paid' | 'overdue' = 'pending'
           if (dueDate < today) {
             status = 'overdue'
           }
 
-          await db.expensePayments.add({
-            id: generateId('pay'),
-            recurringExpenseId: expense.id!,
-            amount: expense.amount,
-            dueDate,
-            status,
-            createdAt: new Date()
-          })
+          try {
+            await db.expensePayments.add({
+              id: generateId('pay'),
+              recurringExpenseId: expense.id!,
+              amount: expense.amount,
+              dueDate,
+              status,
+              createdAt: new Date()
+            })
+          } catch (error) {
+            // If add fails, remove from generated set so it can be retried
+            generatedPaymentsRef.current.delete(paymentKey)
+            console.error('Error generating payment:', error)
+          }
+        } else {
+          // Mark as generated since it already exists
+          generatedPaymentsRef.current.add(paymentKey)
         }
       }
     }
@@ -92,16 +136,20 @@ export function PaymentsTab({
     if (expenses.length > 0) {
       generatePayments()
     }
-  }, [expenses, payments, currentMonth, currentYear])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenses, currentMonth, currentYear]) // Intentionally excluding payments to prevent infinite loops
 
   // Update overdue status
   useEffect(() => {
     const updateOverdueStatus = async () => {
       const today = new Date()
+      today.setHours(0, 0, 0, 0)
       const pendingPayments = payments.filter(p => p.status === 'pending')
 
       for (const payment of pendingPayments) {
-        if (new Date(payment.dueDate) < today) {
+        const dueDate = new Date(payment.dueDate)
+        dueDate.setHours(0, 0, 0, 0)
+        if (dueDate < today) {
           await db.expensePayments.update(payment.id!, { status: 'overdue' })
         }
       }
@@ -128,8 +176,10 @@ export function PaymentsTab({
   )
 
   const handleMarkPaid = (payment: ExpensePayment) => {
+    const expense = expenses.find(e => e.id === payment.recurringExpenseId)
+    const amountARS = expense ? getExpenseAmountARS(expense) : payment.amount
     setSelectedPayment(payment)
-    setActualAmount(payment.amount.toString())
+    setActualAmount(amountARS.toString())
     setPaidByUserId('')
     setNotes('')
     setShowMarkPaidDialog(true)
@@ -161,8 +211,12 @@ export function PaymentsTab({
     }
   }
 
+  const getExpense = (expenseId: string) => {
+    return expenses.find(e => e.id === expenseId)
+  }
+
   const getExpenseName = (expenseId: string) => {
-    const expense = expenses.find(e => e.id === expenseId)
+    const expense = getExpense(expenseId)
     return expense?.name || 'Unknown'
   }
 
@@ -207,31 +261,35 @@ export function PaymentsTab({
         </CardHeader>
         <CardContent>
           {/* Status Summary */}
-          <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
-            <button
+          <div className="flex items-center gap-2 mb-6 p-4 bg-muted/50 rounded-lg flex-wrap">
+            <Button
+              variant={filter === 'all' ? 'default' : 'ghost'}
               onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg transition-colors ${filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+              className="h-10"
             >
               {t('filter.all')} ({currentMonthPayments.length})
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={filter === 'pending' ? 'default' : 'ghost'}
               onClick={() => setFilter('pending')}
-              className={`px-4 py-2 rounded-lg transition-colors ${filter === 'pending' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+              className="h-10"
             >
               {t('filter.pending')} ({pendingCount})
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={filter === 'overdue' ? 'default' : 'ghost'}
               onClick={() => setFilter('overdue')}
-              className={`px-4 py-2 rounded-lg transition-colors ${filter === 'overdue' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+              className="h-10"
             >
               {t('filter.overdue')} ({overdueCount})
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={filter === 'paid' ? 'default' : 'ghost'}
               onClick={() => setFilter('paid')}
-              className={`px-4 py-2 rounded-lg transition-colors ${filter === 'paid' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+              className="h-10"
             >
               {t('filter.paid')} ({paidCount})
-            </button>
+            </Button>
           </div>
 
           {sortedPayments.length === 0 ? (
@@ -242,74 +300,84 @@ export function PaymentsTab({
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedPayments.map(payment => (
-                <div
-                  key={payment.id}
-                  className={`p-4 border rounded-lg ${payment.status === 'overdue' ? 'border-destructive/50 bg-destructive/5' : ''}`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium text-lg">{getExpenseName(payment.recurringExpenseId)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {t('dueDate', { date: format(new Date(payment.dueDate), 'MMM d, yyyy') })}
-                        </p>
+              {sortedPayments.map(payment => {
+                const expense = getExpense(payment.recurringExpenseId)
+                const amountARS = expense ? getExpenseAmountARS(expense) : payment.amount
+
+                return (
+                  <div
+                    key={payment.id}
+                    className={`p-4 border rounded-lg ${payment.status === 'overdue' ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="font-medium text-lg">{getExpenseName(payment.recurringExpenseId)}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{t('dueDate', { date: format(new Date(payment.dueDate), 'MMM d, yyyy') })}</span>
+                            {expense?.currency === 'USD' && (
+                              <Badge variant="secondary" className="text-xs">
+                                USD {formatARS(expense.amount)}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <p className="text-2xl font-bold">$ {formatARS(amountARS)}</p>
+                        {getStatusBadge(payment.status)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <p className="text-2xl font-bold">${payment.amount.toLocaleString()}</p>
-                      {getStatusBadge(payment.status)}
-                    </div>
-                  </div>
 
-                  {/* Split breakdown */}
-                  {totalIncome > 0 && (
-                    <div className="mb-3 p-3 bg-muted/30 rounded-lg">
-                      <p className="text-sm font-medium mb-2">{t('split')}:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {residents.map(user => {
-                          const percentage = getUserPercentage(user.id!)
-                          const share = (payment.amount * percentage) / 100
-                          return (
-                            <div
-                              key={user.id}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full"
-                            >
+                    {/* Split breakdown */}
+                    {totalIncomeARS > 0 && (
+                      <div className="mb-3 p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm font-medium mb-2">{t('split')}:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {residents.map(user => {
+                            const percentage = getUserPercentage(user.id!)
+                            const share = (amountARS * percentage) / 100
+                            return (
                               <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: user.color }}
-                              />
-                              <span className="text-sm">{user.name}</span>
-                              <span className="text-sm font-medium">${share.toFixed(2)}</span>
-                              <span className="text-xs text-muted-foreground">({percentage.toFixed(0)}%)</span>
-                            </div>
-                          )
-                        })}
+                                key={user.id}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full"
+                              >
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: user.color }}
+                                />
+                                <span className="text-sm">{user.name}</span>
+                                <span className="text-sm font-medium">$ {formatARS(share)}</span>
+                                <span className="text-xs text-muted-foreground">({percentage.toFixed(0)}%)</span>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Paid info or Mark as Paid button */}
-                  {payment.status === 'paid' ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-green-500" />
-                      {t('paidBy', { name: getUserName(payment.paidByUserId!) })}
-                      {payment.paidDate && (
-                        <span>• {t('paidOn', { date: format(new Date(payment.paidDate), 'MMM d') })}</span>
-                      )}
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => handleMarkPaid(payment)}
-                      variant={payment.status === 'overdue' ? 'destructive' : 'default'}
-                      className="w-full h-12"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      {t('markPaid')}
-                    </Button>
-                  )}
-                </div>
-              ))}
+                    {/* Paid info or Mark as Paid button */}
+                    {payment.status === 'paid' ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-green-500" />
+                        {t('paidBy', { name: getUserName(payment.paidByUserId!) })}
+                        {payment.paidDate && (
+                          <span>• {t('paidOn', { date: format(new Date(payment.paidDate), 'MMM d') })}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={() => handleMarkPaid(payment)}
+                        variant={payment.status === 'overdue' ? 'destructive' : 'default'}
+                        className="w-full h-12"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        {t('markPaid')}
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -348,14 +416,14 @@ export function PaymentsTab({
             <div className="space-y-2">
               <Label>{t('dialog.actualAmount')}</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={actualAmount}
                   onChange={(e) => setActualAmount(e.target.value)}
-                  className="h-12 pl-10"
+                  className="h-12 pl-8"
                 />
               </div>
             </div>

@@ -91,7 +91,7 @@
 }
 
 /* Large touch targets for tablet interface */
-button, 
+button:not([role="switch"]),
 [role="button"],
 .touch-target {
   min-height: 44px;

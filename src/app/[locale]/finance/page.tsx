@@ -190,6 +190,7 @@ export default function FinancePage() {
               incomes={currentIncomes}
               currentMonth={currentMonth}
               currentYear={currentYear}
+              exchangeRate={currentExchangeRate}
             />
           </TabsContent>
 

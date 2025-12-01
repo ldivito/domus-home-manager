@@ -190,6 +190,11 @@ export default function FinancePage() {
                   <p className="text-2xl font-bold text-green-700 dark:text-green-300">
                     $ {formatARS(totalHouseholdIncome)}
                   </p>
+                  {exchangeRate > 1 && (
+                    <p className="text-sm text-green-600/70 dark:text-green-400/70">
+                      USD {formatARS(totalHouseholdIncome / exchangeRate)}
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full">
                   <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -208,6 +213,11 @@ export default function FinancePage() {
                   <p className="text-2xl font-bold text-red-700 dark:text-red-300">
                     $ {formatARS(totalMonthlyExpenses)}
                   </p>
+                  {exchangeRate > 1 && (
+                    <p className="text-sm text-red-600/70 dark:text-red-400/70">
+                      USD {formatARS(totalMonthlyExpenses / exchangeRate)}
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-red-100 dark:bg-red-900/50 rounded-full">
                   <Receipt className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -226,6 +236,11 @@ export default function FinancePage() {
                   <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                     $ {formatARS(totalHouseholdIncome - totalMonthlyExpenses)}
                   </p>
+                  {exchangeRate > 1 && (
+                    <p className="text-sm text-blue-600/70 dark:text-blue-400/70">
+                      USD {formatARS((totalHouseholdIncome - totalMonthlyExpenses) / exchangeRate)}
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full">
                   <Scale className="h-6 w-6 text-blue-600 dark:text-blue-400" />

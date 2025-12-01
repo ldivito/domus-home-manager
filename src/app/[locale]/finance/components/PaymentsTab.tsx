@@ -381,7 +381,14 @@ export function PaymentsTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <p className="text-2xl font-bold">$ {formatARS(amountARS)}</p>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold">$ {formatARS(amountARS)}</p>
+                          {rate > 1 && (
+                            <p className="text-sm text-muted-foreground/70">
+                              USD {formatARS(amountARS / rate)}
+                            </p>
+                          )}
+                        </div>
                         {getStatusBadge(payment.status)}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

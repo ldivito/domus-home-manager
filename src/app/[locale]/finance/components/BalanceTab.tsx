@@ -252,6 +252,11 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                 <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                   $ {formatARS(totalIncomeARS)}
                 </p>
+                {rate > 1 && (
+                  <p className="text-sm text-blue-600/70 dark:text-blue-400/70">
+                    USD {formatARS(totalIncomeARS / rate)}
+                  </p>
+                )}
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full">
                 <Wallet className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -270,6 +275,11 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                 <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                   $ {formatARS(totalExpensesPaidARS)}
                 </p>
+                {rate > 1 && (
+                  <p className="text-sm text-purple-600/70 dark:text-purple-400/70">
+                    USD {formatARS(totalExpensesPaidARS / rate)}
+                  </p>
+                )}
               </div>
               <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full">
                 <Receipt className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -288,6 +298,11 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                 <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
                   $ {formatARS(totalIncomeARS - totalExpensesPaidARS)}
                 </p>
+                {rate > 1 && (
+                  <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70">
+                    USD {formatARS((totalIncomeARS - totalExpensesPaidARS) / rate)}
+                  </p>
+                )}
               </div>
               <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-full">
                 <PiggyBank className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
@@ -351,11 +366,17 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                               <span className="flex items-center gap-1">
                                 <span className="text-muted-foreground/70">{t('shouldPay')}:</span>
                                 <span className="font-medium">$ {formatARS(balance.totalOwed)}</span>
+                                {rate > 1 && (
+                                  <span className="text-muted-foreground/50 text-xs">(USD {formatARS(balance.totalOwed / rate)})</span>
+                                )}
                               </span>
                               <span className="text-muted-foreground/50">•</span>
                               <span className="flex items-center gap-1">
                                 <span className="text-muted-foreground/70">{t('actuallyPaid')}:</span>
                                 <span className="font-medium">$ {formatARS(balance.totalPaid)}</span>
+                                {rate > 1 && (
+                                  <span className="text-muted-foreground/50 text-xs">(USD {formatARS(balance.totalPaid / rate)})</span>
+                                )}
                               </span>
                             </div>
                           </div>
@@ -370,6 +391,11 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                           }`}>
                             {balance.netBalance >= 0 ? '+' : '-'}$ {formatARS(Math.abs(balance.netBalance))}
                           </p>
+                          {rate > 1 && (
+                            <p className="text-sm text-muted-foreground/70">
+                              USD {formatARS(Math.abs(balance.netBalance) / rate)}
+                            </p>
+                          )}
                           <div className="flex items-center justify-end gap-1.5 mt-1">
                             {balance.netBalance > 0.01 ? (
                               <>
@@ -454,9 +480,16 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                               </div>
                             </div>
                             <div className="text-right flex items-center gap-3">
-                              <p className={`text-2xl font-bold ${isPaid ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                $ {formatARS(settlement.amount)}
-                              </p>
+                              <div>
+                                <p className={`text-2xl font-bold ${isPaid ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                  $ {formatARS(settlement.amount)}
+                                </p>
+                                {rate > 1 && (
+                                  <p className="text-sm text-muted-foreground/70">
+                                    USD {formatARS(settlement.amount / rate)}
+                                  </p>
+                                )}
+                              </div>
                               {isPaid && (
                                 <Badge className="bg-green-500">
                                   <Check className="h-3 w-3 mr-1" />

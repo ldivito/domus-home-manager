@@ -214,6 +214,11 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                 <p className="text-2xl font-bold">{monthNames[currentMonth - 1]} {currentYear}</p>
                 <p className="text-lg text-muted-foreground mt-1">
                   {t('totalHousehold')}: <span className="font-semibold text-foreground">$ {formatARS(totalIncome)}</span>
+                  {rate > 1 && (
+                    <span className="ml-2 text-sm text-muted-foreground/70">
+                      (USD {formatARS(totalIncome / rate)})
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="text-right">
@@ -288,6 +293,11 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                       <p className="text-2xl font-bold">
                         $ {formatARS(incomeInARS)}
                       </p>
+                      {rate > 1 && incomeInARS > 0 && (
+                        <p className="text-sm text-muted-foreground/70">
+                          USD {formatARS(incomeInARS / rate)}
+                        </p>
+                      )}
                       {income && (
                         <div className="flex items-center justify-end gap-2 mt-1">
                           <Badge variant="secondary">

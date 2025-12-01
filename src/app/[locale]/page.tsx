@@ -19,7 +19,8 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
-  Flame
+  Flame,
+  FileText
 } from "lucide-react"
 import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
@@ -295,6 +296,20 @@ export default function HomePage() {
   }
 
   const ketoWeeklyRate = calculateWeeklySuccessRate()
+
+  // Documents data queries
+  const documents = useLiveQuery(() => db.documents.toArray(), []) || []
+
+  const expiringDocuments = documents.filter(doc => {
+    if (!doc.expirationDate) return false
+    const daysUntil = Math.ceil((new Date(doc.expirationDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    return daysUntil <= 30 && daysUntil > 0
+  })
+
+  const expiredDocuments = documents.filter(doc => {
+    if (!doc.expirationDate) return false
+    return new Date(doc.expirationDate) < new Date()
+  })
 
   // Get next 4-5 chores for display
   const nextChores = useLiveQuery(
@@ -922,10 +937,85 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
+            {/* Documents Widget */}
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                    <div className="p-2 bg-slate-500/15 rounded-xl border border-slate-200/50">
+                      <FileText className="h-6 w-6 text-slate-600" />
+                    </div>
+                    {t('widgets.documents.title')}
+                  </CardTitle>
+                  <Link href="/documents">
+                    <Button variant="ghost" size="lg" className="touch-target">
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-3">
+                {documents.length > 0 ? (
+                  <>
+                    {/* Documents Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950/30 dark:to-slate-900/40 rounded-xl border border-slate-200/50 text-center">
+                        <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{documents.length}</p>
+                        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('widgets.documents.total')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 rounded-xl border border-yellow-200/50 text-center">
+                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{expiringDocuments.length}</p>
+                        <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{t('widgets.documents.expiring')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/40 rounded-xl border border-red-200/50 text-center">
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">{expiredDocuments.length}</p>
+                        <p className="text-xs font-medium text-red-600 dark:text-red-400">{t('widgets.documents.expired')}</p>
+                      </div>
+                    </div>
+
+                    {/* Expiring Soon Alert */}
+                    {(expiredDocuments.length > 0 || expiringDocuments.length > 0) && (
+                      <div className={`p-3 rounded-xl border ${
+                        expiredDocuments.length > 0
+                          ? 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/40 border-red-200/50'
+                          : 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 border-yellow-200/50'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className={`h-4 w-4 ${expiredDocuments.length > 0 ? 'text-red-500' : 'text-yellow-500'}`} />
+                          <span className={`text-sm font-medium ${
+                            expiredDocuments.length > 0
+                              ? 'text-red-700 dark:text-red-300'
+                              : 'text-yellow-700 dark:text-yellow-300'
+                          }`}>
+                            {expiredDocuments.length > 0
+                              ? `${expiredDocuments.length} ${t('widgets.documents.expired')}`
+                              : `${expiringDocuments.length} ${t('widgets.documents.expiring')}`
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="w-14 h-14 bg-slate-100 dark:bg-slate-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FileText className="h-7 w-7 text-slate-500" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">{t('widgets.documents.noDocuments')}</p>
+                    <Link href="/documents">
+                      <Button variant="outline" size="sm" className="mt-2">
+                        {t('widgets.documents.uploadFirst')}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       </div>
-      
+
       <CompleteChoreModal
         open={isCompleteModalOpen}
         onOpenChange={setIsCompleteModalOpen}

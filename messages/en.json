@@ -6,6 +6,7 @@
     "language": "Language",
     "all": "All",
     "cancel": "Cancel",
+    "save": "Save",
     "notAssigned": "Not assigned"
   },
   "navigation": {
@@ -18,6 +19,7 @@
     "planner": "Planner",
     "tasks": "Tasks",
     "projects": "Projects",
+    "documents": "Documents",
     "reminders": "Notifications",
     "users": "Users",
     "settings": "Settings",
@@ -173,6 +175,14 @@
         "cheatDays": "Cheat Days",
         "notStarted": "Not tracking yet",
         "startTracking": "Start Tracking"
+      },
+      "documents": {
+        "title": "Documents",
+        "total": "Total Documents",
+        "expiring": "Expiring Soon",
+        "expired": "Expired",
+        "noDocuments": "No documents yet",
+        "uploadFirst": "Upload your first document"
       }
     },
     "quickActions": {
@@ -1362,6 +1372,100 @@
       "settlementMarkedPaid": "Settlement recorded successfully",
       "settlementUnmarked": "Settlement unmarked successfully",
       "error": "An error occurred"
+    }
+  },
+  "documents": {
+    "title": "Document Vault",
+    "subtitle": "Store and organize important household documents",
+    "searchPlaceholder": "Search documents...",
+    "noDocumentsFound": "No documents found",
+    "tryDifferentFilter": "Try adjusting your search or filters",
+    "categories": {
+      "warranty": "Warranty",
+      "manual": "Manual",
+      "receipt": "Receipt",
+      "contract": "Contract",
+      "insurance": "Insurance",
+      "medical": "Medical",
+      "legal": "Legal",
+      "financial": "Financial",
+      "vehicle": "Vehicle",
+      "property": "Property",
+      "pet": "Pet",
+      "other": "Other"
+    },
+    "filters": {
+      "category": "Category"
+    },
+    "status": {
+      "expired": "Expired",
+      "expiringSoon": "expiring soon",
+      "daysLeft": "days left"
+    },
+    "actions": {
+      "upload": "Upload Document",
+      "download": "Download",
+      "preview": "Preview",
+      "edit": "Edit Document",
+      "delete": "Delete"
+    },
+    "form": {
+      "file": "File",
+      "dropOrClick": "Click or drag a file to upload",
+      "maxSize": "Max file size: 10MB",
+      "name": "Document Name",
+      "namePlaceholder": "Enter document name",
+      "category": "Category",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "tags": "Tags",
+      "tagsPlaceholder": "Enter tags separated by commas",
+      "tagsHelp": "Separate tags with commas (e.g., home, insurance, 2024)",
+      "expirationDate": "Expiration Date",
+      "pickDate": "Pick a date",
+      "expires": "Expires",
+      "enableReminder": "Enable expiration reminder",
+      "reminderDays": "Remind days before",
+      "purchaseInfo": "Purchase Information",
+      "purchaseDate": "Purchase Date",
+      "vendor": "Vendor / Store",
+      "vendorPlaceholder": "Where was it purchased",
+      "price": "Price",
+      "currency": "Currency",
+      "uploadedBy": "Uploaded By",
+      "selectUser": "Select user",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional notes about this document",
+      "uploading": "Uploading...",
+      "saving": "Saving..."
+    },
+    "preview": {
+      "noPreview": "Preview not available for this file type",
+      "fileInfo": "File Information",
+      "fileName": "File Name",
+      "fileSize": "Size",
+      "fileType": "Type",
+      "dates": "Dates",
+      "uploaded": "Uploaded"
+    },
+    "empty": {
+      "title": "No Documents",
+      "description": "Upload your first document to get started"
+    },
+    "messages": {
+      "uploaded": "Document uploaded successfully",
+      "updated": "Document updated successfully",
+      "deleted": "Document deleted successfully",
+      "downloaded": "Document downloaded",
+      "uploadError": "Error uploading document",
+      "updateError": "Error updating document",
+      "deleteError": "Error deleting document",
+      "downloadError": "Error downloading document",
+      "nameRequired": "Document name is required",
+      "fileRequired": "Please select a file to upload",
+      "fileTooLarge": "File is too large. Maximum size is 10MB",
+      "fileReadError": "Error reading file",
+      "noFileData": "No file data available"
     }
   }
 }

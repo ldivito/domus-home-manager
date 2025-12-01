@@ -351,6 +351,59 @@ export interface SettlementPayment {
   createdAt: Date
 }
 
+// Document Vault Module interfaces
+export type DocumentCategory = 'warranty' | 'manual' | 'receipt' | 'contract' | 'insurance' |
+  'medical' | 'legal' | 'financial' | 'vehicle' | 'property' | 'pet' | 'other'
+
+export interface Document {
+  id?: string
+  name: string
+  description?: string
+  category: DocumentCategory
+  fileType: string            // MIME type (e.g., 'application/pdf', 'image/jpeg')
+  fileName: string            // Original file name
+  fileSize: number            // Size in bytes
+  fileData?: string           // Base64 encoded data for offline storage
+  tags?: string[]             // Array of tag names for filtering
+  expirationDate?: Date       // For warranties, insurance, etc.
+  reminderEnabled: boolean    // Enable reminder before expiration
+  reminderDaysBefore?: number // Days before expiration to remind
+  // Cross-module linking (for future modules)
+  linkedApplianceId?: string
+  linkedVehicleId?: string
+  linkedPetId?: string
+  linkedSubscriptionId?: string
+  linkedMaintenanceItemId?: string
+  // Purchase/acquisition info
+  purchaseDate?: Date
+  purchasePrice?: number
+  purchaseCurrency?: 'ARS' | 'USD'
+  vendor?: string
+  notes?: string
+  uploadedByUserId?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface DocumentFolder {
+  id?: string
+  name: string
+  parentFolderId?: string     // For nested folders (null = root)
+  color?: string
+  icon?: string
+  householdId?: string
+  createdAt: Date
+}
+
+export interface DocumentTag {
+  id?: string
+  name: string
+  color?: string
+  householdId?: string
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -376,11 +429,47 @@ export class DomusDatabase extends Dexie {
   expenseCategories!: Table<ExpenseCategory>
   expensePayments!: Table<ExpensePayment>
   settlementPayments!: Table<SettlementPayment>
+  // Document Vault tables
+  documents!: Table<Document>
+  documentFolders!: Table<DocumentFolder>
+  documentTags!: Table<DocumentTag>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase')
+
+    // v19: Add Document Vault module tables
+    this.version(19).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt',
+      settlementPayments: 'id, fromUserId, toUserId, [month+year], householdId, createdAt',
+      // Document Vault tables
+      documents: 'id, name, category, expirationDate, uploadedByUserId, householdId, createdAt, *tags',
+      documentFolders: 'id, name, parentFolderId, householdId, createdAt',
+      documentTags: 'id, name, householdId, createdAt'
+    })
 
     // v18: Add settlement payments table
     this.version(18).stores({

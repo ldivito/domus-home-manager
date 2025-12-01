@@ -1232,6 +1232,9 @@
       "noPayments": "No hay pagos para este período",
       "noPaymentsDescription": "Los pagos aparecerán aquí cuando los gastos recurrentes venzan",
       "markPaid": "Marcar como Pagado",
+      "unmarkPaid": "Desmarcar como Pagado",
+      "delete": "Eliminar Pago",
+      "expenseDeleted": "Gasto eliminado",
       "dueDate": "Vence {date}",
       "paidOn": "Pagado el {date}",
       "paidBy": "Pagado por {name}",
@@ -1294,6 +1297,8 @@
       "expenseUpdated": "Gasto actualizado exitosamente",
       "expenseDeleted": "Gasto eliminado exitosamente",
       "paymentMarkedPaid": "Pago marcado como pagado",
+      "paymentUnmarked": "Pago desmarcado exitosamente",
+      "paymentDeleted": "Pago eliminado exitosamente",
       "error": "Ocurrió un error"
     }
   }

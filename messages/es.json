@@ -642,11 +642,13 @@
     "blocked": "Bloqueada",
     "blockedBy": "Bloqueada por",
     "completeBlockerFirst": "Completa primero la tarea bloqueadora",
+    "manageCategories": "Categorías",
     "filters": {
       "priority": "Prioridad",
       "status": "Estado",
       "assignee": "Asignado a",
-      "project": "Proyecto"
+      "project": "Proyecto",
+      "category": "Categoría"
     },
     "priority": {
       "low": "Baja",
@@ -657,11 +659,38 @@
       "pending": "Pendiente",
       "completed": "Completada"
     },
+    "categories": {
+      "manage": "Gestionar Categorías de Tareas",
+      "addNew": "Agregar Categoría",
+      "name": "Nombre",
+      "namePlaceholder": "Ingresa nombre de categoría",
+      "color": "Color",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "create": "Crear",
+      "close": "Cerrar",
+      "defaultCategory": "Categoría predeterminada"
+    },
+    "defaultTaskCategories": {
+      "personal": "Personal",
+      "work": "Trabajo",
+      "home": "Hogar",
+      "shopping": "Compras",
+      "health": "Salud",
+      "finance": "Finanzas",
+      "errands": "Diligencias",
+      "other": "Otros"
+    },
     "form": {
       "title": "Título",
       "titlePlaceholder": "Ingresa el título de la tarea",
       "description": "Descripción",
       "descriptionPlaceholder": "Descripción opcional de la tarea",
+      "category": "Categoría",
+      "selectCategory": "Selecciona una categoría",
+      "noCategory": "Sin categoría",
       "assignedTo": "Asignado a",
       "selectUser": "Seleccionar usuario",
       "priority": "Prioridad",
@@ -690,6 +719,7 @@
     "editProject": "Editar Proyecto",
     "noProjects": "Aún no hay proyectos",
     "addFirstProject": "Crea tu primer proyecto de mejora del hogar",
+    "dragHere": "Arrastra proyectos aquí",
     "status": {
       "todo": "Por Hacer",
       "inProgress": "En Progreso",

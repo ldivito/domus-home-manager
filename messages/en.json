@@ -642,11 +642,13 @@
     "blocked": "Blocked",
     "blockedBy": "Blocked by",
     "completeBlockerFirst": "Complete the blocking task first",
+    "manageCategories": "Categories",
     "filters": {
       "priority": "Priority",
       "status": "Status",
       "assignee": "Assignee",
-      "project": "Project"
+      "project": "Project",
+      "category": "Category"
     },
     "priority": {
       "low": "Low",
@@ -657,11 +659,38 @@
       "pending": "Pending",
       "completed": "Completed"
     },
+    "categories": {
+      "manage": "Manage Task Categories",
+      "addNew": "Add Category",
+      "name": "Name",
+      "namePlaceholder": "Enter category name",
+      "color": "Color",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "close": "Close",
+      "defaultCategory": "Default category"
+    },
+    "defaultTaskCategories": {
+      "personal": "Personal",
+      "work": "Work",
+      "home": "Home",
+      "shopping": "Shopping",
+      "health": "Health",
+      "finance": "Finance",
+      "errands": "Errands",
+      "other": "Other"
+    },
     "form": {
       "title": "Title",
       "titlePlaceholder": "Enter task title",
       "description": "Description",
       "descriptionPlaceholder": "Optional task description",
+      "category": "Category",
+      "selectCategory": "Select a category",
+      "noCategory": "No category",
       "assignedTo": "Assigned To",
       "selectUser": "Select user",
       "priority": "Priority",
@@ -690,6 +719,7 @@
     "editProject": "Edit Project",
     "noProjects": "No projects yet",
     "addFirstProject": "Create your first home improvement project",
+    "dragHere": "Drag projects here",
     "status": {
       "todo": "To Do",
       "inProgress": "In Progress",

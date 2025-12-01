@@ -19,6 +19,7 @@
     "meals": "Comidas",
     "keto": "Keto",
     "finance": "Finanzas",
+    "subscriptions": "Suscripciones",
     "planner": "Planificador",
     "tasks": "Pendientes",
     "projects": "Proyectos",
@@ -197,6 +198,15 @@
         "dueSoonAlert": "tareas esta semana",
         "noItems": "Sin items aún",
         "addFirst": "Agrega tu primer item"
+      },
+      "subscriptions": {
+        "title": "Suscripciones",
+        "active": "Activas",
+        "monthlyTotal": "Mensual",
+        "dueSoon": "Próximas",
+        "noSubscriptions": "Sin suscripciones aún",
+        "addFirst": "Agrega tu primera suscripción",
+        "dueThisWeek": "vencen esta semana"
       }
     },
     "quickActions": {
@@ -1653,6 +1663,166 @@
       "updateError": "Error al actualizar",
       "deleteError": "Error al eliminar",
       "logError": "Error al registrar mantenimiento"
+    }
+  },
+  "subscriptions": {
+    "title": "Suscripciones",
+    "description": "Rastrea y gestiona tus suscripciones recurrentes",
+    "search": {
+      "placeholder": "Buscar suscripciones..."
+    },
+    "tabs": {
+      "active": "Activas",
+      "inactive": "Inactivas",
+      "history": "Historial de Pagos"
+    },
+    "stats": {
+      "active": "Activas",
+      "monthlyTotal": "Total Mensual",
+      "dueThisWeek": "Vencen Esta Semana",
+      "paused": "Pausadas"
+    },
+    "categories": {
+      "streaming": "Streaming",
+      "software": "Software",
+      "gaming": "Videojuegos",
+      "music": "Música",
+      "cloud_storage": "Almacenamiento en la Nube",
+      "news": "Noticias",
+      "fitness": "Fitness",
+      "utilities": "Servicios",
+      "insurance": "Seguros",
+      "membership": "Membresía",
+      "other": "Otro"
+    },
+    "cycles": {
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "biannually": "Cada 6 Meses",
+      "yearly": "Anual"
+    },
+    "status": {
+      "active": "Activa",
+      "trial": "Prueba",
+      "paused": "Pausada",
+      "cancelled": "Cancelada"
+    },
+    "paymentStatus": {
+      "paid": "Pagado",
+      "pending": "Pendiente",
+      "failed": "Fallido",
+      "refunded": "Reembolsado"
+    },
+    "actions": {
+      "add": "Agregar Suscripción",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "recordPayment": "Registrar Pago",
+      "viewDetails": "Ver Detalles"
+    },
+    "form": {
+      "name": "Nombre",
+      "namePlaceholder": "ej., Netflix, Spotify",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Descripción opcional",
+      "category": "Categoría",
+      "amount": "Monto",
+      "currency": "Moneda",
+      "billingCycle": "Ciclo de Facturación",
+      "billingDay": "Día de Facturación",
+      "nextBillingDate": "Próxima Fecha de Facturación",
+      "status": "Estado",
+      "autoRenew": "Renovación Automática",
+      "autoRenewDescription": "Renovar automáticamente esta suscripción",
+      "enableReminder": "Habilitar Recordatorio",
+      "reminderDescription": "Recibir notificación antes de la fecha de facturación",
+      "reminderDaysBefore": "Recordar Días Antes",
+      "providerName": "Nombre del Proveedor",
+      "providerNamePlaceholder": "ej., Netflix Inc.",
+      "providerWebsite": "Sitio Web del Proveedor",
+      "accountEmail": "Email de la Cuenta",
+      "accountEmailPlaceholder": "Email usado para esta suscripción",
+      "notes": "Notas",
+      "notesPlaceholder": "Notas adicionales",
+      "paymentDate": "Fecha de Pago",
+      "paymentMethod": "Método de Pago",
+      "paymentMethodPlaceholder": "ej., Tarjeta de Crédito, PayPal",
+      "paymentStatus": "Estado del Pago",
+      "transactionId": "ID de Transacción",
+      "transactionIdPlaceholder": "Referencia de transacción opcional"
+    },
+    "dialogs": {
+      "add": {
+        "title": "Agregar Suscripción"
+      },
+      "edit": {
+        "title": "Editar Suscripción"
+      },
+      "delete": {
+        "title": "¿Eliminar Suscripción?",
+        "description": "¿Estás seguro de que quieres eliminar \"{name}\"? Esto también eliminará todo el historial de pagos."
+      },
+      "recordPayment": {
+        "title": "Registrar Pago",
+        "for": "Para suscripción"
+      }
+    },
+    "details": {
+      "billingInfo": "Información de Facturación",
+      "billingDay": "Día {day} del mes",
+      "nextBilling": "Próxima facturación",
+      "daysUntil": "{days} días hasta la facturación",
+      "overdue": "Vencido por {days} días",
+      "providerInfo": "Información del Proveedor",
+      "autoRenewOn": "Renovación automática habilitada",
+      "autoRenewOff": "Renovación automática deshabilitada",
+      "reminderOn": "Recordatorio {days} días antes",
+      "reminderOff": "Recordatorios deshabilitados",
+      "paymentHistory": "Historial de Pagos",
+      "totalSpent": "Total gastado",
+      "noPayments": "Sin pagos registrados aún"
+    },
+    "empty": {
+      "active": {
+        "title": "Sin Suscripciones Activas",
+        "description": "Agrega tu primera suscripción para comenzar a rastrear"
+      },
+      "inactive": {
+        "title": "Sin Suscripciones Inactivas",
+        "description": "Las suscripciones pausadas o canceladas aparecerán aquí"
+      },
+      "history": {
+        "title": "Sin Historial de Pagos",
+        "description": "Los registros de pago aparecerán aquí"
+      }
+    },
+    "filter": {
+      "category": "Categoría",
+      "allCategories": "Todas las Categorías"
+    },
+    "perMonth": "/mes",
+    "perYear": "/año",
+    "nextBilling": "Próxima facturación",
+    "dueSoon": "Vence pronto",
+    "overdue": "Vencido",
+    "validation": {
+      "nameRequired": "El nombre de la suscripción es obligatorio",
+      "amountRequired": "El monto es obligatorio y debe ser mayor a 0"
+    },
+    "messages": {
+      "added": "Suscripción agregada exitosamente",
+      "updated": "Suscripción actualizada exitosamente",
+      "deleted": "Suscripción eliminada exitosamente",
+      "paused": "Suscripción pausada",
+      "resumed": "Suscripción reanudada",
+      "paymentRecorded": "Pago registrado exitosamente",
+      "addError": "Error al agregar suscripción",
+      "updateError": "Error al actualizar suscripción",
+      "deleteError": "Error al eliminar suscripción",
+      "paymentError": "Error al registrar pago"
     }
   }
 }

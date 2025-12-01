@@ -479,6 +479,64 @@ export interface MaintenanceLog {
   createdAt: Date
 }
 
+// Subscription Manager Module interfaces
+export type SubscriptionCategory = 'streaming' | 'software' | 'gaming' | 'music' |
+  'cloud_storage' | 'news' | 'fitness' | 'utilities' | 'insurance' | 'membership' | 'other'
+
+export type SubscriptionBillingCycle = 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'yearly'
+
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'trial'
+
+export interface Subscription {
+  id?: string
+  name: string
+  description?: string
+  category: SubscriptionCategory
+  // Billing info
+  amount: number
+  currency: 'ARS' | 'USD'
+  billingCycle: SubscriptionBillingCycle
+  billingDay: number            // Day of month/week for billing
+  nextBillingDate: Date
+  // Status
+  status: SubscriptionStatus
+  trialEndDate?: Date           // For trial subscriptions
+  cancelledDate?: Date
+  // Features
+  autoRenew: boolean
+  reminderEnabled: boolean
+  reminderDaysBefore?: number   // Days before billing to remind
+  // Provider info
+  providerName?: string
+  providerWebsite?: string
+  providerEmail?: string
+  providerPhone?: string
+  accountEmail?: string         // Email used for the subscription account
+  accountUsername?: string
+  // Cross-module linking
+  linkedExpenseId?: string      // Manual link to Finance RecurringExpense
+  linkedDocumentIds?: string[]  // Contracts, invoices
+  // Notes
+  notes?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface SubscriptionPayment {
+  id?: string
+  subscriptionId: string        // Reference to Subscription
+  amount: number
+  currency: 'ARS' | 'USD'
+  paymentDate: Date
+  paymentMethod?: string        // Credit card, debit, bank transfer, etc.
+  status: 'paid' | 'failed' | 'pending' | 'refunded'
+  transactionId?: string        // External reference number
+  notes?: string
+  householdId?: string
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -512,11 +570,53 @@ export class DomusDatabase extends Dexie {
   maintenanceItems!: Table<MaintenanceItem>
   maintenanceTasks!: Table<MaintenanceTask>
   maintenanceLogs!: Table<MaintenanceLog>
+  // Subscription Manager tables
+  subscriptions!: Table<Subscription>
+  subscriptionPayments!: Table<SubscriptionPayment>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase')
+
+    // v21: Add Subscription Manager module tables
+    this.version(21).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt',
+      settlementPayments: 'id, fromUserId, toUserId, [month+year], householdId, createdAt',
+      // Document Vault tables
+      documents: 'id, name, category, expirationDate, uploadedByUserId, householdId, createdAt, *tags',
+      documentFolders: 'id, name, parentFolderId, householdId, createdAt',
+      documentTags: 'id, name, householdId, createdAt',
+      // Maintenance Scheduler tables
+      maintenanceItems: 'id, name, type, location, householdId, createdAt',
+      maintenanceTasks: 'id, maintenanceItemId, name, nextDue, priority, assignedUserId, householdId, createdAt',
+      maintenanceLogs: 'id, maintenanceItemId, maintenanceTaskId, completedDate, completedByUserId, householdId, createdAt',
+      // Subscription Manager tables
+      subscriptions: 'id, name, category, status, nextBillingDate, billingCycle, householdId, createdAt',
+      subscriptionPayments: 'id, subscriptionId, paymentDate, status, householdId, createdAt'
+    })
 
     // v20: Add Maintenance Scheduler module tables
     this.version(20).stores({

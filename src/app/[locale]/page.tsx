@@ -21,7 +21,8 @@ import {
   DollarSign,
   Flame,
   FileText,
-  Wrench
+  Wrench,
+  CreditCard
 } from "lucide-react"
 import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
@@ -324,6 +325,31 @@ export default function HomePage() {
     const daysUntil = Math.ceil((new Date(task.nextDue).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     return daysUntil <= 7 && daysUntil > 0
   })
+
+  // Subscriptions data queries
+  const subscriptions = useLiveQuery(() => db.subscriptions.toArray(), []) || []
+  const activeSubscriptions = subscriptions.filter(s => s.status === 'active' || s.status === 'trial')
+
+  const subscriptionsDueThisWeek = activeSubscriptions.filter(sub => {
+    const daysUntil = Math.ceil((new Date(sub.nextBillingDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    return daysUntil <= 7 && daysUntil >= 0
+  })
+
+  const monthlySubscriptionTotal = activeSubscriptions.reduce((sum, sub) => {
+    let monthlyAmount = sub.amount
+    // Convert to monthly equivalent
+    switch (sub.billingCycle) {
+      case 'weekly': monthlyAmount *= 4; break
+      case 'quarterly': monthlyAmount /= 3; break
+      case 'biannually': monthlyAmount /= 6; break
+      case 'yearly': monthlyAmount /= 12; break
+    }
+    // Convert USD to ARS if exchange rate available
+    if (sub.currency === 'USD' && exchangeRate?.rate) {
+      monthlyAmount *= exchangeRate.rate
+    }
+    return sum + monthlyAmount
+  }, 0)
 
   // Get next 4-5 chores for display
   const nextChores = useLiveQuery(
@@ -1094,6 +1120,70 @@ export default function HomePage() {
                     <Link href="/maintenance">
                       <Button variant="outline" size="sm" className="mt-2">
                         {t('widgets.maintenance.addFirst')}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Subscriptions Widget */}
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                    <div className="p-2 bg-violet-500/15 rounded-xl border border-violet-200/50">
+                      <CreditCard className="h-6 w-6 text-violet-600" />
+                    </div>
+                    {t('widgets.subscriptions.title')}
+                  </CardTitle>
+                  <Link href="/subscriptions">
+                    <Button variant="ghost" size="lg" className="touch-target">
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-3">
+                {subscriptions.length > 0 ? (
+                  <>
+                    {/* Subscriptions Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950/30 dark:to-violet-900/40 rounded-xl border border-violet-200/50 text-center">
+                        <p className="text-2xl font-bold text-violet-700 dark:text-violet-300">{activeSubscriptions.length}</p>
+                        <p className="text-xs font-medium text-violet-600 dark:text-violet-400">{t('widgets.subscriptions.active')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/40 rounded-xl border border-emerald-200/50 text-center">
+                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">${Math.round(monthlySubscriptionTotal).toLocaleString('es-AR')}</p>
+                        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t('widgets.subscriptions.monthlyTotal')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 rounded-xl border border-yellow-200/50 text-center">
+                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{subscriptionsDueThisWeek.length}</p>
+                        <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{t('widgets.subscriptions.dueSoon')}</p>
+                      </div>
+                    </div>
+
+                    {/* Due This Week Alert */}
+                    {subscriptionsDueThisWeek.length > 0 && (
+                      <div className="p-3 rounded-xl border bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 border-yellow-200/50">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                            {subscriptionsDueThisWeek.length} {t('widgets.subscriptions.dueThisWeek')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="w-14 h-14 bg-violet-100 dark:bg-violet-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <CreditCard className="h-7 w-7 text-violet-500" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">{t('widgets.subscriptions.noSubscriptions')}</p>
+                    <Link href="/subscriptions">
+                      <Button variant="outline" size="sm" className="mt-2">
+                        {t('widgets.subscriptions.addFirst')}
                       </Button>
                     </Link>
                   </div>

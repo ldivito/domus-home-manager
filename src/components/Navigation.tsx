@@ -22,7 +22,8 @@ import {
   Wallet,
   FileText,
   Wrench,
-  CreditCard
+  CreditCard,
+  PawPrint
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -122,6 +123,7 @@ export default function Navigation() {
     { nameKey: 'keto', href: '/keto', icon: Heart },
     { nameKey: 'finance', href: '/finance', icon: Wallet },
     { nameKey: 'subscriptions', href: '/subscriptions', icon: CreditCard },
+    { nameKey: 'pets', href: '/pets', icon: PawPrint },
     { nameKey: 'planner', href: '/planner', icon: Calendar },
     { nameKey: 'tasks', href: '/tasks', icon: List },
     { nameKey: 'projects', href: '/projects', icon: Hammer },

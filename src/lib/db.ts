@@ -539,6 +539,151 @@ export interface SubscriptionPayment {
   createdAt: Date
 }
 
+// Pet Management Module interfaces
+export type PetType = 'dog' | 'cat' | 'bird' | 'fish' | 'reptile' | 'small_mammal' | 'other'
+export type PetGender = 'male' | 'female' | 'unknown'
+
+export interface Pet {
+  id?: string
+  name: string
+  type: PetType
+  breed?: string
+  gender: PetGender
+  birthDate?: Date
+  weight?: number
+  weightUnit: 'kg' | 'lb'
+  microchipId?: string
+  isNeutered?: boolean
+  allergies?: string[]
+  veterinarianName?: string
+  veterinarianPhone?: string
+  veterinarianAddress?: string
+  emergencyVetName?: string
+  emergencyVetPhone?: string
+  insuranceProvider?: string
+  insurancePolicyNumber?: string
+  insuranceExpiration?: Date
+  photo?: string                // Base64 encoded photo
+  primaryCaretakerId?: string   // Reference to User
+  notes?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export type FeedingFrequency = 'daily' | 'specific_days'
+
+export interface PetFeedingSchedule {
+  id?: string
+  petId: string                 // Reference to Pet
+  name: string                  // e.g., "Morning Meal", "Evening Snack"
+  foodType: string              // e.g., "Dry kibble", "Wet food"
+  foodBrand?: string
+  amount: string                // e.g., "1 cup", "100g"
+  scheduledTime: string         // HH:MM format
+  frequency: FeedingFrequency
+  specificDays?: number[]       // 0=Sunday, 1=Monday, etc. (for 'specific_days')
+  assignedUserId?: string       // Who is responsible for this feeding
+  notes?: string
+  isActive: boolean
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface PetFeedingLog {
+  id?: string
+  feedingScheduleId?: string    // Reference to PetFeedingSchedule (optional for ad-hoc feedings)
+  petId: string                 // Reference to Pet
+  fedDate: Date
+  fedByUserId?: string          // Who fed the pet
+  foodType?: string
+  amount?: string
+  notes?: string
+  householdId?: string
+  createdAt: Date
+}
+
+export type MedicationFrequency = 'once' | 'daily' | 'twice_daily' | 'weekly' | 'monthly' | 'as_needed'
+
+export interface PetMedication {
+  id?: string
+  petId: string                 // Reference to Pet
+  name: string                  // Medication name
+  dosage: string                // e.g., "10mg", "1 tablet"
+  frequency: MedicationFrequency
+  startDate: Date
+  endDate?: Date                // Null for ongoing medications
+  nextDose?: Date
+  prescribedBy?: string         // Vet name
+  pharmacy?: string
+  refillsRemaining?: number
+  reminderEnabled: boolean
+  reminderTime?: string         // HH:MM format
+  notes?: string
+  isActive: boolean
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface PetMedicationLog {
+  id?: string
+  medicationId: string          // Reference to PetMedication
+  petId: string                 // Reference to Pet
+  givenDate: Date
+  givenByUserId?: string        // Who gave the medication
+  dosageGiven?: string          // Actual dosage given (may differ from prescribed)
+  skipped: boolean              // If the dose was skipped
+  skipReason?: string
+  notes?: string
+  householdId?: string
+  createdAt: Date
+}
+
+export type VetVisitType = 'checkup' | 'vaccination' | 'illness' | 'injury' | 'surgery' | 'dental' | 'grooming' | 'emergency' | 'other'
+
+export interface PetVetVisit {
+  id?: string
+  petId: string                 // Reference to Pet
+  visitDate: Date
+  visitType: VetVisitType
+  vetName?: string
+  clinicName?: string
+  reason: string                // Why the visit happened
+  diagnosis?: string
+  treatment?: string
+  prescriptions?: string        // Any medications prescribed
+  cost?: number
+  currency: 'ARS' | 'USD'
+  followUpDate?: Date
+  followUpNotes?: string
+  linkedDocumentIds?: string[]  // Medical records, receipts
+  notes?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface PetVaccination {
+  id?: string
+  petId: string                 // Reference to Pet
+  vaccineName: string           // e.g., "Rabies", "Distemper", "Bordetella"
+  dateAdministered: Date
+  administeredBy?: string       // Vet name
+  clinicName?: string
+  batchNumber?: string          // Vaccine batch/lot number
+  expirationDate?: Date         // Vaccine expiration
+  nextDueDate?: Date            // When booster is needed
+  reminderEnabled: boolean
+  reminderDaysBefore?: number   // Days before next due to remind
+  linkedDocumentId?: string     // Certificate/record
+  notes?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -575,11 +720,71 @@ export class DomusDatabase extends Dexie {
   // Subscription Manager tables
   subscriptions!: Table<Subscription>
   subscriptionPayments!: Table<SubscriptionPayment>
+  // Pet Management tables
+  pets!: Table<Pet>
+  petFeedingSchedules!: Table<PetFeedingSchedule>
+  petFeedingLogs!: Table<PetFeedingLog>
+  petMedications!: Table<PetMedication>
+  petMedicationLogs!: Table<PetMedicationLog>
+  petVetVisits!: Table<PetVetVisit>
+  petVaccinations!: Table<PetVaccination>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase')
+
+    // v22: Add Pet Management module tables
+    this.version(22).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt',
+      settlementPayments: 'id, fromUserId, toUserId, [month+year], householdId, createdAt',
+      // Document Vault tables
+      documents: 'id, name, category, expirationDate, uploadedByUserId, householdId, createdAt, *tags',
+      documentFolders: 'id, name, parentFolderId, householdId, createdAt',
+      documentTags: 'id, name, householdId, createdAt',
+      // Maintenance Scheduler tables
+      maintenanceItems: 'id, name, type, location, householdId, createdAt',
+      maintenanceTasks: 'id, maintenanceItemId, name, nextDue, priority, assignedUserId, householdId, createdAt',
+      maintenanceLogs: 'id, maintenanceItemId, maintenanceTaskId, completedDate, completedByUserId, householdId, createdAt',
+      // Subscription Manager tables
+      subscriptions: 'id, name, category, status, nextBillingDate, billingCycle, householdId, createdAt',
+      subscriptionPayments: 'id, subscriptionId, paymentDate, status, householdId, createdAt',
+      // Pet Management tables
+      pets: 'id, name, type, primaryCaretakerId, householdId, createdAt',
+      petFeedingSchedules: 'id, petId, scheduledTime, assignedUserId, isActive, householdId, createdAt',
+      petFeedingLogs: 'id, feedingScheduleId, petId, fedDate, fedByUserId, householdId, createdAt',
+      petMedications: 'id, petId, name, nextDose, isActive, householdId, createdAt',
+      petMedicationLogs: 'id, medicationId, petId, givenDate, givenByUserId, householdId, createdAt',
+      petVetVisits: 'id, petId, visitDate, visitType, householdId, createdAt',
+      petVaccinations: 'id, petId, vaccineName, nextDueDate, householdId, createdAt'
+    })
+
+    // v23: Add followUpDate index to petVetVisits
+    this.version(23).stores({
+      petVetVisits: 'id, petId, visitDate, visitType, followUpDate, householdId, createdAt'
+    })
 
     // v21: Add Subscription Manager module tables
     this.version(21).stores({

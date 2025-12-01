@@ -221,7 +221,14 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
           {activeExpenses.length > 0 && (
             <div className="mb-6 p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground">{t('totalMonthly')}</p>
-              <p className="text-2xl font-bold">$ {formatARS(totalActiveARS)}</p>
+              <p className="text-2xl font-bold">
+                $ {formatARS(totalActiveARS)}
+                {rate > 1 && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground/70">
+                    (USD {formatARS(totalActiveARS / rate)})
+                  </span>
+                )}
+              </p>
               {rate > 1 && (
                 <p className="text-sm text-muted-foreground mt-1">
                   1 USD = $ {formatARS(rate)} ARS
@@ -288,7 +295,14 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <p className="text-2xl font-bold">$ {formatARS(amountInARS)}</p>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold">$ {formatARS(amountInARS)}</p>
+                              {rate > 1 && (
+                                <p className="text-sm text-muted-foreground/70">
+                                  USD {formatARS(amountInARS / rate)}
+                                </p>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2">
                               <Switch
                                 checked={expense.isActive}
@@ -355,9 +369,16 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <p className="text-xl font-semibold text-muted-foreground">
-                              $ {formatARS(amountInARS)}
-                            </p>
+                            <div className="text-right">
+                              <p className="text-xl font-semibold text-muted-foreground">
+                                $ {formatARS(amountInARS)}
+                              </p>
+                              {rate > 1 && (
+                                <p className="text-sm text-muted-foreground/70">
+                                  USD {formatARS(amountInARS / rate)}
+                                </p>
+                              )}
+                            </div>
                             <Switch
                               checked={expense.isActive}
                               onCheckedChange={() => handleToggleActive(expense)}

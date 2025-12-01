@@ -75,6 +75,12 @@ export interface MealIngredient {
   usageNotes?: string
 }
 
+// Estimated time for tasks
+export interface TaskEstimatedTime {
+  hours: number
+  minutes: number
+}
+
 export interface Task {
   id?: string
   title: string
@@ -84,6 +90,10 @@ export interface Task {
   dueDate?: Date
   priority: 'low' | 'medium' | 'high'
   isCompleted: boolean
+  // New fields
+  linkedProjectId?: string      // Links to HomeImprovement project
+  estimatedTime?: TaskEstimatedTime  // How long the task will take
+  blockedByTaskId?: string      // Task that must be completed first
   createdAt: Date
 }
 
@@ -779,6 +789,11 @@ export class DomusDatabase extends Dexie {
       petMedicationLogs: 'id, medicationId, petId, givenDate, givenByUserId, householdId, createdAt',
       petVetVisits: 'id, petId, visitDate, visitType, householdId, createdAt',
       petVaccinations: 'id, petId, vaccineName, nextDueDate, householdId, createdAt'
+    })
+
+    // v24: Add linkedProjectId and blockedByTaskId indexes to tasks
+    this.version(24).stores({
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, linkedProjectId, blockedByTaskId, createdAt'
     })
 
     // v23: Add followUpDate index to petVetVisits

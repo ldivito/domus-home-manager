@@ -3,12 +3,12 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User } from "lucide-react"
+import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db, Task } from '@/lib/db'
+import { db, Task, HomeImprovement } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddTaskDialog } from './components/AddTaskDialog'
 import { EditTaskDialog } from './components/EditTaskDialog'
@@ -23,6 +23,7 @@ export default function TasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
+  const [projectFilter, setProjectFilter] = useState<string>('all')
 
   const tasks = useLiveQuery(
     () => db.tasks.orderBy('createdAt').reverse().toArray(),
@@ -34,10 +35,15 @@ export default function TasksPage() {
     []
   ) || []
 
+  const projects = useLiveQuery(
+    () => db.homeImprovements.toArray(),
+    []
+  ) || []
+
   const priorityColors = {
-    high: 'bg-red-100 text-red-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    low: 'bg-green-100 text-green-800'
+    high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
   }
 
   const handleMarkComplete = async (taskId: string) => {
@@ -67,20 +73,50 @@ export default function TasksPage() {
     return user?.name || tCommon('notAssigned')
   }
 
+  const getProjectName = (projectId?: string) => {
+    if (!projectId) return null
+    const project = projects.find(p => p.id === projectId)
+    return project?.title || null
+  }
+
+  const getBlockerTask = (blockerTaskId?: string) => {
+    if (!blockerTaskId) return null
+    const blocker = tasks.find(t => t.id === blockerTaskId)
+    return blocker || null
+  }
+
+  const formatEstimatedTime = (estimatedTime?: { hours: number; minutes: number }) => {
+    if (!estimatedTime) return null
+    const { hours, minutes } = estimatedTime
+    if (hours === 0 && minutes === 0) return null
+    if (hours === 0) return `${minutes}m`
+    if (minutes === 0) return `${hours}h`
+    return `${hours}h ${minutes}m`
+  }
+
+  const isBlockedByIncompleteTask = (task: Task) => {
+    if (!task.blockedByTaskId) return false
+    const blocker = tasks.find(t => t.id === task.blockedByTaskId)
+    return blocker && !blocker.isCompleted
+  }
+
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    
+
     const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'completed' && task.isCompleted) ||
       (statusFilter === 'pending' && !task.isCompleted)
-    const matchesAssignee = assigneeFilter === 'all' || 
+    const matchesAssignee = assigneeFilter === 'all' ||
       (assigneeFilter === 'unassigned' && !task.assignedUserId) ||
       task.assignedUserId?.toString() === assigneeFilter
-    
-    return matchesSearch && matchesPriority && matchesStatus && matchesAssignee
+    const matchesProject = projectFilter === 'all' ||
+      (projectFilter === 'none' && !task.linkedProjectId) ||
+      task.linkedProjectId?.toString() === projectFilter
+
+    return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesProject
   })
 
   return (
@@ -96,7 +132,7 @@ export default function TasksPage() {
             {t('addTask')}
           </Button>
         </div>
-        
+
         {/* Search and Filters */}
         <div className="mb-6 space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -109,9 +145,9 @@ export default function TasksPage() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t('filters.priority')} />
                 </SelectTrigger>
@@ -122,9 +158,9 @@ export default function TasksPage() {
                   <SelectItem value="low">{t('priority.low')}</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36">
                   <SelectValue placeholder={t('filters.status')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -133,9 +169,9 @@ export default function TasksPage() {
                   <SelectItem value="completed">{t('status.completed')}</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36">
                   <User className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t('filters.assignee')} />
                 </SelectTrigger>
@@ -145,7 +181,7 @@ export default function TasksPage() {
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id!.toString()}>
                       <div className="flex items-center space-x-2">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: user.color }}
                         />
@@ -155,14 +191,30 @@ export default function TasksPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={projectFilter} onValueChange={setProjectFilter}>
+                <SelectTrigger className="w-40">
+                  <FolderKanban className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder={t('filters.project')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tCommon('all')}</SelectItem>
+                  <SelectItem value="none">{t('form.noProject')}</SelectItem>
+                  {projects.map((project: HomeImprovement) => (
+                    <SelectItem key={project.id} value={project.id!.toString()}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
-        
+
         <div className="grid gap-6">
           {filteredTasks.length === 0 ? (
-            <Card className="border-dashed border-2 border-gray-300">
-              <CardContent className="flex items-center justify-center h-32 text-gray-500">
+            <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
+              <CardContent className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400">
                 <div className="text-center">
                   {tasks.length === 0 ? (
                     <>
@@ -181,79 +233,120 @@ export default function TasksPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredTasks.map((task) => (
-            <Card key={task.id} className={`transition-all ${task.isCompleted ? 'opacity-75 bg-green-50' : 'hover:shadow-md'}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className={`text-xl flex items-center ${task.isCompleted ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                      {task.isCompleted ? (
-                        <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
-                      ) : (
-                        <List className="mr-3 h-6 w-6 text-gray-600" />
-                      )}
-                      {task.title}
-                    </CardTitle>
-                    {task.description && (
-                      <CardDescription className="text-base mt-2">{task.description}</CardDescription>
-                    )}
-                    <div className="flex items-center gap-4 mt-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <User className="mr-1 h-4 w-4" />
-                        <span>{getUserName(task.assignedUserId)}</span>
-                      </div>
-                      {task.dueDate && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Calendar className="mr-1 h-4 w-4" />
-                          <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+            filteredTasks.map((task) => {
+              const projectName = getProjectName(task.linkedProjectId)
+              const estimatedTimeStr = formatEstimatedTime(task.estimatedTime)
+              const blockerTask = getBlockerTask(task.blockedByTaskId)
+              const isBlocked = isBlockedByIncompleteTask(task)
+
+              return (
+                <Card key={task.id} className={`transition-all ${task.isCompleted ? 'opacity-75 bg-green-50 dark:bg-green-900/20' : isBlocked ? 'border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-900/10' : 'hover:shadow-md'}`}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className={`text-xl flex items-center ${task.isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                          {task.isCompleted ? (
+                            <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
+                          ) : isBlocked ? (
+                            <AlertTriangle className="mr-3 h-6 w-6 text-orange-500" />
+                          ) : (
+                            <List className="mr-3 h-6 w-6 text-gray-600 dark:text-gray-400" />
+                          )}
+                          {task.title}
+                        </CardTitle>
+                        {task.description && (
+                          <CardDescription className="text-base mt-2">{task.description}</CardDescription>
+                        )}
+                        <div className="flex items-center gap-4 mt-3 flex-wrap">
+                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <User className="mr-1 h-4 w-4" />
+                            <span>{getUserName(task.assignedUserId)}</span>
+                          </div>
+                          {task.dueDate && (
+                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                              <Calendar className="mr-1 h-4 w-4" />
+                              <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                          {estimatedTimeStr && (
+                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                              <Clock className="mr-1 h-4 w-4" />
+                              <span>{estimatedTimeStr}</span>
+                            </div>
+                          )}
+                          {projectName && (
+                            <div className="flex items-center text-sm text-purple-600 dark:text-purple-400">
+                              <FolderKanban className="mr-1 h-4 w-4" />
+                              <span>{projectName}</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={priorityColors[task.priority as keyof typeof priorityColors]}>
-                      {task.priority.toUpperCase()}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-4">
-                    {task.priority === 'high' && !task.isCompleted && (
-                      <div className="flex items-center text-red-600">
-                        <AlertCircle className="mr-1 h-4 w-4" />
-                        <span className="text-sm font-medium">{t('priority.high')}</span>
+                        {blockerTask && (
+                          <div className={`flex items-center gap-2 mt-2 text-sm ${blockerTask.isCompleted ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>
+                              {t('blockedBy')}: {blockerTask.title}
+                              {blockerTask.isCompleted && <CheckCircle className="inline ml-1 h-3 w-3" />}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {!task.isCompleted && (
-                      <Button className="h-10 px-6" onClick={() => handleMarkComplete(task.id!)}>
-                        {t('markComplete')}
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={() => handleEditTask(task)}>
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteTask(task.id!)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                      <div className="flex items-center space-x-2">
+                        <Badge className={priorityColors[task.priority as keyof typeof priorityColors]}>
+                          {t(`priority.${task.priority}`).toUpperCase()}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-4">
+                        {task.priority === 'high' && !task.isCompleted && (
+                          <div className="flex items-center text-red-600">
+                            <AlertCircle className="mr-1 h-4 w-4" />
+                            <span className="text-sm font-medium">{t('priority.high')}</span>
+                          </div>
+                        )}
+                        {isBlocked && !task.isCompleted && (
+                          <div className="flex items-center text-orange-600 dark:text-orange-400">
+                            <AlertTriangle className="mr-1 h-4 w-4" />
+                            <span className="text-sm font-medium">{t('blocked')}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {!task.isCompleted && (
+                          <Button
+                            className="h-10 px-6"
+                            onClick={() => handleMarkComplete(task.id!)}
+                            disabled={isBlocked}
+                            title={isBlocked ? t('completeBlockerFirst') : undefined}
+                          >
+                            {t('markComplete')}
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => handleEditTask(task)}>
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteTask(task.id!)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
         </div>
-        
-        <AddTaskDialog 
-          open={addDialogOpen} 
+
+        <AddTaskDialog
+          open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           users={users}
         />
-        
-        <EditTaskDialog 
+
+        <EditTaskDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           task={editingTask}

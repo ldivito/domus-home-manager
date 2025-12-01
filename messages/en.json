@@ -1180,6 +1180,7 @@
       "active": "Active",
       "inactive": "Inactive",
       "dueOn": "Due on day {day}",
+      "totalMonthly": "Total Monthly Expenses",
       "frequency": {
         "monthly": "Monthly",
         "bimonthly": "Every 2 Months",
@@ -1193,6 +1194,7 @@
         "namePlaceholder": "e.g., Rent, Electricity",
         "description": "Description",
         "descriptionPlaceholder": "Optional description",
+        "currency": "Currency",
         "amount": "Amount",
         "amountPlaceholder": "Enter amount",
         "category": "Category",

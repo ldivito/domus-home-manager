@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { db, RecurringExpense, ExpenseCategory } from '@/lib/db'
-import { generateId } from '@/lib/utils'
+import { db, RecurringExpense, ExpenseCategory, MonthlyExchangeRate } from '@/lib/db'
+import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 interface ExpensesTabProps {
   expenses: RecurringExpense[]
   categories: ExpenseCategory[]
+  exchangeRate?: MonthlyExchangeRate
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -33,10 +34,11 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const frequencies = ['monthly', 'bimonthly', 'quarterly', 'yearly'] as const
 
-export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
+export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabProps) {
   const t = useTranslations('finance.expenses')
   const tCat = useTranslations('finance.defaultExpenseCategories')
   const tMessages = useTranslations('finance.messages')
+  const tIncome = useTranslations('finance.income')
 
   const [showDialog, setShowDialog] = useState(false)
   const [editingExpense, setEditingExpense] = useState<RecurringExpense | null>(null)
@@ -46,14 +48,26 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
+  const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS')
   const [category, setCategory] = useState('')
   const [frequency, setFrequency] = useState<typeof frequencies[number]>('monthly')
   const [dueDay, setDueDay] = useState('1')
+
+  const rate = exchangeRate?.rate || 1
+
+  // Calculate expense in ARS
+  const getAmountInARS = (expense: RecurringExpense): number => {
+    if (expense.currency === 'USD') {
+      return expense.amount * rate
+    }
+    return expense.amount
+  }
 
   const resetForm = () => {
     setName('')
     setDescription('')
     setAmount('')
+    setCurrency('ARS')
     setCategory('')
     setFrequency('monthly')
     setDueDay('1')
@@ -66,6 +80,7 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
       setName(expense.name)
       setDescription(expense.description || '')
       setAmount(expense.amount.toString())
+      setCurrency(expense.currency || 'ARS')
       setCategory(expense.category)
       setFrequency(expense.frequency)
       setDueDay(expense.dueDay.toString())
@@ -99,6 +114,7 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
           name: name.trim(),
           description: description.trim() || undefined,
           amount: amountNum,
+          currency,
           category,
           frequency,
           dueDay: dueDayNum,
@@ -111,6 +127,7 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
           name: name.trim(),
           description: description.trim() || undefined,
           amount: amountNum,
+          currency,
           category,
           frequency,
           dueDay: dueDayNum,
@@ -176,6 +193,9 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
   const activeExpenses = expenses.filter(e => e.isActive)
   const inactiveExpenses = expenses.filter(e => !e.isActive)
 
+  // Calculate totals in ARS
+  const totalActiveARS = activeExpenses.reduce((sum, exp) => sum + getAmountInARS(exp), 0)
+
   return (
     <>
       <Card>
@@ -197,6 +217,19 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Monthly Total Summary */}
+          {activeExpenses.length > 0 && (
+            <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">{t('totalMonthly')}</p>
+              <p className="text-2xl font-bold">$ {formatARS(totalActiveARS)}</p>
+              {rate > 1 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  1 USD = $ {formatARS(rate)} ARS
+                </p>
+              )}
+            </div>
+          )}
+
           {expenses.length === 0 ? (
             <div className="text-center py-12">
               <Receipt className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
@@ -219,6 +252,7 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
                   <div className="space-y-3">
                     {activeExpenses.map(expense => {
                       const IconComponent = getCategoryIcon(expense.category)
+                      const amountInARS = getAmountInARS(expense)
                       return (
                         <div
                           key={expense.id}
@@ -242,11 +276,19 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
                                 <span>{t(`frequency.${expense.frequency}`)}</span>
                                 <span>•</span>
                                 <span>{t('dueOn', { day: expense.dueDay })}</span>
+                                {expense.currency === 'USD' && (
+                                  <>
+                                    <span>•</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      USD {formatARS(expense.amount)}
+                                    </Badge>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <p className="text-2xl font-bold">${expense.amount.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">$ {formatARS(amountInARS)}</p>
                             <div className="flex items-center gap-2">
                               <Switch
                                 checked={expense.isActive}
@@ -285,6 +327,7 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
                   <div className="space-y-3 opacity-60">
                     {inactiveExpenses.map(expense => {
                       const IconComponent = getCategoryIcon(expense.category)
+                      const amountInARS = getAmountInARS(expense)
                       return (
                         <div
                           key={expense.id}
@@ -298,14 +341,22 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
                             </div>
                             <div>
                               <p className="font-medium text-lg">{expense.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {getCategoryName(expense.category)}
-                              </p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>{getCategoryName(expense.category)}</span>
+                                {expense.currency === 'USD' && (
+                                  <>
+                                    <span>•</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      USD {formatARS(expense.amount)}
+                                    </Badge>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
                             <p className="text-xl font-semibold text-muted-foreground">
-                              ${expense.amount.toLocaleString()}
+                              $ {formatARS(amountInARS)}
                             </p>
                             <Switch
                               checked={expense.isActive}
@@ -355,20 +406,63 @@ export function ExpensesTab({ expenses, categories }: ExpensesTabProps) {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>{t('dialog.currency')}</Label>
+              <Select value={currency} onValueChange={(val) => setCurrency(val as 'ARS' | 'USD')}>
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ARS">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">ARS</span>
+                      <span className="text-muted-foreground">- {tIncome('dialog.argentinePeso')}</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="USD">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">USD</span>
+                      <span className="text-muted-foreground">- {tIncome('dialog.usDollar')}</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {currency === 'USD' && rate > 1 && (
+                <p className="text-sm text-muted-foreground">
+                  {tIncome('dialog.willBeConverted', { rate: formatARS(rate) })}
+                </p>
+              )}
+              {currency === 'USD' && rate <= 1 && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  {tIncome('dialog.setExchangeRateFirst')}
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="amount">{t('dialog.amount')}</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder={t('dialog.amountPlaceholder')}
-                  className="h-12"
-                  required
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                    {currency === 'USD' ? 'USD' : '$'}
+                  </span>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder={t('dialog.amountPlaceholder')}
+                    className="h-12 pl-12"
+                    required
+                  />
+                </div>
+                {currency === 'USD' && amount && rate > 1 && (
+                  <p className="text-sm text-muted-foreground">
+                    = $ {formatARS(parseFloat(amount) * rate)} ARS
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

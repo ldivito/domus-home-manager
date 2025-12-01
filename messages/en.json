@@ -7,6 +7,9 @@
     "all": "All",
     "cancel": "Cancel",
     "save": "Save",
+    "saving": "Saving...",
+    "edit": "Edit",
+    "delete": "Delete",
     "notAssigned": "Not assigned"
   },
   "navigation": {
@@ -20,6 +23,7 @@
     "tasks": "Tasks",
     "projects": "Projects",
     "documents": "Documents",
+    "maintenance": "Maintenance",
     "reminders": "Notifications",
     "users": "Users",
     "settings": "Settings",
@@ -183,6 +187,16 @@
         "expired": "Expired",
         "noDocuments": "No documents yet",
         "uploadFirst": "Upload your first document"
+      },
+      "maintenance": {
+        "title": "Maintenance",
+        "items": "Items",
+        "dueSoon": "Due Soon",
+        "overdue": "Overdue",
+        "overdueAlert": "overdue tasks",
+        "dueSoonAlert": "tasks due this week",
+        "noItems": "No items tracked yet",
+        "addFirst": "Add your first item"
       }
     },
     "quickActions": {
@@ -1466,6 +1480,179 @@
       "fileTooLarge": "File is too large. Maximum size is 10MB",
       "fileReadError": "Error reading file",
       "noFileData": "No file data available"
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance Scheduler",
+    "description": "Track and schedule maintenance for appliances, vehicles, and home systems",
+    "tabs": {
+      "items": "Items",
+      "tasks": "Tasks",
+      "history": "History"
+    },
+    "stats": {
+      "overdue": "Overdue",
+      "dueThisWeek": "Due This Week",
+      "upcoming": "Upcoming",
+      "totalItems": "Total Items"
+    },
+    "search": {
+      "placeholder": "Search items..."
+    },
+    "filter": {
+      "allTypes": "All Types"
+    },
+    "itemTypes": {
+      "appliance": "Appliance",
+      "hvac": "HVAC",
+      "plumbing": "Plumbing",
+      "electrical": "Electrical",
+      "vehicle": "Vehicle",
+      "roof": "Roof",
+      "exterior": "Exterior",
+      "landscaping": "Landscaping",
+      "pool": "Pool",
+      "security": "Security",
+      "other": "Other"
+    },
+    "frequencies": {
+      "once": "One Time",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "biannually": "Every 6 Months",
+      "yearly": "Yearly",
+      "custom": "Custom"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "actions": {
+      "addItem": "Add Item",
+      "addTask": "Add Task",
+      "edit": "Edit",
+      "complete": "Complete",
+      "logMaintenance": "Log Maintenance"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "e.g., Refrigerator, HVAC System",
+      "type": "Type",
+      "location": "Location",
+      "locationPlaceholder": "e.g., Kitchen, Garage",
+      "brand": "Brand",
+      "brandPlaceholder": "e.g., Samsung, LG",
+      "model": "Model",
+      "modelPlaceholder": "Model number",
+      "serialNumber": "Serial Number",
+      "serialNumberPlaceholder": "Serial number",
+      "purchaseDate": "Purchase Date",
+      "warrantyExpiration": "Warranty Expiration",
+      "description": "Description",
+      "descriptionPlaceholder": "Description of the item",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional notes",
+      "item": "Item",
+      "selectItem": "Select an item",
+      "taskName": "Task Name",
+      "taskNamePlaceholder": "e.g., Change oil, Replace filter",
+      "taskDescriptionPlaceholder": "What needs to be done",
+      "frequency": "Frequency",
+      "customDays": "Every X Days",
+      "nextDue": "Next Due Date",
+      "priority": "Priority",
+      "assignee": "Assigned To",
+      "unassigned": "Unassigned",
+      "enableReminder": "Enable Reminder",
+      "reminderDescription": "Get notified before maintenance is due",
+      "reminderDaysBefore": "Remind Days Before",
+      "estimatedCostMin": "Est. Cost (Min)",
+      "estimatedCostMax": "Est. Cost (Max)",
+      "preferredProvider": "Preferred Service Provider",
+      "providerPlaceholder": "Service provider name",
+      "workPerformed": "Work Performed",
+      "workPerformedPlaceholder": "Describe the maintenance done",
+      "completedDate": "Completed Date",
+      "completedBy": "Completed By",
+      "selectUser": "Select user",
+      "notSpecified": "Not specified",
+      "externalService": "Hired Professional",
+      "externalServiceDescription": "Check if done by a service provider",
+      "serviceProvider": "Service Provider",
+      "actualCost": "Actual Cost",
+      "currency": "Currency",
+      "logDescriptionPlaceholder": "Details about the maintenance performed"
+    },
+    "dialogs": {
+      "addItem": {
+        "title": "Add Maintenance Item"
+      },
+      "editItem": {
+        "title": "Edit Maintenance Item"
+      },
+      "deleteItem": {
+        "title": "Delete Item?",
+        "description": "Are you sure you want to delete \"{name}\"? This will also delete all associated tasks and maintenance history."
+      },
+      "addTask": {
+        "title": "Add Maintenance Task"
+      },
+      "editTask": {
+        "title": "Edit Maintenance Task"
+      },
+      "deleteTask": {
+        "title": "Delete Task?",
+        "description": "Are you sure you want to delete \"{name}\"?"
+      },
+      "logMaintenance": {
+        "title": "Log Completed Maintenance"
+      }
+    },
+    "empty": {
+      "items": {
+        "title": "No Maintenance Items",
+        "description": "Add your first appliance, vehicle, or home system to track"
+      },
+      "tasks": {
+        "title": "No Scheduled Tasks",
+        "description": "Add maintenance tasks to items to see them here"
+      },
+      "history": {
+        "title": "No Maintenance History",
+        "description": "Completed maintenance will appear here"
+      }
+    },
+    "overdue": "Overdue",
+    "noLocation": "No location",
+    "nextMaintenance": "Next maintenance",
+    "noScheduledTasks": "No scheduled tasks",
+    "scheduledTasks": "Scheduled Tasks",
+    "maintenanceHistory": "Maintenance History",
+    "noMaintenanceHistory": "No maintenance history",
+    "totalMaintenanceCost": "Total Maintenance Cost",
+    "expired": "Expired",
+    "professional": "Professional",
+    "diy": "DIY",
+    "validation": {
+      "nameRequired": "Name is required",
+      "itemRequired": "Please select an item",
+      "titleRequired": "Title is required"
+    },
+    "messages": {
+      "itemAdded": "Item added successfully",
+      "itemUpdated": "Item updated successfully",
+      "itemDeleted": "Item deleted successfully",
+      "taskAdded": "Task scheduled successfully",
+      "taskUpdated": "Task updated successfully",
+      "taskDeleted": "Task deleted successfully",
+      "maintenanceLogged": "Maintenance logged successfully",
+      "addError": "Error adding item",
+      "updateError": "Error updating",
+      "deleteError": "Error deleting",
+      "logError": "Error logging maintenance"
     }
   }
 }

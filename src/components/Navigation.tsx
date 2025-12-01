@@ -20,7 +20,8 @@ import {
   LogOut,
   User,
   Wallet,
-  FileText
+  FileText,
+  Wrench
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -123,6 +124,7 @@ export default function Navigation() {
     { nameKey: 'tasks', href: '/tasks', icon: List },
     { nameKey: 'projects', href: '/projects', icon: Hammer },
     { nameKey: 'documents', href: '/documents', icon: FileText },
+    { nameKey: 'maintenance', href: '/maintenance', icon: Wrench },
     { nameKey: 'reminders', href: '/reminders', icon: Bell },
     { nameKey: 'users', href: '/users', icon: Users },
     { nameKey: 'settings', href: '/settings', icon: Settings },

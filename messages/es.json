@@ -1126,6 +1126,25 @@
   "finance": {
     "title": "Finanzas",
     "subtitle": "Gestiona gastos e ingresos compartidos del hogar",
+    "months": {
+      "january": "Enero",
+      "february": "Febrero",
+      "march": "Marzo",
+      "april": "Abril",
+      "may": "Mayo",
+      "june": "Junio",
+      "july": "Julio",
+      "august": "Agosto",
+      "september": "Septiembre",
+      "october": "Octubre",
+      "november": "Noviembre",
+      "december": "Diciembre"
+    },
+    "navigator": {
+      "history": "Historial",
+      "upcoming": "Próximo",
+      "backToCurrent": "Volver al mes actual"
+    },
     "tabs": {
       "income": "Ingresos",
       "expenses": "Gastos",
@@ -1148,6 +1167,7 @@
       "exchangeRate": "Tipo de Cambio",
       "noExchangeRate": "Sin tipo de cambio establecido",
       "exchangeRateUpdated": "Tipo de cambio actualizado exitosamente",
+      "futureMonthNotice": "Estás viendo un mes futuro. Los ingresos no se pueden establecer para meses futuros, pero puedes configurar el tipo de cambio con anticipación.",
       "dialog": {
         "title": "Establecer Ingresos Mensuales",
         "description": "Ingresa los ingresos para {month} {year}",
@@ -1240,6 +1260,7 @@
       "paidBy": "Pagado por {name}",
       "yourShare": "Tu Parte",
       "split": "Reparto",
+      "futureMonthNotice": "Estás viendo un mes futuro. Los pagos no se pueden marcar como pagados hasta que llegue el mes.",
       "dialog": {
         "title": "Marcar Pago como Pagado",
         "description": "Registra quién pagó este gasto",
@@ -1266,6 +1287,7 @@
       "summary": "Resumen de Saldo",
       "totalIncome": "Ingresos Totales",
       "totalPaidExpenses": "Total Pagado",
+      "netBalance": "Balance Neto",
       "remaining": "Restante",
       "shouldPay": "Debería pagar",
       "actuallyPaid": "Pagó",
@@ -1282,11 +1304,23 @@
       "receives": "recibe",
       "owes": "{from} debe a {to}",
       "markSettled": "Marcar como Liquidado",
+      "paid": "Pagado",
+      "paidOn": "Pagado el {date}",
+      "unmarkPaid": "Desmarcar",
       "periodSelect": "Seleccionar Período",
       "thisMonth": "Este Mes",
       "lastMonth": "Mes Pasado",
       "last3Months": "Últimos 3 Meses",
-      "allTime": "Todos los Tiempos"
+      "allTime": "Todos los Tiempos",
+      "settlementDialog": {
+        "title": "Confirmar Liquidación",
+        "description": "{from} paga a {to} $ {amount}",
+        "notes": "Notas (Opcional)",
+        "notesPlaceholder": "ej., Transferencia bancaria, Efectivo, etc.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Liquidación",
+        "confirming": "Confirmando..."
+      }
     },
     "defaultExpenseCategories": {
       "housing": "Vivienda",
@@ -1307,6 +1341,8 @@
       "paymentMarkedPaid": "Pago marcado como pagado",
       "paymentUnmarked": "Pago desmarcado exitosamente",
       "paymentDeleted": "Pago eliminado exitosamente",
+      "settlementMarkedPaid": "Liquidación registrada exitosamente",
+      "settlementUnmarked": "Liquidación desmarcada exitosamente",
       "error": "Ocurrió un error"
     }
   }

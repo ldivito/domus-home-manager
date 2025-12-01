@@ -20,6 +20,7 @@ interface IncomeTabProps {
   currentMonth: number
   currentYear: number
   exchangeRate?: MonthlyExchangeRate
+  isFutureMonth?: boolean
 }
 
 const monthNames = [
@@ -27,7 +28,7 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, exchangeRate }: IncomeTabProps) {
+export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, exchangeRate, isFutureMonth }: IncomeTabProps) {
   const t = useTranslations('finance.income')
   const tMessages = useTranslations('finance.messages')
   const [showDialog, setShowDialog] = useState(false)
@@ -189,13 +190,22 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                 {t('subtitle')}
               </CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog()} className="h-12 px-6">
+            <Button onClick={() => handleOpenDialog()} className="h-12 px-6" disabled={isFutureMonth}>
               <Plus className="h-5 w-5 mr-2" />
               {t('setIncome')}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
+          {/* Future Month Notice */}
+          {isFutureMonth && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                {t('futureMonthNotice')}
+              </p>
+            </div>
+          )}
+
           {/* Current Month Header */}
           <div className="mb-6 p-4 bg-muted/50 rounded-lg">
             <div className="flex justify-between items-start">
@@ -244,8 +254,8 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                 return (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 bg-card border rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={() => handleOpenDialog(user.id)}
+                    className={`flex items-center justify-between p-4 bg-card border rounded-lg transition-colors ${isFutureMonth ? 'opacity-75' : 'hover:bg-muted/30 cursor-pointer'}`}
+                    onClick={isFutureMonth ? undefined : () => handleOpenDialog(user.id)}
                   >
                     <div className="flex items-center gap-4">
                       <div

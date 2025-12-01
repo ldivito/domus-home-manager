@@ -338,6 +338,19 @@ export interface ExpensePayment {
   updatedAt?: Date
 }
 
+export interface SettlementPayment {
+  id?: string
+  fromUserId: string          // User who owes money
+  toUserId: string            // User who is owed money
+  amount: number              // Amount in ARS
+  month: number               // 1-12
+  year: number                // e.g., 2024
+  paidDate: Date              // When the settlement was made
+  notes?: string
+  householdId?: string
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -362,11 +375,40 @@ export class DomusDatabase extends Dexie {
   recurringExpenses!: Table<RecurringExpense>
   expenseCategories!: Table<ExpenseCategory>
   expensePayments!: Table<ExpensePayment>
+  settlementPayments!: Table<SettlementPayment>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase')
+
+    // v18: Add settlement payments table
+    this.version(18).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt',
+      settlementPayments: 'id, fromUserId, toUserId, [month+year], householdId, createdAt'
+    })
 
     // v17: Add currency to expenses
     this.version(17).stores({

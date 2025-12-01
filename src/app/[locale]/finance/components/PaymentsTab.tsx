@@ -29,6 +29,7 @@ interface PaymentsTabProps {
   currentMonth: number
   currentYear: number
   exchangeRate?: MonthlyExchangeRate
+  isFutureMonth?: boolean
 }
 
 export function PaymentsTab({
@@ -38,7 +39,8 @@ export function PaymentsTab({
   incomes,
   currentMonth,
   currentYear,
-  exchangeRate
+  exchangeRate,
+  isFutureMonth
 }: PaymentsTabProps) {
   const t = useTranslations('finance.payments')
   const tMessages = useTranslations('finance.messages')
@@ -299,6 +301,15 @@ export function PaymentsTab({
           </div>
         </CardHeader>
         <CardContent>
+          {/* Future Month Notice */}
+          {isFutureMonth && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                {t('futureMonthNotice')}
+              </p>
+            </div>
+          )}
+
           {/* Status Summary */}
           <div className="flex items-center gap-2 mb-6 p-4 bg-muted/50 rounded-lg flex-wrap">
             <Button
@@ -438,6 +449,7 @@ export function PaymentsTab({
                         onClick={() => handleMarkPaid(payment)}
                         variant={payment.status === 'overdue' ? 'destructive' : 'default'}
                         className="w-full h-12"
+                        disabled={isFutureMonth}
                       >
                         <Check className="h-4 w-4 mr-2" />
                         {t('markPaid')}

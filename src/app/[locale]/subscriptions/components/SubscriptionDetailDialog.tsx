@@ -53,7 +53,7 @@ export function SubscriptionDetailDialog({
           .equals(subscription.id)
           .reverse()
           .sortBy('paymentDate')
-      : Promise.resolve([]),
+      : Promise.resolve([] as SubscriptionPayment[]),
     [subscription?.id]
   ) ?? EMPTY_PAYMENTS
 

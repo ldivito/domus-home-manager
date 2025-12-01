@@ -657,7 +657,7 @@ export default function SubscriptionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('dialogs.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('dialogs.delete.description', { name: selectedSubscription?.name })}
+              {t('dialogs.delete.description', { name: selectedSubscription?.name ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -276,6 +276,56 @@ export interface KetoDay {
   updatedAt: Date
 }
 
+// Finance Module interfaces
+export interface MonthlyIncome {
+  id?: string
+  userId: string              // Reference to User
+  amount: number              // Income amount
+  month: number               // 1-12
+  year: number                // e.g., 2024
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface RecurringExpense {
+  id?: string
+  name: string                // e.g., "Rent", "Electricity"
+  description?: string
+  amount: number              // Fixed amount or estimated
+  category: string            // Category ID reference
+  frequency: 'monthly' | 'bimonthly' | 'quarterly' | 'yearly'
+  dueDay: number              // Day of month (1-31)
+  isActive: boolean           // Can pause without deleting
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface ExpenseCategory {
+  id?: string
+  name: string                // Translation key or custom name
+  icon?: string               // Lucide icon name
+  color?: string
+  isDefault: boolean
+  householdId?: string
+  createdAt: Date
+}
+
+export interface ExpensePayment {
+  id?: string
+  recurringExpenseId: string  // Reference to RecurringExpense
+  amount: number              // Actual amount paid
+  dueDate: Date               // When it was due
+  paidDate?: Date             // When it was actually paid
+  paidByUserId?: string       // Who paid it
+  status: 'pending' | 'paid' | 'overdue'
+  notes?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -294,11 +344,42 @@ export class DomusDatabase extends Dexie {
   homeSettings!: Table<HomeSettings>
   ketoSettings!: Table<KetoSettings>
   ketoDays!: Table<KetoDay>
+  // Finance tables
+  monthlyIncomes!: Table<MonthlyIncome>
+  recurringExpenses!: Table<RecurringExpense>
+  expenseCategories!: Table<ExpenseCategory>
+  expensePayments!: Table<ExpensePayment>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
   constructor() {
     super('DomusDatabase')
+
+    // v15: Add Finance module tables
+    this.version(15).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, month, year, householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt'
+    })
 
     // v14: Introduce structured meal ingredients
     this.version(14).stores({
@@ -535,6 +616,23 @@ export class DomusDatabase extends Dexie {
   // Helper method to seed default categories for new databases
   async seedDefaultCategoriesIfNeeded(): Promise<void> {
     try {
+      // Seed expense categories if needed (separate check for existing DBs)
+      const expenseCategoryCount = await this.expenseCategories.count()
+      if (expenseCategoryCount === 0) {
+        const now = new Date()
+        await this.expenseCategories.bulkAdd([
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.housing', icon: 'Home', color: '#8B5CF6', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.utilities', icon: 'Zap', color: '#F59E0B', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.internet', icon: 'Wifi', color: '#3B82F6', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.insurance', icon: 'Shield', color: '#10B981', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.taxes', icon: 'FileText', color: '#EF4444', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.subscriptions', icon: 'Tv', color: '#EC4899', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.maintenance', icon: 'Wrench', color: '#6B7280', isDefault: true, createdAt: now },
+          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.other', icon: 'MoreHorizontal', color: '#9CA3AF', isDefault: true, createdAt: now }
+        ])
+        console.log('Default expense categories seeded successfully')
+      }
+
       const categoryCount = await this.groceryCategories.count()
       if (categoryCount > 0) return // Already seeded
 

@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { AddUserModal } from "@/components/AddUserModal"
+import { EditUserModal } from "@/components/EditUserModal"
 import { db, User as UserType } from "@/lib/db"
 import { generateId } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface UserStats {
   activeTasks: number
@@ -22,6 +24,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserType[]>([])
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   // Load users from database
@@ -66,11 +70,42 @@ export default function UsersPage() {
         ...userData,
         createdAt: new Date()
       }
-      
+
       await db.users.add(newUser)
       await loadUsers() // Reload users after creation
+      toast.success(t('messages.userCreated'))
     } catch (error) {
       console.error('Error creating user:', error)
+      toast.error(t('messages.error'))
+      throw error
+    }
+  }
+
+  const handleEditUser = (user: UserType) => {
+    setSelectedUser(user)
+    setIsEditModalOpen(true)
+  }
+
+  const handleUpdateUser = async (userId: string, userData: Partial<UserType>) => {
+    try {
+      await db.users.update(userId, userData)
+      await loadUsers()
+      toast.success(t('messages.userUpdated'))
+    } catch (error) {
+      console.error('Error updating user:', error)
+      toast.error(t('messages.error'))
+      throw error
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await db.users.delete(userId)
+      await loadUsers()
+      toast.success(t('messages.userDeleted'))
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      toast.error(t('messages.error'))
       throw error
     }
   }
@@ -209,7 +244,12 @@ export default function UsersPage() {
                         </Badge>
                       )}
                       
-                      <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200"
+                        onClick={() => handleEditUser(user)}
+                      >
                         <Settings className="mr-2 h-4 w-4" />
                         {t('editProfile')}
                       </Button>
@@ -320,6 +360,14 @@ export default function UsersPage() {
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           onCreateUser={handleCreateUser}
+        />
+
+        <EditUserModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          user={selectedUser}
+          onUpdateUser={handleUpdateUser}
+          onDeleteUser={handleDeleteUser}
         />
       </div>
     </div>

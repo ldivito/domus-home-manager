@@ -379,7 +379,7 @@ export default function KetoPage() {
       <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-center items-center h-96">
-            <div className="text-lg font-medium text-muted-foreground">Loading...</div>
+            <div className="text-lg font-medium text-muted-foreground">{t('loading')}</div>
           </div>
         </div>
       </div>
@@ -389,12 +389,16 @@ export default function KetoPage() {
   const stats = calculateStats()
   const calendarDays = generateCalendarDays()
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    t('months.january'), t('months.february'), t('months.march'), t('months.april'),
+    t('months.may'), t('months.june'), t('months.july'), t('months.august'),
+    t('months.september'), t('months.october'), t('months.november'), t('months.december')
   ]
 
   // Get day names in the correct order based on start of week
-  const sundayFirstDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const sundayFirstDayNames = [
+    t('days.sun'), t('days.mon'), t('days.tue'), t('days.wed'),
+    t('days.thu'), t('days.fri'), t('days.sat')
+  ]
   const dayNames = startOfWeek === 'monday'
     ? [...sundayFirstDayNames.slice(1), sundayFirstDayNames[0]] // Move Sunday to the end
     : sundayFirstDayNames
@@ -662,19 +666,19 @@ export default function KetoPage() {
               {/* Motivational Section */}
               <div className="space-y-3 p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
                 <h4 className="font-semibold text-foreground flex items-center gap-2">
-                  🎯 Keep Going!
+                  🎯 {t('progress.keepGoing')}
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   {stats.currentStreak > 0
-                    ? `Amazing! You're on a ${stats.currentStreak} day streak. Every day counts toward your goals!`
+                    ? t('progress.streakMessage', { streak: stats.currentStreak })
                     : stats.daysOnKeto > 0
-                    ? "Every journey has its ups and downs. Today is a new opportunity to succeed!"
-                    : "Welcome to your keto journey! Start by marking today's progress."
+                    ? t('progress.journeyMessage')
+                    : t('progress.welcomeMessage')
                   }
                 </p>
                 {stats.daysOnKeto >= 7 && (
                   <div className="text-sm">
-                    <span className="text-green-600 font-medium">Week {Math.ceil(stats.daysOnKeto / 7)} completed!</span>
+                    <span className="text-green-600 font-medium">{t('progress.weekCompleted', { week: Math.ceil(stats.daysOnKeto / 7) })}</span>
                   </div>
                 )}
               </div>
@@ -702,7 +706,7 @@ export default function KetoPage() {
                     {stats.currentStreak}
                   </div>
                   <div className="text-sm font-medium text-orange-600/70 dark:text-orange-400/70">
-                    Day Streak! 🔥
+                    {t('progress.dayStreak')} 🔥
                   </div>
                 </div>
               )}

@@ -983,8 +983,38 @@
       "thisMonth": "This Month",
       "cheatDays": "Cheat Days",
       "insights": "Progress Insights",
-      "insightsSubtitle": "Your keto journey overview and motivation"
-    }
+      "insightsSubtitle": "Your keto journey overview and motivation",
+      "keepGoing": "Keep Going!",
+      "streakMessage": "Amazing! You're on a {streak} day streak. Every day counts toward your goals!",
+      "journeyMessage": "Every journey has its ups and downs. Today is a new opportunity to succeed!",
+      "welcomeMessage": "Welcome to your keto journey! Start by marking today's progress.",
+      "weekCompleted": "Week {week} completed!",
+      "dayStreak": "Day Streak!"
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "days": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "loading": "Loading..."
   },
   "sync": {
     "syncing": "Syncing...",

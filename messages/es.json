@@ -710,6 +710,48 @@
       "creating": "Creando...",
       "updateTask": "Actualizar Tarea",
       "updating": "Actualizando..."
+    },
+    "import": {
+      "button": "Importar",
+      "title": "Importar Tareas",
+      "description": "Importa múltiples tareas desde un archivo CSV",
+      "downloadTemplate": "Paso 1: Descargar Plantilla",
+      "downloadTemplateDescription": "Descarga una plantilla CSV con todos los campos disponibles y datos de ejemplo",
+      "downloadExample": "Descargar Plantilla",
+      "uploadFile": "Paso 2: Subir Tu Archivo",
+      "dropOrClick": "Haz clic para seleccionar un archivo CSV o arrastra y suelta",
+      "csvOnly": "Solo archivos CSV (.csv)",
+      "fieldsInfo": "Campos Disponibles",
+      "required": "requerido",
+      "defaultValue": "predeterminado",
+      "fieldDescriptions": {
+        "title": "Título de la tarea (requerido)",
+        "category": "Nombre de categoría (debe coincidir con una categoría existente)",
+        "assignedTo": "Nombre de usuario (debe coincidir con un usuario existente)",
+        "linkedProject": "Título del proyecto (debe coincidir con un proyecto existente)",
+        "estimatedTime": "Solo números",
+        "blockedByTask": "Título de tarea existente que bloquea esta"
+      },
+      "parsedSuccess": "{count} tareas analizadas correctamente",
+      "readyToImport": "Haz clic en Importar para agregar estas tareas",
+      "errorsFound": "{count} errores encontrados",
+      "errorRow": "Fila {row}",
+      "moreErrors": "...y {count} errores más",
+      "errors": {
+        "noDataRows": "No se encontraron filas de datos en el archivo CSV",
+        "missingTitleColumn": "Falta la columna requerida 'title'",
+        "emptyTitle": "El título no puede estar vacío",
+        "invalidPriority": "La prioridad debe ser low, medium o high",
+        "invalidDateFormat": "La fecha debe estar en formato AAAA-MM-DD",
+        "invalidNumber": "Debe ser un número válido",
+        "invalidMinutes": "Los minutos deben estar entre 0 y 59"
+      },
+      "importing": "Importando...",
+      "importTasks": "Importar {count} Tareas",
+      "complete": "¡Importación Completa!",
+      "importedCount": "Se importaron {count} tareas exitosamente",
+      "success": "Se importaron {count} tareas exitosamente",
+      "error": "Error al importar tareas. Inténtalo de nuevo."
     }
   },
   "projects": {

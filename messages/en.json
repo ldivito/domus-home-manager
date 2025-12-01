@@ -710,6 +710,48 @@
       "creating": "Creating...",
       "updateTask": "Update Task",
       "updating": "Updating..."
+    },
+    "import": {
+      "button": "Import",
+      "title": "Import Tasks",
+      "description": "Import multiple tasks from a CSV file",
+      "downloadTemplate": "Step 1: Download Template",
+      "downloadTemplateDescription": "Download a CSV template with all available fields and example data",
+      "downloadExample": "Download Template",
+      "uploadFile": "Step 2: Upload Your File",
+      "dropOrClick": "Click to select a CSV file or drag and drop",
+      "csvOnly": "CSV files only (.csv)",
+      "fieldsInfo": "Available Fields",
+      "required": "required",
+      "defaultValue": "default",
+      "fieldDescriptions": {
+        "title": "Task title (required)",
+        "category": "Category name (must match existing category)",
+        "assignedTo": "User name (must match existing user)",
+        "linkedProject": "Project title (must match existing project)",
+        "estimatedTime": "Numbers only",
+        "blockedByTask": "Title of existing task that blocks this one"
+      },
+      "parsedSuccess": "{count} tasks parsed successfully",
+      "readyToImport": "Click Import to add these tasks",
+      "errorsFound": "{count} errors found",
+      "errorRow": "Row {row}",
+      "moreErrors": "...and {count} more errors",
+      "errors": {
+        "noDataRows": "No data rows found in CSV file",
+        "missingTitleColumn": "Missing required 'title' column",
+        "emptyTitle": "Title cannot be empty",
+        "invalidPriority": "Priority must be low, medium, or high",
+        "invalidDateFormat": "Date must be in YYYY-MM-DD format",
+        "invalidNumber": "Must be a valid number",
+        "invalidMinutes": "Minutes must be between 0 and 59"
+      },
+      "importing": "Importing...",
+      "importTasks": "Import {count} Tasks",
+      "complete": "Import Complete!",
+      "importedCount": "Successfully imported {count} tasks",
+      "success": "Successfully imported {count} tasks",
+      "error": "Error importing tasks. Please try again."
     }
   },
   "projects": {

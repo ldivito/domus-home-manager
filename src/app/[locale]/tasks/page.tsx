@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle, Tag, Settings } from "lucide-react"
+import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { AddTaskDialog } from './components/AddTaskDialog'
 import { EditTaskDialog } from './components/EditTaskDialog'
 import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
+import { ImportTasksDialog } from './components/ImportTasksDialog'
 
 export default function TasksPage() {
   const t = useTranslations('tasks')
@@ -21,6 +22,7 @@ export default function TasksPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
@@ -163,6 +165,10 @@ export default function TasksPage() {
             <p className="text-xl text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="lg" className="h-14" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="mr-2 h-5 w-5" />
+              {t('import.button')}
+            </Button>
             <Button variant="outline" size="lg" className="h-14" onClick={() => setCategoriesDialogOpen(true)}>
               <Settings className="mr-2 h-5 w-5" />
               {t('manageCategories')}
@@ -429,6 +435,15 @@ export default function TasksPage() {
           open={categoriesDialogOpen}
           onOpenChange={setCategoriesDialogOpen}
           categories={categories}
+        />
+
+        <ImportTasksDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          users={users}
+          categories={categories}
+          projects={projects}
+          existingTasks={tasks}
         />
       </div>
     </div>

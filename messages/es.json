@@ -1180,6 +1180,7 @@
       "active": "Activo",
       "inactive": "Inactivo",
       "dueOn": "Vence el día {day}",
+      "totalMonthly": "Total de Gastos Mensuales",
       "frequency": {
         "monthly": "Mensual",
         "bimonthly": "Cada 2 Meses",
@@ -1193,6 +1194,7 @@
         "namePlaceholder": "ej., Renta, Electricidad",
         "description": "Descripción",
         "descriptionPlaceholder": "Descripción opcional",
+        "currency": "Moneda",
         "amount": "Monto",
         "amountPlaceholder": "Ingresa el monto",
         "category": "Categoría",

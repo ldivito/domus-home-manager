@@ -64,7 +64,12 @@ export default function FinancePage() {
     }
     return sum + inc.amount
   }, 0)
-  const totalMonthlyExpenses = activeExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const totalMonthlyExpenses = activeExpenses.reduce((sum, exp) => {
+    if (exp.currency === 'USD') {
+      return sum + (exp.amount * exchangeRate)
+    }
+    return sum + exp.amount
+  }, 0)
 
   return (
     <div className="p-8">
@@ -173,6 +178,7 @@ export default function FinancePage() {
             <ExpensesTab
               expenses={recurringExpenses}
               categories={expenseCategories}
+              exchangeRate={currentExchangeRate}
             />
           </TabsContent>
 

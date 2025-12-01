@@ -304,6 +304,7 @@ export interface RecurringExpense {
   name: string                // e.g., "Rent", "Electricity"
   description?: string
   amount: number              // Fixed amount or estimated
+  currency: 'ARS' | 'USD'     // Currency of the expense
   category: string            // Category ID reference
   frequency: 'monthly' | 'bimonthly' | 'quarterly' | 'yearly'
   dueDay: number              // Day of month (1-31)
@@ -366,6 +367,46 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
+
+    // v17: Add currency to expenses
+    this.version(17).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt'
+    })
+
+    // v17 upgrade: add default currency to existing expenses
+    this.version(17).upgrade(async (tx) => {
+      const expenses = await tx.table('recurringExpenses').toArray()
+      for (const expense of expenses) {
+        if (!expense.currency) {
+          await tx.table('recurringExpenses').update(expense.id, {
+            currency: 'ARS'
+          })
+        }
+      }
+      console.log('Database upgraded to v17 with expense currency support')
+    })
 
     // v16: Add exchange rates and currency to income
     this.version(16).stores({

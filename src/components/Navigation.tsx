@@ -21,7 +21,8 @@ import {
   User,
   Wallet,
   FileText,
-  Wrench
+  Wrench,
+  CreditCard
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -120,6 +121,7 @@ export default function Navigation() {
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },
     { nameKey: 'keto', href: '/keto', icon: Heart },
     { nameKey: 'finance', href: '/finance', icon: Wallet },
+    { nameKey: 'subscriptions', href: '/subscriptions', icon: CreditCard },
     { nameKey: 'planner', href: '/planner', icon: Calendar },
     { nameKey: 'tasks', href: '/tasks', icon: List },
     { nameKey: 'projects', href: '/projects', icon: Hammer },

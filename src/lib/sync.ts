@@ -26,6 +26,7 @@ export interface SyncResult {
 }
 
 const SYNC_TABLES = [
+  // Core tables
   'users',
   'households',
   'householdMembers',
@@ -41,8 +42,35 @@ const SYNC_TABLES = [
   'reminders',
   'calendarEvents',
   'homeSettings',
+  // Keto module
   'ketoSettings',
-  'ketoDays'
+  'ketoDays',
+  // Finance module
+  'monthlyIncomes',
+  'monthlyExchangeRates',
+  'recurringExpenses',
+  'expenseCategories',
+  'expensePayments',
+  'settlementPayments',
+  // Document Vault module
+  'documents',
+  'documentFolders',
+  'documentTags',
+  // Maintenance Scheduler module
+  'maintenanceItems',
+  'maintenanceTasks',
+  'maintenanceLogs',
+  // Subscription Manager module
+  'subscriptions',
+  'subscriptionPayments',
+  // Pet Management module
+  'pets',
+  'petFeedingSchedules',
+  'petFeedingLogs',
+  'petMedications',
+  'petMedicationLogs',
+  'petVetVisits',
+  'petVaccinations'
 ] as const
 
 type SyncTable = typeof SYNC_TABLES[number]

@@ -639,10 +639,14 @@
     "tryDifferentFilter": "Intenta ajustar los filtros",
     "searchPlaceholder": "Buscar tareas...",
     "markComplete": "Marcar Completa",
+    "blocked": "Bloqueada",
+    "blockedBy": "Bloqueada por",
+    "completeBlockerFirst": "Completa primero la tarea bloqueadora",
     "filters": {
       "priority": "Prioridad",
       "status": "Estado",
-      "assignee": "Asignado a"
+      "assignee": "Asignado a",
+      "project": "Proyecto"
     },
     "priority": {
       "low": "Baja",
@@ -663,6 +667,16 @@
       "priority": "Prioridad",
       "dueDate": "Fecha límite",
       "pickDate": "Selecciona una fecha",
+      "linkedProject": "Proyecto Vinculado",
+      "selectProject": "Selecciona un proyecto",
+      "noProject": "Sin proyecto",
+      "estimatedTime": "Tiempo Estimado",
+      "hours": "horas",
+      "minutes": "min",
+      "blockedBy": "Bloqueada Por",
+      "selectBlocker": "Selecciona tarea bloqueadora",
+      "noBlocker": "Sin bloqueo",
+      "blockedByHint": "Esta tarea no puede completarse hasta que la tarea bloqueadora esté hecha",
       "createTask": "Crear Tarea",
       "creating": "Creando...",
       "updateTask": "Actualizar Tarea",

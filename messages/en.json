@@ -639,10 +639,14 @@
     "tryDifferentFilter": "Try adjusting your filters",
     "searchPlaceholder": "Search tasks...",
     "markComplete": "Mark Complete",
+    "blocked": "Blocked",
+    "blockedBy": "Blocked by",
+    "completeBlockerFirst": "Complete the blocking task first",
     "filters": {
       "priority": "Priority",
       "status": "Status",
-      "assignee": "Assignee"
+      "assignee": "Assignee",
+      "project": "Project"
     },
     "priority": {
       "low": "Low",
@@ -663,6 +667,16 @@
       "priority": "Priority",
       "dueDate": "Due Date",
       "pickDate": "Pick a date",
+      "linkedProject": "Linked Project",
+      "selectProject": "Select a project",
+      "noProject": "No project",
+      "estimatedTime": "Estimated Time",
+      "hours": "hours",
+      "minutes": "min",
+      "blockedBy": "Blocked By",
+      "selectBlocker": "Select blocking task",
+      "noBlocker": "No blocker",
+      "blockedByHint": "This task cannot be completed until the blocking task is done",
       "createTask": "Create Task",
       "creating": "Creating...",
       "updateTask": "Update Task",

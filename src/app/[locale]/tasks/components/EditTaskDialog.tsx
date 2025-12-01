@@ -15,9 +15,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, User } from "lucide-react"
+import { CalendarIcon, User, FolderKanban, Clock, AlertTriangle } from "lucide-react"
 import { format } from "date-fns"
-import { db, User as UserType, Task } from '@/lib/db'
+import { db, User as UserType, Task, HomeImprovement } from '@/lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { cn } from "@/lib/utils"
 
 interface EditTaskDialogProps {
@@ -30,13 +31,32 @@ interface EditTaskDialogProps {
 export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDialogProps) {
   const t = useTranslations('tasks')
   const tCommon = useTranslations('common')
-  
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assignedUserId, setAssignedUserId] = useState<string>('')
   const [dueDate, setDueDate] = useState<Date | undefined>()
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [linkedProjectId, setLinkedProjectId] = useState<string>('')
+  const [estimatedHours, setEstimatedHours] = useState<string>('')
+  const [estimatedMinutes, setEstimatedMinutes] = useState<string>('')
+  const [blockedByTaskId, setBlockedByTaskId] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Fetch projects for dropdown
+  const projects = useLiveQuery(
+    () => db.homeImprovements.toArray(),
+    []
+  ) || []
+
+  // Fetch other tasks for blocker dropdown (excluding current task)
+  const existingTasks = useLiveQuery(
+    () => db.tasks.where('isCompleted').equals(0).toArray(),
+    []
+  ) || []
+
+  // Filter out current task from blocker options
+  const blockerOptions = existingTasks.filter(t => t.id !== task?.id)
 
   // Pre-fill form when task changes
   useEffect(() => {
@@ -46,25 +66,36 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
       setAssignedUserId(task.assignedUserId ? task.assignedUserId.toString() : 'unassigned')
       setDueDate(task.dueDate ? new Date(task.dueDate) : undefined)
       setPriority(task.priority)
+      setLinkedProjectId(task.linkedProjectId || 'none')
+      setEstimatedHours(task.estimatedTime?.hours?.toString() || '')
+      setEstimatedMinutes(task.estimatedTime?.minutes?.toString() || '')
+      setBlockedByTaskId(task.blockedByTaskId || 'none')
     }
   }, [task, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!title.trim() || !task?.id) {
       return
     }
 
     setIsSubmitting(true)
-    
+
     try {
+      const hours = estimatedHours ? parseInt(estimatedHours) : 0
+      const minutes = estimatedMinutes ? parseInt(estimatedMinutes) : 0
+      const hasEstimatedTime = hours > 0 || minutes > 0
+
       await db.tasks.update(task.id, {
         title: title.trim(),
         description: description.trim() || undefined,
         assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
         dueDate: dueDate,
         priority,
+        linkedProjectId: linkedProjectId && linkedProjectId !== 'none' ? linkedProjectId : undefined,
+        estimatedTime: hasEstimatedTime ? { hours, minutes } : undefined,
+        blockedByTaskId: blockedByTaskId && blockedByTaskId !== 'none' ? blockedByTaskId : undefined,
       })
 
       onOpenChange(false)
@@ -83,11 +114,11 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{t('editTask')}</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
@@ -126,7 +157,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id!.toString()}>
                     <div className="flex items-center space-x-2">
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: user.color }}
                       />
@@ -198,13 +229,89 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
             </Popover>
           </div>
 
+          {/* Linked Project */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-linkedProject">{t('form.linkedProject')}</Label>
+            <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
+              <SelectTrigger>
+                <FolderKanban className="mr-2 h-4 w-4" />
+                <SelectValue placeholder={t('form.selectProject')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t('form.noProject')}</SelectItem>
+                {projects.map((project: HomeImprovement) => (
+                  <SelectItem key={project.id} value={project.id!.toString()}>
+                    <div className="flex items-center space-x-2">
+                      <span>{project.title}</span>
+                      <span className="text-xs text-gray-500">({project.status})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Estimated Time */}
+          <div className="space-y-2">
+            <Label>{t('form.estimatedTime')}</Label>
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-gray-500" />
+              <div className="flex items-center space-x-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={estimatedHours}
+                  onChange={(e) => setEstimatedHours(e.target.value)}
+                  placeholder="0"
+                  className="w-20"
+                />
+                <span className="text-sm text-gray-500">{t('form.hours')}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={estimatedMinutes}
+                  onChange={(e) => setEstimatedMinutes(e.target.value)}
+                  placeholder="0"
+                  className="w-20"
+                />
+                <span className="text-sm text-gray-500">{t('form.minutes')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Blocked By Task */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-blockedBy">{t('form.blockedBy')}</Label>
+            <Select value={blockedByTaskId} onValueChange={setBlockedByTaskId}>
+              <SelectTrigger>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                <SelectValue placeholder={t('form.selectBlocker')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t('form.noBlocker')}</SelectItem>
+                {blockerOptions.map((blockerTask: Task) => (
+                  <SelectItem key={blockerTask.id} value={blockerTask.id!.toString()}>
+                    <div className="flex items-center space-x-2">
+                      <span>{blockerTask.title}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">{t('form.blockedByHint')}</p>
+          </div>
+
           {/* Actions */}
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={handleCancel}>
               {tCommon('cancel')}
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!title.trim() || isSubmitting}
             >
               {isSubmitting ? t('form.updating') : t('form.updateTask')}

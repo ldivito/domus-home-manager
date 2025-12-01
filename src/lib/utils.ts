@@ -33,6 +33,25 @@ export function toDate(value: Date | string | number | undefined | null): Date {
   return isNaN(parsed.getTime()) ? new Date() : parsed
 }
 
+/**
+ * Format a number as Argentinian Peso (ARS)
+ * Uses periods for thousands separator and comma for decimal separator
+ * Example: 1234567.89 => "1.234.567,89"
+ */
+export function formatARS(amount: number): string {
+  // Round to 2 decimal places
+  const rounded = Math.round(amount * 100) / 100
+
+  // Split into integer and decimal parts
+  const [intPart, decPart = '00'] = rounded.toFixed(2).split('.')
+
+  // Add thousand separators (periods)
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  // Return with comma as decimal separator
+  return `${formattedInt},${decPart}`
+}
+
 // Generate a short, shareable invite code (8 characters, uppercase alphanumeric)
 export function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Removed ambiguous chars: I, O, 0, 1

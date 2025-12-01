@@ -1139,20 +1139,36 @@
       "setIncome": "Establecer Ingresos",
       "noIncome": "No hay ingresos registrados para este mes",
       "noIncomeDescription": "Agrega ingresos para los miembros del hogar para calcular el reparto de gastos",
+      "noIncomeSet": "Sin ingresos establecidos",
       "totalHousehold": "Ingresos Totales del Hogar",
       "share": "Participación",
       "history": "Historial de Ingresos",
       "viewHistory": "Ver Historial",
       "noHistory": "No hay historial de ingresos",
+      "exchangeRate": "Tipo de Cambio",
+      "noExchangeRate": "Sin tipo de cambio establecido",
+      "exchangeRateUpdated": "Tipo de cambio actualizado exitosamente",
       "dialog": {
         "title": "Establecer Ingresos Mensuales",
         "description": "Ingresa los ingresos para {month} {year}",
         "amount": "Monto",
         "amountPlaceholder": "Ingresa el monto",
         "selectUser": "Seleccionar Miembro",
+        "currency": "Moneda",
+        "argentinePeso": "Peso Argentino",
+        "usDollar": "Dólar Estadounidense",
+        "willBeConverted": "Se convertirá a 1 USD = $ {rate} ARS",
+        "setExchangeRateFirst": "Establece el tipo de cambio primero para convertir USD a ARS",
         "save": "Guardar Ingresos",
         "saving": "Guardando...",
         "cancel": "Cancelar"
+      },
+      "exchangeDialog": {
+        "title": "Establecer Tipo de Cambio",
+        "description": "Establece el tipo de cambio USD a ARS para {month} {year}",
+        "rate": "Tipo de Cambio",
+        "ratePlaceholder": "ej., 1000",
+        "hint": "Ingresa el tipo de cambio actual de USD a ARS para este mes"
       }
     },
     "expenses": {

@@ -281,6 +281,17 @@ export interface MonthlyIncome {
   id?: string
   userId: string              // Reference to User
   amount: number              // Income amount
+  currency: 'ARS' | 'USD'     // Currency of the income
+  month: number               // 1-12
+  year: number                // e.g., 2024
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MonthlyExchangeRate {
+  id?: string
+  rate: number                // USD to ARS exchange rate
   month: number               // 1-12
   year: number                // e.g., 2024
   householdId?: string
@@ -346,6 +357,7 @@ export class DomusDatabase extends Dexie {
   ketoDays!: Table<KetoDay>
   // Finance tables
   monthlyIncomes!: Table<MonthlyIncome>
+  monthlyExchangeRates!: Table<MonthlyExchangeRate>
   recurringExpenses!: Table<RecurringExpense>
   expenseCategories!: Table<ExpenseCategory>
   expensePayments!: Table<ExpensePayment>
@@ -354,6 +366,46 @@ export class DomusDatabase extends Dexie {
 
   constructor() {
     super('DomusDatabase')
+
+    // v16: Add exchange rates and currency to income
+    this.version(16).stores({
+      users: 'id, name, email, color, type, householdId',
+      households: 'id, name, owner, createdAt, updatedAt',
+      householdMembers: 'id, householdId, userId, role, joinedAt',
+      chores: 'id, title, householdId, assignedUserId, frequency, nextDue, isCompleted',
+      groceryItems: 'id, name, householdId, category, importance, addedBy, createdAt',
+      groceryCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedGroceryItems: 'id, name, householdId, category, importance, timesUsed, lastUsed, createdAt',
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, createdAt',
+      homeImprovements: 'id, title, householdId, status, assignedUserId, priority, createdAt',
+      meals: 'id, title, householdId, date, mealType, assignedUserId',
+      mealCategories: 'id, name, householdId, isDefault, locale, createdAt',
+      savedMeals: 'id, name, householdId, category, timesUsed, lastUsed, createdAt',
+      reminders: 'id, title, householdId, reminderTime, isCompleted, userId, type',
+      calendarEvents: 'id, title, householdId, date, type',
+      homeSettings: 'id, householdId, homeName, lastUpdated, createdAt',
+      ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
+      ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
+      // Finance tables
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
+      monthlyExchangeRates: 'id, [month+year], householdId, createdAt',
+      recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
+      expenseCategories: 'id, name, isDefault, householdId, createdAt',
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt'
+    })
+
+    // v16 upgrade: add default currency to existing incomes
+    this.version(16).upgrade(async (tx) => {
+      const incomes = await tx.table('monthlyIncomes').toArray()
+      for (const income of incomes) {
+        if (!income.currency) {
+          await tx.table('monthlyIncomes').update(income.id, {
+            currency: 'ARS'
+          })
+        }
+      }
+      console.log('Database upgraded to v16 with currency support')
+    })
 
     // v15: Add Finance module tables
     this.version(15).stores({

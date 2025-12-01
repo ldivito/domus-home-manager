@@ -1139,20 +1139,36 @@
       "setIncome": "Set Income",
       "noIncome": "No income recorded for this month",
       "noIncomeDescription": "Add income for household members to calculate expense splits",
+      "noIncomeSet": "No income set",
       "totalHousehold": "Total Household Income",
       "share": "Share",
       "history": "Income History",
       "viewHistory": "View History",
       "noHistory": "No income history",
+      "exchangeRate": "Exchange Rate",
+      "noExchangeRate": "No exchange rate set",
+      "exchangeRateUpdated": "Exchange rate updated successfully",
       "dialog": {
         "title": "Set Monthly Income",
         "description": "Enter income for {month} {year}",
         "amount": "Amount",
         "amountPlaceholder": "Enter amount",
         "selectUser": "Select Member",
+        "currency": "Currency",
+        "argentinePeso": "Argentine Peso",
+        "usDollar": "US Dollar",
+        "willBeConverted": "Will be converted at 1 USD = $ {rate} ARS",
+        "setExchangeRateFirst": "Set exchange rate first to convert USD to ARS",
         "save": "Save Income",
         "saving": "Saving...",
         "cancel": "Cancel"
+      },
+      "exchangeDialog": {
+        "title": "Set Exchange Rate",
+        "description": "Set USD to ARS exchange rate for {month} {year}",
+        "rate": "Exchange Rate",
+        "ratePlaceholder": "e.g., 1000",
+        "hint": "Enter the current USD to ARS exchange rate for this month"
       }
     },
     "expenses": {

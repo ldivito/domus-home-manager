@@ -11,6 +11,7 @@ import { IncomeTab } from './components/IncomeTab'
 import { ExpensesTab } from './components/ExpensesTab'
 import { PaymentsTab } from './components/PaymentsTab'
 import { BalanceTab } from './components/BalanceTab'
+import { formatARS } from '@/lib/utils'
 
 export default function FinancePage() {
   const t = useTranslations('finance')
@@ -31,6 +32,15 @@ export default function FinancePage() {
     [currentMonth, currentYear]
   ) || []
 
+  // Get current month's exchange rate
+  const currentExchangeRate = useLiveQuery(
+    () => db.monthlyExchangeRates
+      .where('[month+year]')
+      .equals([currentMonth, currentYear])
+      .first(),
+    [currentMonth, currentYear]
+  )
+
   // Get all recurring expenses
   const recurringExpenses = useLiveQuery(() => db.recurringExpenses.toArray()) || []
   const activeExpenses = recurringExpenses.filter(e => e.isActive)
@@ -44,8 +54,16 @@ export default function FinancePage() {
     []
   ) || []
 
-  // Calculate totals
-  const totalHouseholdIncome = currentIncomes.reduce((sum, inc) => sum + inc.amount, 0)
+  // Get exchange rate value (default to 1 if not set)
+  const exchangeRate = currentExchangeRate?.rate || 1
+
+  // Calculate totals - convert USD to ARS
+  const totalHouseholdIncome = currentIncomes.reduce((sum, inc) => {
+    if (inc.currency === 'USD') {
+      return sum + (inc.amount * exchangeRate)
+    }
+    return sum + inc.amount
+  }, 0)
   const totalMonthlyExpenses = activeExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
   return (
@@ -73,7 +91,7 @@ export default function FinancePage() {
                     {t('income.totalHousehold')}
                   </p>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                    ${totalHouseholdIncome.toLocaleString()}
+                    $ {formatARS(totalHouseholdIncome)}
                   </p>
                 </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full">
@@ -91,7 +109,7 @@ export default function FinancePage() {
                     {t('expenses.title')}
                   </p>
                   <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                    ${totalMonthlyExpenses.toLocaleString()}
+                    $ {formatARS(totalMonthlyExpenses)}
                   </p>
                 </div>
                 <div className="p-3 bg-red-100 dark:bg-red-900/50 rounded-full">
@@ -109,7 +127,7 @@ export default function FinancePage() {
                     {t('balance.netBalance')}
                   </p>
                   <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    ${(totalHouseholdIncome - totalMonthlyExpenses).toLocaleString()}
+                    $ {formatARS(totalHouseholdIncome - totalMonthlyExpenses)}
                   </p>
                 </div>
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full">
@@ -147,6 +165,7 @@ export default function FinancePage() {
               currentIncomes={currentIncomes}
               currentMonth={currentMonth}
               currentYear={currentYear}
+              exchangeRate={currentExchangeRate}
             />
           </TabsContent>
 

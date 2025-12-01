@@ -66,6 +66,22 @@ export function SubscriptionDetailDialog({
     }).format(amount)
   }
 
+  // Get formatted amounts for both currencies
+  const getFormattedAmounts = () => {
+    const amounts: { label: string; value: string }[] = []
+    if (subscription.amountARS) {
+      amounts.push({ label: 'ARS', value: formatCurrency(subscription.amountARS, 'ARS') })
+    }
+    if (subscription.amountUSD) {
+      amounts.push({ label: 'USD', value: formatCurrency(subscription.amountUSD, 'USD') })
+    }
+    // Fallback to legacy field
+    if (amounts.length === 0) {
+      amounts.push({ label: subscription.currency, value: formatCurrency(subscription.amount, subscription.currency) })
+    }
+    return amounts
+  }
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('es-AR', {
       year: 'numeric',
@@ -132,9 +148,13 @@ export function SubscriptionDetailDialog({
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">{t('form.amount')}</p>
-              <p className="text-lg font-semibold">
-                {formatCurrency(subscription.amount, subscription.currency)}
-              </p>
+              <div className="space-y-0.5">
+                {getFormattedAmounts().map((amount, idx) => (
+                  <p key={idx} className={idx === 0 ? "text-lg font-semibold" : "text-md text-muted-foreground"}>
+                    {amount.value}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
 

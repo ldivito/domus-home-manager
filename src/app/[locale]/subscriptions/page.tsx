@@ -152,6 +152,22 @@ export default function SubscriptionsPage() {
     return `${currency} ${amount.toLocaleString()}`
   }
 
+  // Format subscription amounts for display
+  const formatSubscriptionAmount = (subscription: Subscription) => {
+    const parts: string[] = []
+    if (subscription.amountARS) {
+      parts.push(`ARS ${subscription.amountARS.toLocaleString()}`)
+    }
+    if (subscription.amountUSD) {
+      parts.push(`USD ${subscription.amountUSD.toLocaleString()}`)
+    }
+    // Fallback to legacy fields if new fields are not set
+    if (parts.length === 0) {
+      parts.push(formatCurrency(subscription.amount, subscription.currency))
+    }
+    return parts
+  }
+
   const isDueSoon = (date: Date) => {
     const now = new Date()
     const dueDate = new Date(date)
@@ -411,8 +427,12 @@ export default function SubscriptionsPage() {
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="text-2xl font-bold">
-                        {formatCurrency(subscription.amount, subscription.currency)}
+                      <div className="space-y-0.5">
+                        {formatSubscriptionAmount(subscription).map((amount, idx) => (
+                          <div key={idx} className={idx === 0 ? "text-2xl font-bold" : "text-lg font-semibold text-muted-foreground"}>
+                            {amount}
+                          </div>
+                        ))}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         /{t(`cycles.${subscription.billingCycle}`)}
@@ -496,8 +516,12 @@ export default function SubscriptionsPage() {
                         {t(`status.${subscription.status}`)}
                       </Badge>
                     </div>
-                    <div className="text-lg font-medium text-muted-foreground">
-                      {formatCurrency(subscription.amount, subscription.currency)}
+                    <div className="text-muted-foreground">
+                      {formatSubscriptionAmount(subscription).map((amount, idx) => (
+                        <span key={idx} className={idx === 0 ? "text-lg font-medium" : "text-sm ml-2"}>
+                          {amount}
+                        </span>
+                      ))}
                       <span className="text-sm">/{t(`cycles.${subscription.billingCycle}`)}</span>
                     </div>
                   </CardContent>

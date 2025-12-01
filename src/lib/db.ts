@@ -375,7 +375,7 @@ export class DomusDatabase extends Dexie {
       ketoSettings: 'id, householdId, userId, startDate, createdAt, updatedAt',
       ketoDays: 'id, householdId, userId, date, status, createdAt, updatedAt',
       // Finance tables
-      monthlyIncomes: 'id, userId, month, year, householdId, createdAt',
+      monthlyIncomes: 'id, userId, [month+year], householdId, createdAt',
       recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
       expenseCategories: 'id, name, isDefault, householdId, createdAt',
       expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt'

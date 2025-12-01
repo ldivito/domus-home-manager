@@ -22,7 +22,10 @@ import {
   Flame,
   FileText,
   Wrench,
-  CreditCard
+  CreditCard,
+  PawPrint,
+  Syringe,
+  Pill
 } from "lucide-react"
 import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
@@ -378,6 +381,25 @@ export default function HomePage() {
 
     return sum + monthlyAmountARS
   }, 0)
+
+  // Pets data queries
+  const pets = useLiveQuery(() => db.pets.toArray(), []) || []
+
+  const upcomingVaccinations = useLiveQuery(async () => {
+    const now = new Date()
+    const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+    return db.petVaccinations
+      .where('nextDueDate')
+      .between(now, twoWeeksFromNow)
+      .toArray()
+  }, []) || []
+
+  const activeMedications = useLiveQuery(async () => {
+    return db.petMedications
+      .where('isActive')
+      .equals(1)
+      .toArray()
+  }, []) || []
 
   // Get next 4-5 chores for display
   const nextChores = useLiveQuery(
@@ -1212,6 +1234,84 @@ export default function HomePage() {
                     <Link href="/subscriptions">
                       <Button variant="outline" size="sm" className="mt-2">
                         {t('widgets.subscriptions.addFirst')}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pets Widget */}
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                    <div className="p-2 bg-amber-500/15 rounded-xl border border-amber-200/50">
+                      <PawPrint className="h-6 w-6 text-amber-600" />
+                    </div>
+                    {t('widgets.pets.title')}
+                  </CardTitle>
+                  <Link href="/pets">
+                    <Button variant="ghost" size="lg" className="touch-target">
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-3">
+                {pets.length > 0 ? (
+                  <>
+                    {/* Pets Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/40 rounded-xl border border-amber-200/50 text-center">
+                        <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{pets.length}</p>
+                        <p className="text-xs font-medium text-amber-600 dark:text-amber-400">{t('widgets.pets.totalPets')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 rounded-xl border border-yellow-200/50 text-center">
+                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{upcomingVaccinations.length}</p>
+                        <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{t('widgets.pets.vaccinesDue')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/40 rounded-xl border border-blue-200/50 text-center">
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{activeMedications.length}</p>
+                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400">{t('widgets.pets.medications')}</p>
+                      </div>
+                    </div>
+
+                    {/* Alerts */}
+                    {(upcomingVaccinations.length > 0 || activeMedications.length > 0) && (
+                      <div className="space-y-2">
+                        {upcomingVaccinations.length > 0 && (
+                          <div className="p-3 rounded-xl border bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 border-yellow-200/50">
+                            <div className="flex items-center gap-2">
+                              <Syringe className="h-4 w-4 text-yellow-500" />
+                              <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                                {upcomingVaccinations.length} {t('widgets.pets.vaccinationsDueSoon')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {activeMedications.length > 0 && (
+                          <div className="p-3 rounded-xl border bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/40 border-blue-200/50">
+                            <div className="flex items-center gap-2">
+                              <Pill className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                {activeMedications.length} {t('widgets.pets.activeMedications')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <PawPrint className="h-7 w-7 text-amber-500" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">{t('widgets.pets.noPets')}</p>
+                    <Link href="/pets">
+                      <Button variant="outline" size="sm" className="mt-2">
+                        {t('widgets.pets.addFirst')}
                       </Button>
                     </Link>
                   </div>

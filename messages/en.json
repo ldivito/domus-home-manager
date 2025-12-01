@@ -735,6 +735,15 @@
       "completed": "Completed",
       "estimatedCost": "Estimated Cost"
     },
+    "detail": {
+      "createdAt": "Created",
+      "linkedTasks": "Linked Tasks",
+      "completed": "completed",
+      "noLinkedTasks": "No linked tasks",
+      "noLinkedTasksHint": "Link tasks to this project from the Tasks page",
+      "pendingTasks": "Pending",
+      "completedTasks": "Completed"
+    },
     "form": {
       "name": "Project Name",
       "namePlaceholder": "Enter project name",

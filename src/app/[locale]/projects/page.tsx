@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
-import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical } from "lucide-react"
+import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical, ListTodo } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { db, HomeImprovement } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddProjectDialog } from './components/AddProjectDialog'
 import { EditProjectDialog } from './components/EditProjectDialog'
+import { ProjectDetailDialog } from './components/ProjectDetailDialog'
 
 type StatusType = 'todo' | 'in-progress' | 'done'
 
@@ -17,7 +18,9 @@ export default function ProjectsPage() {
   const t = useTranslations('projects')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<HomeImprovement | null>(null)
+  const [selectedProject, setSelectedProject] = useState<HomeImprovement | null>(null)
   const [draggedProject, setDraggedProject] = useState<HomeImprovement | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<StatusType | null>(null)
 
@@ -28,6 +31,11 @@ export default function ProjectsPage() {
 
   const users = useLiveQuery(
     () => db.users.toArray(),
+    []
+  ) || []
+
+  const tasks = useLiveQuery(
+    () => db.tasks.toArray(),
     []
   ) || []
 
@@ -58,10 +66,32 @@ export default function ProjectsPage() {
     setEditDialogOpen(true)
   }
 
+  const handleViewProject = (project: HomeImprovement) => {
+    setSelectedProject(project)
+    setDetailDialogOpen(true)
+  }
+
+  const handleEditFromDetail = () => {
+    if (selectedProject) {
+      setDetailDialogOpen(false)
+      setEditingProject(selectedProject)
+      setEditDialogOpen(true)
+    }
+  }
+
   const getUserName = (userId?: string) => {
     if (!userId) return null
     const user = users.find(u => u.id === userId)
     return user?.name || null
+  }
+
+  const getTaskCounts = (projectId?: string) => {
+    if (!projectId) return { pending: 0, completed: 0 }
+    const linkedTasks = tasks.filter(task => task.linkedProjectId === projectId)
+    return {
+      pending: linkedTasks.filter(task => !task.isCompleted).length,
+      completed: linkedTasks.filter(task => task.isCompleted).length
+    }
   }
 
   const handleDragStart = (e: React.DragEvent, project: HomeImprovement) => {
@@ -115,15 +145,18 @@ export default function ProjectsPage() {
   const ProjectCard = ({ project }: { project: HomeImprovement }) => {
     const userName = getUserName(project.assignedUserId)
     const isDragging = draggedProject?.id === project.id
+    const taskCounts = getTaskCounts(project.id)
+    const totalTasks = taskCounts.pending + taskCounts.completed
 
     return (
       <Card
         className={`mb-2 cursor-grab active:cursor-grabbing transition-all ${
-          isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md'
+          isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md hover:border-purple-300 dark:hover:border-purple-600'
         }`}
         draggable
         onDragStart={(e) => handleDragStart(e, project)}
         onDragEnd={handleDragEnd}
+        onClick={() => handleViewProject(project)}
       >
         <CardContent className="p-3">
           <div className="flex items-start gap-2">
@@ -150,6 +183,14 @@ export default function ProjectsPage() {
                     <span className="flex items-center">
                       <DollarSign className="mr-0.5 h-3 w-3" />
                       {project.estimatedCost.toFixed(0)}
+                    </span>
+                  )}
+                  {totalTasks > 0 && (
+                    <span className="flex items-center gap-1">
+                      <ListTodo className="h-3 w-3" />
+                      <span className="text-green-600 dark:text-green-400">{taskCounts.completed}</span>
+                      <span>/</span>
+                      <span>{totalTasks}</span>
                     </span>
                   )}
                 </div>
@@ -301,6 +342,15 @@ export default function ProjectsPage() {
           onOpenChange={setEditDialogOpen}
           project={editingProject}
           users={users}
+        />
+
+        <ProjectDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          project={selectedProject}
+          users={users}
+          tasks={tasks}
+          onEdit={handleEditFromDetail}
         />
       </div>
     </div>

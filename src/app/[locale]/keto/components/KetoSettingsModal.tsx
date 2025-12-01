@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 interface KetoSettingsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  currentStartDate?: Date
+  currentStartDate?: Date | string
   onSave: (startDate: Date) => void
 }
 
@@ -33,8 +33,10 @@ export default function KetoSettingsModal({
 
   useEffect(() => {
     if (currentStartDate) {
+      // Handle both Date objects and ISO strings from IndexedDB
+      const date = currentStartDate instanceof Date ? currentStartDate : new Date(currentStartDate)
       // Format date as YYYY-MM-DD for input
-      const formatted = currentStartDate.toISOString().split('T')[0]
+      const formatted = date.toISOString().split('T')[0]
       setStartDate(formatted)
     } else {
       // Default to today

@@ -21,6 +21,18 @@ export function generateId(prefix: string): string {
   return `${prefix}_${fallback}`
 }
 
+/**
+ * Safely convert a date value to a Date object.
+ * Handles Date objects, ISO strings (from IndexedDB), and timestamps.
+ * Returns the current date if input is invalid.
+ */
+export function toDate(value: Date | string | number | undefined | null): Date {
+  if (!value) return new Date()
+  if (value instanceof Date) return value
+  const parsed = new Date(value)
+  return isNaN(parsed.getTime()) ? new Date() : parsed
+}
+
 // Generate a short, shareable invite code (8 characters, uppercase alphanumeric)
 export function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Removed ambiguous chars: I, O, 0, 1

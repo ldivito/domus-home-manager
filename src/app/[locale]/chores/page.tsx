@@ -174,15 +174,17 @@ export default function ChoresPage() {
     }
   }
 
-  const isOverdue = (date: Date) => {
-    return date < new Date()
+  const isOverdue = (date: Date | string) => {
+    const d = date instanceof Date ? date : new Date(date)
+    return d < new Date()
   }
 
-  const formatDueDate = (date: Date) => {
+  const formatDueDate = (date: Date | string) => {
+    const d = date instanceof Date ? date : new Date(date)
     const now = new Date()
-    const diff = date.getTime() - now.getTime()
+    const diff = d.getTime() - now.getTime()
     const days = Math.ceil(diff / (24 * 60 * 60 * 1000))
-    
+
     if (days === 0) return t('dueToday')
     if (days === 1) return t('dueTomorrow')
     if (days === -1) return t('dueYesterday')
@@ -313,7 +315,7 @@ export default function ChoresPage() {
                       ) : (
                         <div className="flex items-center text-sm text-green-600">
                           <Calendar className="mr-2 h-4 w-4" />
-                          {t('completedOn')} {chore.completedAt?.toLocaleDateString()} {chore.completedAt?.toLocaleTimeString()}
+                          {t('completedOn')} {chore.completedAt ? new Date(chore.completedAt).toLocaleDateString() : ''} {chore.completedAt ? new Date(chore.completedAt).toLocaleTimeString() : ''}
                         </div>
                       )}
                       

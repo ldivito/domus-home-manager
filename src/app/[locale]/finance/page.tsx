@@ -199,6 +199,8 @@ export default function FinancePage() {
               users={users}
               payments={payments}
               incomes={currentIncomes}
+              expenses={recurringExpenses}
+              exchangeRate={currentExchangeRate}
             />
           </TabsContent>
         </Tabs>

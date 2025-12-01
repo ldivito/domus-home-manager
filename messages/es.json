@@ -175,6 +175,14 @@
         "cheatDays": "Días Trampa",
         "notStarted": "Sin seguimiento aún",
         "startTracking": "Comenzar Seguimiento"
+      },
+      "documents": {
+        "title": "Documentos",
+        "total": "Total de Documentos",
+        "expiring": "Por Vencer",
+        "expired": "Vencidos",
+        "noDocuments": "Sin documentos aún",
+        "uploadFirst": "Sube tu primer documento"
       }
     },
     "quickActions": {

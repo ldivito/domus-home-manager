@@ -29,15 +29,15 @@ export default function ProjectsPage() {
   ) || []
 
   const priorityColors = {
-    high: 'bg-red-100 text-red-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    low: 'bg-green-100 text-green-800'
+    high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
   }
 
   const statusColors = {
-    todo: 'border-gray-300 bg-gray-50',
-    'in-progress': 'border-blue-300 bg-blue-50',
-    done: 'border-green-300 bg-green-50'
+    todo: 'border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50',
+    'in-progress': 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/30',
+    done: 'border-green-300 bg-green-50 dark:border-green-600 dark:bg-green-900/30'
   }
 
   const handleDeleteProject = async (projectId: string) => {
@@ -79,7 +79,7 @@ export default function ProjectsPage() {
           <CardDescription className="text-base">{project.description}</CardDescription>
         )}
         <div className="flex items-center gap-4 mt-2">
-          <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
             <User className="mr-1 h-4 w-4" />
             <span>{getUserName(project.assignedUserId)}</span>
           </div>
@@ -87,7 +87,7 @@ export default function ProjectsPage() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
-          <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
             <DollarSign className="mr-1 h-4 w-4" />
             {project.estimatedCost ? `$${project.estimatedCost.toFixed(2)}` : 'No cost estimate'}
           </div>
@@ -133,25 +133,25 @@ export default function ProjectsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* To Do Column */}
               <div className={`p-4 rounded-lg border-2 ${statusColors.todo}`}>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
                   <Hammer className="mr-2 h-5 w-5" />
                   {t('status.todo')} ({projectsByStatus.todo.length})
                 </h2>
                 {projectsByStatus.todo.map(project => <ProjectCard key={project.id} project={project} />)}
               </div>
-              
+
               {/* In Progress Column */}
               <div className={`p-4 rounded-lg border-2 ${statusColors['in-progress']}`}>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
                   <Calendar className="mr-2 h-5 w-5" />
                   {t('status.inProgress')} ({projectsByStatus.inProgress.length})
                 </h2>
                 {projectsByStatus.inProgress.map(project => <ProjectCard key={project.id} project={project} />)}
               </div>
-              
+
               {/* Done Column */}
               <div className={`p-4 rounded-lg border-2 ${statusColors.done}`}>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
                   <CheckCircle className="mr-2 h-5 w-5" />
                   {t('status.done')} ({projectsByStatus.done.length})
                 </h2>
@@ -160,24 +160,24 @@ export default function ProjectsPage() {
             </div>
             
             {/* Project Summary */}
-            <div className="mt-8 p-6 bg-white rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Project Summary</h3>
+            <div className="mt-8 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Project Summary</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-gray-600">{projectsByStatus.todo.length + projectsByStatus.inProgress.length}</p>
-                  <p className="text-sm text-gray-500">{t('summary.activeProjects')}</p>
+                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{projectsByStatus.todo.length + projectsByStatus.inProgress.length}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('summary.activeProjects')}</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-green-600">{projectsByStatus.done.length}</p>
-                  <p className="text-sm text-gray-500">{t('summary.completed')}</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{projectsByStatus.done.length}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('summary.completed')}</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     ${[...projectsByStatus.todo, ...projectsByStatus.inProgress]
                       .reduce((sum, p) => sum + (p.estimatedCost || 0), 0)
                       .toFixed(2)}
                   </p>
-                  <p className="text-sm text-gray-500">{t('summary.estimatedCost')}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('summary.estimatedCost')}</p>
                 </div>
               </div>
             </div>

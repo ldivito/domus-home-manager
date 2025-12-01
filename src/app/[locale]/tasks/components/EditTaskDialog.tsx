@@ -15,9 +15,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, User, FolderKanban, Clock, AlertTriangle } from "lucide-react"
+import { CalendarIcon, User, FolderKanban, Clock, AlertTriangle, Tag } from "lucide-react"
 import { format } from "date-fns"
-import { db, User as UserType, Task, HomeImprovement } from '@/lib/db'
+import { db, User as UserType, Task, HomeImprovement, TaskCategory } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cn } from "@/lib/utils"
 
@@ -26,17 +26,20 @@ interface EditTaskDialogProps {
   onOpenChange: (open: boolean) => void
   task: Task | null
   users: UserType[]
+  categories: TaskCategory[]
 }
 
-export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDialogProps) {
+export function EditTaskDialog({ open, onOpenChange, task, users, categories }: EditTaskDialogProps) {
   const t = useTranslations('tasks')
   const tCommon = useTranslations('common')
+  const tCat = useTranslations('tasks.defaultTaskCategories')
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assignedUserId, setAssignedUserId] = useState<string>('')
   const [dueDate, setDueDate] = useState<Date | undefined>()
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [categoryId, setCategoryId] = useState<string>('')
   const [linkedProjectId, setLinkedProjectId] = useState<string>('')
   const [estimatedHours, setEstimatedHours] = useState<string>('')
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>('')
@@ -58,6 +61,24 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
   // Filter out current task from blocker options
   const blockerOptions = existingTasks.filter(t => t.id !== task?.id)
 
+  const translateCategoryName = (categoryName: string) => {
+    if (categoryName.startsWith('defaultTaskCategories.')) {
+      const key = categoryName.replace('defaultTaskCategories.', '')
+      const categoryMap: Record<string, string> = {
+        'personal': tCat('personal'),
+        'work': tCat('work'),
+        'home': tCat('home'),
+        'shopping': tCat('shopping'),
+        'health': tCat('health'),
+        'finance': tCat('finance'),
+        'errands': tCat('errands'),
+        'other': tCat('other')
+      }
+      return categoryMap[key] || categoryName
+    }
+    return categoryName
+  }
+
   // Pre-fill form when task changes
   useEffect(() => {
     if (task && open) {
@@ -66,6 +87,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
       setAssignedUserId(task.assignedUserId ? task.assignedUserId.toString() : 'unassigned')
       setDueDate(task.dueDate ? new Date(task.dueDate) : undefined)
       setPriority(task.priority)
+      setCategoryId(task.category || 'none')
       setLinkedProjectId(task.linkedProjectId || 'none')
       setEstimatedHours(task.estimatedTime?.hours?.toString() || '')
       setEstimatedMinutes(task.estimatedTime?.minutes?.toString() || '')
@@ -93,6 +115,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
         assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
         dueDate: dueDate,
         priority,
+        category: categoryId && categoryId !== 'none' ? categoryId : undefined,
         linkedProjectId: linkedProjectId && linkedProjectId !== 'none' ? linkedProjectId : undefined,
         estimatedTime: hasEstimatedTime ? { hours, minutes } : undefined,
         blockedByTaskId: blockedByTaskId && blockedByTaskId !== 'none' ? blockedByTaskId : undefined,
@@ -142,6 +165,31 @@ export function EditTaskDialog({ open, onOpenChange, task, users }: EditTaskDial
               placeholder={t('form.descriptionPlaceholder')}
               rows={3}
             />
+          </div>
+
+          {/* Category */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-category">{t('form.category')}</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger>
+                <Tag className="mr-2 h-4 w-4" />
+                <SelectValue placeholder={t('form.selectCategory')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t('form.noCategory')}</SelectItem>
+                {categories.map((category: TaskCategory) => (
+                  <SelectItem key={category.id} value={category.id!.toString()}>
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: category.color || '#6b7280' }}
+                      />
+                      <span>{translateCategoryName(category.name)}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Assigned User */}

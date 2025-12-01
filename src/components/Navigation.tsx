@@ -188,8 +188,8 @@ export default function Navigation() {
       </div>
       
       {/* Navigation Items */}
-      <div className="flex-1 py-3 px-2">
-        <ul className="space-y-1">
+      <div className="flex-1 py-2 px-2 overflow-y-auto min-h-0">
+        <ul className="space-y-0.5">
           {navigationItems.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
@@ -199,8 +199,8 @@ export default function Navigation() {
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex items-center py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                  isExpanded ? 'gap-3 px-2.5' : 'justify-center px-2',
+                  'flex items-center py-2 text-sm font-medium rounded-lg transition-all duration-200',
+                  isExpanded ? 'gap-2.5 px-2' : 'justify-center px-2',
                   'hover:bg-muted/80 hover:scale-[1.02] active:scale-[0.98]',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive
@@ -209,7 +209,7 @@ export default function Navigation() {
                 )}
               >
                 <Icon className={cn(
-                  "h-5 w-5 transition-colors duration-200 flex-shrink-0",
+                  "h-[18px] w-[18px] transition-colors duration-200 flex-shrink-0",
                   isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
                 )} />
                 {isExpanded && (
@@ -248,11 +248,11 @@ export default function Navigation() {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-border/50 space-y-2">
+      <div className="p-2 border-t border-border/50 space-y-1.5 flex-shrink-0">
         {/* User Profile Section - Show when logged in */}
         {user && (
           <div className={cn(
-            "border-b border-border/50 pb-2",
+            "border-b border-border/50 pb-1.5",
             isExpanded ? "px-1" : "px-0"
           )}>
             {isExpanded ? (
@@ -272,11 +272,11 @@ export default function Navigation() {
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-1.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 cursor-default">
-                      <User className="h-4 w-4 text-primary" />
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 cursor-default">
+                      <User className="h-3.5 w-3.5 text-primary" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -289,9 +289,9 @@ export default function Navigation() {
                       onClick={handleLogout}
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-7 w-7"
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -313,7 +313,7 @@ export default function Navigation() {
             <SyncButton />
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>

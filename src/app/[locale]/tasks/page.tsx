@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { List, Plus, Calendar, AlertCircle, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { List, Plus, Calendar, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,8 @@ import { AddTaskDialog } from './components/AddTaskDialog'
 import { EditTaskDialog } from './components/EditTaskDialog'
 import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
 import { ImportTasksDialog } from './components/ImportTasksDialog'
+
+const TASKS_PER_PAGE = 10
 
 export default function TasksPage() {
   const t = useTranslations('tasks')
@@ -30,11 +32,13 @@ export default function TasksPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [projectFilter, setProjectFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const tasks = useLiveQuery(
+  const tasksData = useLiveQuery(
     () => db.tasks.orderBy('createdAt').reverse().toArray(),
     []
-  ) || []
+  )
+  const tasks = useMemo(() => tasksData || [], [tasksData])
 
   const users = useLiveQuery(
     () => db.users.toArray(),
@@ -97,9 +101,9 @@ export default function TasksPage() {
   }
 
   const getUserName = (userId?: string) => {
-    if (!userId) return tCommon('notAssigned')
+    if (!userId) return null
     const user = users.find(u => u.id === userId)
-    return user?.name || tCommon('notAssigned')
+    return user?.name || null
   }
 
   const getProjectName = (projectId?: string) => {
@@ -134,68 +138,84 @@ export default function TasksPage() {
     return blocker && !blocker.isCompleted
   }
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = !searchQuery ||
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const matchesSearch = !searchQuery ||
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'completed' && task.isCompleted) ||
-      (statusFilter === 'pending' && !task.isCompleted)
-    const matchesAssignee = assigneeFilter === 'all' ||
-      (assigneeFilter === 'unassigned' && !task.assignedUserId) ||
-      task.assignedUserId?.toString() === assigneeFilter
-    const matchesProject = projectFilter === 'all' ||
-      (projectFilter === 'none' && !task.linkedProjectId) ||
-      task.linkedProjectId?.toString() === projectFilter
-    const matchesCategory = categoryFilter === 'all' ||
-      (categoryFilter === 'none' && !task.category) ||
-      task.category?.toString() === categoryFilter
+      const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'completed' && task.isCompleted) ||
+        (statusFilter === 'pending' && !task.isCompleted)
+      const matchesAssignee = assigneeFilter === 'all' ||
+        (assigneeFilter === 'unassigned' && !task.assignedUserId) ||
+        task.assignedUserId?.toString() === assigneeFilter
+      const matchesProject = projectFilter === 'all' ||
+        (projectFilter === 'none' && !task.linkedProjectId) ||
+        task.linkedProjectId?.toString() === projectFilter
+      const matchesCategory = categoryFilter === 'all' ||
+        (categoryFilter === 'none' && !task.category) ||
+        task.category?.toString() === categoryFilter
 
-    return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesProject && matchesCategory
-  })
+      return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesProject && matchesCategory
+    })
+  }, [tasks, searchQuery, priorityFilter, statusFilter, assigneeFilter, projectFilter, categoryFilter])
+
+  // Reset to page 1 when filters change
+  const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE)
+  const validCurrentPage = Math.min(currentPage, Math.max(1, totalPages))
+
+  const paginatedTasks = useMemo(() => {
+    const startIndex = (validCurrentPage - 1) * TASKS_PER_PAGE
+    return filteredTasks.slice(startIndex, startIndex + TASKS_PER_PAGE)
+  }, [filteredTasks, validCurrentPage])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
-    <div className="p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <div className="p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('title')}</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
+            <p className="text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="lg" className="h-14" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="mr-2 h-5 w-5" />
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
               {t('import.button')}
             </Button>
-            <Button variant="outline" size="lg" className="h-14" onClick={() => setCategoriesDialogOpen(true)}>
-              <Settings className="mr-2 h-5 w-5" />
+            <Button variant="outline" onClick={() => setCategoriesDialogOpen(true)}>
+              <Settings className="mr-2 h-4 w-4" />
               {t('manageCategories')}
             </Button>
-            <Button size="lg" className="h-14 px-8 text-lg" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-6 w-6" />
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
               {t('addTask')}
             </Button>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="mb-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
                 placeholder={t('searchPlaceholder')}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <Tag className="mr-2 h-4 w-4" />
+              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger className="w-36 h-9">
+                  <Tag className="mr-1 h-3 w-3" />
                   <SelectValue placeholder={t('filters.category')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -204,10 +224,7 @@ export default function TasksPage() {
                   {categories.map((category: TaskCategory) => (
                     <SelectItem key={category.id} value={category.id!.toString()}>
                       <div className="flex items-center space-x-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color || '#6b7280' }}
-                        />
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category.color || '#6b7280' }} />
                         <span>{translateCategoryName(category.name)}</span>
                       </div>
                     </SelectItem>
@@ -215,9 +232,9 @@ export default function TasksPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-36">
-                  <Filter className="mr-2 h-4 w-4" />
+              <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger className="w-32 h-9">
+                  <Filter className="mr-1 h-3 w-3" />
                   <SelectValue placeholder={t('filters.priority')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -228,8 +245,8 @@ export default function TasksPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36">
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger className="w-32 h-9">
                   <SelectValue placeholder={t('filters.status')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -239,9 +256,9 @@ export default function TasksPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                <SelectTrigger className="w-36">
-                  <User className="mr-2 h-4 w-4" />
+              <Select value={assigneeFilter} onValueChange={(v) => { setAssigneeFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger className="w-32 h-9">
+                  <User className="mr-1 h-3 w-3" />
                   <SelectValue placeholder={t('filters.assignee')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -250,10 +267,7 @@ export default function TasksPage() {
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id!.toString()}>
                       <div className="flex items-center space-x-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: user.color }}
-                        />
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: user.color }} />
                         <span>{user.name}</span>
                       </div>
                     </SelectItem>
@@ -261,9 +275,9 @@ export default function TasksPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="w-40">
-                  <FolderKanban className="mr-2 h-4 w-4" />
+              <Select value={projectFilter} onValueChange={(v) => { setProjectFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger className="w-36 h-9">
+                  <FolderKanban className="mr-1 h-3 w-3" />
                   <SelectValue placeholder={t('filters.project')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -280,131 +294,133 @@ export default function TasksPage() {
           </div>
         </div>
 
-        <div className="grid gap-6">
-          {filteredTasks.length === 0 ? (
+        {/* Results count */}
+        <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+          {filteredTasks.length} {filteredTasks.length === 1 ? t('pagination.task') : t('pagination.tasks')}
+          {totalPages > 1 && ` • ${t('pagination.page')} ${validCurrentPage} ${t('pagination.of')} ${totalPages}`}
+        </div>
+
+        {/* Compact Task List */}
+        <div className="space-y-2">
+          {paginatedTasks.length === 0 ? (
             <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
-              <CardContent className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400">
+              <CardContent className="flex items-center justify-center h-24 text-gray-500 dark:text-gray-400">
                 <div className="text-center">
                   {tasks.length === 0 ? (
                     <>
-                      <Plus className="mx-auto h-8 w-8 mb-2" />
-                      <p className="text-lg">{t('noTasks')}</p>
-                      <p className="text-sm">{t('addFirstTask')}</p>
+                      <Plus className="mx-auto h-6 w-6 mb-1" />
+                      <p>{t('noTasks')}</p>
                     </>
                   ) : (
                     <>
-                      <Search className="mx-auto h-8 w-8 mb-2" />
-                      <p className="text-lg">{t('noTasksFound')}</p>
-                      <p className="text-sm">{t('tryDifferentFilter')}</p>
+                      <Search className="mx-auto h-6 w-6 mb-1" />
+                      <p>{t('noTasksFound')}</p>
                     </>
                   )}
                 </div>
               </CardContent>
             </Card>
           ) : (
-            filteredTasks.map((task) => {
+            paginatedTasks.map((task) => {
               const projectName = getProjectName(task.linkedProjectId)
               const category = getCategory(task.category)
               const estimatedTimeStr = formatEstimatedTime(task.estimatedTime)
               const blockerTask = getBlockerTask(task.blockedByTaskId)
               const isBlocked = isBlockedByIncompleteTask(task)
+              const userName = getUserName(task.assignedUserId)
 
               return (
-                <Card key={task.id} className={`transition-all ${task.isCompleted ? 'opacity-75 bg-green-50 dark:bg-green-900/20' : isBlocked ? 'border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-900/10' : 'hover:shadow-md'}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className={`text-xl flex items-center ${task.isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
-                          {task.isCompleted ? (
-                            <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
-                          ) : isBlocked ? (
-                            <AlertTriangle className="mr-3 h-6 w-6 text-orange-500" />
-                          ) : (
-                            <List className="mr-3 h-6 w-6 text-gray-600 dark:text-gray-400" />
-                          )}
-                          {task.title}
-                        </CardTitle>
-                        {task.description && (
-                          <CardDescription className="text-base mt-2">{task.description}</CardDescription>
+                <Card
+                  key={task.id}
+                  className={`transition-all ${
+                    task.isCompleted
+                      ? 'opacity-60 bg-green-50/50 dark:bg-green-900/10'
+                      : isBlocked
+                        ? 'border-orange-300 dark:border-orange-700 bg-orange-50/30 dark:bg-orange-900/10'
+                        : 'hover:shadow-sm hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <CardContent className="py-3 px-4">
+                    <div className="flex items-center gap-3">
+                      {/* Status Icon */}
+                      <div className="flex-shrink-0">
+                        {task.isCompleted ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : isBlocked ? (
+                          <AlertTriangle className="h-5 w-5 text-orange-500" />
+                        ) : (
+                          <List className="h-5 w-5 text-gray-400" />
                         )}
-                        <div className="flex items-center gap-4 mt-3 flex-wrap">
+                      </div>
+
+                      {/* Main Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`font-medium truncate ${task.isCompleted ? 'line-through text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                            {task.title}
+                          </span>
                           {category && (
-                            <div className="flex items-center text-sm" style={{ color: category.color || '#6b7280' }}>
-                              <Tag className="mr-1 h-4 w-4" />
-                              <span>{translateCategoryName(category.name)}</span>
-                            </div>
+                            <Badge variant="outline" className="text-xs px-1.5 py-0" style={{ borderColor: category.color, color: category.color }}>
+                              {translateCategoryName(category.name)}
+                            </Badge>
                           )}
-                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                            <User className="mr-1 h-4 w-4" />
-                            <span>{getUserName(task.assignedUserId)}</span>
-                          </div>
-                          {task.dueDate && (
-                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <Calendar className="mr-1 h-4 w-4" />
-                              <span>{new Date(task.dueDate).toLocaleDateString()}</span>
-                            </div>
-                          )}
-                          {estimatedTimeStr && (
-                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <Clock className="mr-1 h-4 w-4" />
-                              <span>{estimatedTimeStr}</span>
-                            </div>
-                          )}
-                          {projectName && (
-                            <div className="flex items-center text-sm text-purple-600 dark:text-purple-400">
-                              <FolderKanban className="mr-1 h-4 w-4" />
-                              <span>{projectName}</span>
-                            </div>
+                          {blockerTask && !blockerTask.isCompleted && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 border-orange-400 text-orange-600 dark:text-orange-400">
+                              {t('blocked')}
+                            </Badge>
                           )}
                         </div>
-                        {blockerTask && (
-                          <div className={`flex items-center gap-2 mt-2 text-sm ${blockerTask.isCompleted ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                            <AlertTriangle className="h-4 w-4" />
-                            <span>
-                              {t('blockedBy')}: {blockerTask.title}
-                              {blockerTask.isCompleted && <CheckCircle className="inline ml-1 h-3 w-3" />}
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {userName && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {userName}
                             </span>
-                          </div>
-                        )}
+                          )}
+                          {task.dueDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(task.dueDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          {estimatedTimeStr && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {estimatedTimeStr}
+                            </span>
+                          )}
+                          {projectName && (
+                            <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                              <FolderKanban className="h-3 w-3" />
+                              {projectName}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={priorityColors[task.priority as keyof typeof priorityColors]}>
-                          {t(`priority.${task.priority}`).toUpperCase()}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-4">
-                        {task.priority === 'high' && !task.isCompleted && (
-                          <div className="flex items-center text-red-600">
-                            <AlertCircle className="mr-1 h-4 w-4" />
-                            <span className="text-sm font-medium">{t('priority.high')}</span>
-                          </div>
-                        )}
-                        {isBlocked && !task.isCompleted && (
-                          <div className="flex items-center text-orange-600 dark:text-orange-400">
-                            <AlertTriangle className="mr-1 h-4 w-4" />
-                            <span className="text-sm font-medium">{t('blocked')}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
+
+                      {/* Priority Badge */}
+                      <Badge className={`${priorityColors[task.priority as keyof typeof priorityColors]} text-xs px-2`}>
+                        {t(`priority.${task.priority}`).charAt(0).toUpperCase()}
+                      </Badge>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         {!task.isCompleted && (
                           <Button
-                            className="h-10 px-6"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
                             onClick={() => handleMarkComplete(task.id!)}
                             disabled={isBlocked}
-                            title={isBlocked ? t('completeBlockerFirst') : undefined}
+                            title={isBlocked ? t('completeBlockerFirst') : t('markComplete')}
                           >
-                            {t('markComplete')}
+                            <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={() => handleEditTask(task)}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEditTask(task)}>
                           <Edit3 className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDeleteTask(task.id!)}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDeleteTask(task.id!)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
@@ -415,6 +431,56 @@ export default function TasksPage() {
             })
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(validCurrentPage - 1)}
+              disabled={validCurrentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              // Show first page, last page, and pages around current
+              const showPage = page === 1 ||
+                page === totalPages ||
+                Math.abs(page - validCurrentPage) <= 1
+
+              if (!showPage) {
+                // Show ellipsis
+                if (page === 2 || page === totalPages - 1) {
+                  return <span key={page} className="px-2 text-gray-400">...</span>
+                }
+                return null
+              }
+
+              return (
+                <Button
+                  key={page}
+                  variant={page === validCurrentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(page)}
+                  className="min-w-[36px]"
+                >
+                  {page}
+                </Button>
+              )
+            })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(validCurrentPage + 1)}
+              disabled={validCurrentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         <AddTaskDialog
           open={addDialogOpen}

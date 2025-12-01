@@ -711,6 +711,12 @@
       "updateTask": "Update Task",
       "updating": "Updating..."
     },
+    "pagination": {
+      "task": "task",
+      "tasks": "tasks",
+      "page": "Page",
+      "of": "of"
+    },
     "import": {
       "button": "Import",
       "title": "Import Tasks",

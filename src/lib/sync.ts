@@ -93,6 +93,14 @@ export function setLastSyncTime(date: Date): void {
 }
 
 /**
+ * Reset sync state to force a full sync on next sync operation
+ */
+export function resetSyncState(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem('lastSyncAt')
+}
+
+/**
  * Get sync status from localStorage
  */
 export async function getSyncStatus(): Promise<SyncStatus> {
@@ -245,9 +253,10 @@ async function pullChanges(since: Date | null): Promise<{ success: boolean; chan
 
 /**
  * Perform a full bi-directional sync
+ * @param forceFullSync - If true, ignores last sync time and syncs all data
  */
-export async function performSync(): Promise<SyncResult> {
-  const lastSync = getLastSyncTime()
+export async function performSync(forceFullSync: boolean = false): Promise<SyncResult> {
+  const lastSync = forceFullSync ? null : getLastSyncTime()
   const result: SyncResult = {
     success: false,
     pushed: 0,

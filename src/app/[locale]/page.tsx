@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { 
-  CheckSquare, 
-  ShoppingCart, 
-  List, 
-  Hammer, 
-  UtensilsCrossed, 
+import {
+  CheckSquare,
+  ShoppingCart,
+  List,
+  Hammer,
+  UtensilsCrossed,
   Users,
   Check,
   Calendar,
@@ -18,7 +18,8 @@ import {
   ExternalLink,
   Clock,
   AlertCircle,
-  Activity
+  DollarSign,
+  Flame
 } from "lucide-react"
 import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
@@ -30,6 +31,7 @@ export default function HomePage() {
   const mealsT = useTranslations('meals')
   const tasksT = useTranslations('tasks')
   const commonT = useTranslations('common')
+  const ketoT = useTranslations('keto')
 
   // State for chore completion modal
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false)
@@ -121,7 +123,6 @@ export default function HomePage() {
   const overdueChores = pendingChores.filter(c => c.nextDue && new Date(c.nextDue) < new Date())
   
   const groceryItems = useLiveQuery(() => db.groceryItems.toArray(), []) || []
-  const highPriorityGrocery = groceryItems.filter(item => item.importance === 'high')
   
   const tasks = useLiveQuery(() => db.tasks.toArray(), []) || []
   const pendingTasks = tasks.filter(t => !t.isCompleted)
@@ -202,6 +203,98 @@ export default function HomePage() {
   const reminders = useLiveQuery(() => db.reminders.toArray(), []) || []
   const activeReminders = reminders.filter(r => !r.isCompleted)
   const upcomingReminders = activeReminders.filter(r => new Date(r.reminderTime) >= new Date())
+
+  // Finance data queries
+  const currentMonth = new Date().getMonth() + 1
+  const currentYear = new Date().getFullYear()
+
+  const monthlyIncomes = useLiveQuery(
+    () => db.monthlyIncomes.filter(i => i.month === currentMonth && i.year === currentYear).toArray(),
+    [currentMonth, currentYear]
+  ) || []
+
+  const exchangeRate = useLiveQuery(
+    () => db.monthlyExchangeRates.filter(r => r.month === currentMonth && r.year === currentYear).first(),
+    [currentMonth, currentYear]
+  )
+
+  const recurringExpenses = useLiveQuery(() => db.recurringExpenses.filter(e => e.isActive).toArray(), []) || []
+
+  const expensePayments = useLiveQuery(
+    () => db.expensePayments.filter(p => {
+      const dueDate = new Date(p.dueDate)
+      return dueDate.getMonth() + 1 === currentMonth && dueDate.getFullYear() === currentYear
+    }).toArray(),
+    [currentMonth, currentYear]
+  ) || []
+
+  // Calculate finance totals
+  const totalIncome = monthlyIncomes.reduce((sum, inc) => {
+    if (inc.currency === 'USD' && exchangeRate?.rate) {
+      return sum + (inc.amount * exchangeRate.rate)
+    }
+    return sum + inc.amount
+  }, 0)
+
+  const totalExpenses = recurringExpenses.reduce((sum, exp) => {
+    if (exp.currency === 'USD' && exchangeRate?.rate) {
+      return sum + (exp.amount * exchangeRate.rate)
+    }
+    return sum + exp.amount
+  }, 0)
+
+  const pendingPayments = expensePayments.filter(p => p.status === 'pending')
+  const overduePayments = expensePayments.filter(p => p.status === 'overdue')
+  const netBalance = totalIncome - totalExpenses
+
+  // Keto data queries
+  const ketoSettings = useLiveQuery(() => db.ketoSettings.toArray(), [])
+  const ketoDays = useLiveQuery(() => db.ketoDays.toArray(), []) || []
+
+  // Calculate keto stats
+  const ketoSuccessfulDays = ketoDays.filter(d => d.status === 'success' || d.status === 'fasting')
+  const ketoCheatDays = ketoDays.filter(d => d.status === 'cheat')
+
+  // Calculate current streak
+  const calculateKetoStreak = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let streak = 0
+    let daysBack = 0
+
+    while (true) {
+      const checkDate = new Date(today.getTime() - daysBack * 24 * 60 * 60 * 1000)
+      const dayEntry = ketoDays.find(d => {
+        const entryDate = new Date(d.date)
+        entryDate.setHours(0, 0, 0, 0)
+        return entryDate.getTime() === checkDate.getTime()
+      })
+
+      if (dayEntry && (dayEntry.status === 'success' || dayEntry.status === 'fasting')) {
+        streak++
+        daysBack++
+      } else {
+        break
+      }
+    }
+    return streak
+  }
+
+  const ketoStreak = calculateKetoStreak()
+
+  // Weekly success rate for keto
+  const calculateWeeklySuccessRate = () => {
+    const today = new Date()
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const weekDays = ketoDays.filter(d => {
+      const date = new Date(d.date)
+      return date >= weekAgo && date <= today
+    })
+    const successDays = weekDays.filter(d => d.status === 'success' || d.status === 'fasting')
+    return weekDays.length > 0 ? Math.round((successDays.length / 7) * 100) : 0
+  }
+
+  const ketoWeeklyRate = calculateWeeklySuccessRate()
 
   // Get next 4-5 chores for display
   const nextChores = useLiveQuery(
@@ -702,48 +795,130 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            {/* Quick Stats - Enhanced */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-xl font-semibold">
-                  <div className="p-2 bg-purple-500/15 rounded-xl border border-purple-200/50">
-                    <Activity className="h-6 w-6 text-purple-600" />
-                  </div>
-                  {t('widgets.stats.title')}
-                </CardTitle>
+            {/* Finance Summary Card */}
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-3 flex flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                    <div className="p-2 bg-emerald-500/15 rounded-xl border border-emerald-200/50">
+                      <DollarSign className="h-6 w-6 text-emerald-600" />
+                    </div>
+                    {t('widgets.finance.title')}
+                  </CardTitle>
+                  <Link href="/finance">
+                    <Button variant="ghost" size="lg" className="touch-target">
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
               </CardHeader>
-              <CardContent className="flex-1">
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="text-center px-2 py-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/40 rounded-xl border border-blue-200/50 transition-all hover:shadow-md">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <span className="text-white font-bold text-xl">
-                        {chores.length > 0 ? Math.round((chores.filter(c => c.isCompleted).length / chores.length) * 100) : 0}%
-                      </span>
-                    </div>
-                    <p className="text-base font-semibold text-blue-700 dark:text-blue-300">{t('widgets.stats.choresComplete')}</p>
+              <CardContent className="flex-1 space-y-3">
+                {/* Balance Summary */}
+                <div className="p-3 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/40 rounded-xl border border-emerald-200/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{t('widgets.finance.balance')}</span>
+                    <span className={`text-lg font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {netBalance >= 0 ? '+' : ''}${Math.abs(netBalance).toLocaleString('es-AR')}
+                    </span>
                   </div>
-
-                  <div className="text-center px-2 py-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/40 rounded-xl border border-green-200/50 transition-all hover:shadow-md">
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <span className="text-white font-bold text-xl">{highPriorityGrocery.length}</span>
-                    </div>
-                    <p className="text-base font-semibold text-green-700 dark:text-green-300">{t('widgets.stats.urgentShopping')}</p>
-                  </div>
-
-                  <div className="text-center px-2 py-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/40 rounded-xl border border-orange-200/50 transition-all hover:shadow-md">
-                    <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <span className="text-white font-bold text-xl">{todaysEvents.length + todaysMeals.length}</span>
-                    </div>
-                    <p className="text-base font-semibold text-orange-700 dark:text-orange-300">{t('widgets.stats.todaysEvents')}</p>
-                  </div>
-
-                  <div className="text-center px-2 py-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/40 rounded-xl border border-purple-200/50 transition-all hover:shadow-md">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <span className="text-white font-bold text-xl">{activeReminders.length}</span>
-                    </div>
-                    <p className="text-base font-semibold text-purple-700 dark:text-purple-300">{t('widgets.stats.activeReminders')}</p>
+                  <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                    <span>{t('widgets.finance.income')}: ${totalIncome.toLocaleString('es-AR')}</span>
+                    <span>{t('widgets.finance.expenses')}: ${totalExpenses.toLocaleString('es-AR')}</span>
                   </div>
                 </div>
+
+                {/* Payment Status */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/40 rounded-lg border border-yellow-200/50 text-center">
+                    <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{pendingPayments.length}</p>
+                    <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{t('widgets.finance.pending')}</p>
+                  </div>
+                  <div className="p-2 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/40 rounded-lg border border-red-200/50 text-center">
+                    <p className="text-xl font-bold text-red-700 dark:text-red-300">{overduePayments.length}</p>
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400">{t('widgets.finance.overdue')}</p>
+                  </div>
+                </div>
+
+                {/* Active Expenses Count */}
+                <div className="text-center pt-1">
+                  <p className="text-xs text-muted-foreground">
+                    {recurringExpenses.length} {t('widgets.finance.activeExpenses')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Keto Tracker Card */}
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-3 flex flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                    <div className="p-2 bg-orange-500/15 rounded-xl border border-orange-200/50">
+                      <Flame className="h-6 w-6 text-orange-600" />
+                    </div>
+                    {t('widgets.keto.title')}
+                  </CardTitle>
+                  <Link href="/keto">
+                    <Button variant="ghost" size="lg" className="touch-target">
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-3">
+                {ketoSettings && ketoSettings.length > 0 ? (
+                  <>
+                    {/* Current Streak */}
+                    <div className="p-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/40 rounded-xl border border-orange-200/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-orange-700 dark:text-orange-300">{t('widgets.keto.streak')}</span>
+                        <div className="flex items-center gap-1">
+                          <Flame className="h-5 w-5 text-orange-500" />
+                          <span className="text-2xl font-bold text-orange-600">{ketoStreak}</span>
+                          <span className="text-sm text-orange-500">{ketoT('stats.days')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Weekly Success Rate */}
+                    <div className="p-2 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/40 rounded-lg border border-green-200/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-green-700 dark:text-green-300">{t('widgets.keto.weeklySuccess')}</span>
+                        <span className="text-lg font-bold text-green-600">{ketoWeeklyRate}%</span>
+                      </div>
+                      <div className="mt-1 h-2 bg-green-200 dark:bg-green-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all"
+                          style={{ width: `${ketoWeeklyRate}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats Summary */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/40 rounded-lg border border-emerald-200/50 text-center">
+                        <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{ketoSuccessfulDays.length}</p>
+                        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t('widgets.keto.successDays')}</p>
+                      </div>
+                      <div className="p-2 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/40 rounded-lg border border-red-200/50 text-center">
+                        <p className="text-xl font-bold text-red-700 dark:text-red-300">{ketoCheatDays.length}</p>
+                        <p className="text-xs font-medium text-red-600 dark:text-red-400">{t('widgets.keto.cheatDays')}</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Flame className="h-7 w-7 text-orange-500" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">{t('widgets.keto.notStarted')}</p>
+                    <Link href="/keto">
+                      <Button variant="outline" size="sm" className="mt-2">
+                        {t('widgets.keto.startTracking')}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

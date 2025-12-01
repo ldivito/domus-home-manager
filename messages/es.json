@@ -155,6 +155,24 @@
         "moreReminders": "más recordatorios",
         "allCaughtUp": "¡Todo al día!",
         "noUrgent": "No hay notificaciones urgentes o recordatorios"
+      },
+      "finance": {
+        "title": "Finanzas",
+        "balance": "Balance Neto",
+        "income": "Ingresos",
+        "expenses": "Gastos",
+        "pending": "Pendientes",
+        "overdue": "Vencidos",
+        "activeExpenses": "gastos activos"
+      },
+      "keto": {
+        "title": "Seguidor Keto",
+        "streak": "Racha Actual",
+        "weeklySuccess": "Éxito Semanal",
+        "successDays": "Días Exitosos",
+        "cheatDays": "Días Trampa",
+        "notStarted": "Sin seguimiento aún",
+        "startTracking": "Comenzar Seguimiento"
       }
     },
     "quickActions": {

@@ -75,6 +75,18 @@ export interface MealIngredient {
   usageNotes?: string
 }
 
+// Task Category
+export interface TaskCategory {
+  id?: string
+  name: string
+  color?: string
+  icon?: string
+  isDefault: boolean
+  householdId?: string
+  locale?: string
+  createdAt: Date
+}
+
 // Estimated time for tasks
 export interface TaskEstimatedTime {
   hours: number
@@ -90,6 +102,8 @@ export interface Task {
   dueDate?: Date
   priority: 'low' | 'medium' | 'high'
   isCompleted: boolean
+  // Category
+  category?: string             // TaskCategory ID
   // New fields
   linkedProjectId?: string      // Links to HomeImprovement project
   estimatedTime?: TaskEstimatedTime  // How long the task will take
@@ -703,6 +717,7 @@ export class DomusDatabase extends Dexie {
   groceryCategories!: Table<GroceryCategory>
   savedGroceryItems!: Table<SavedGroceryItem>
   tasks!: Table<Task>
+  taskCategories!: Table<TaskCategory>
   homeImprovements!: Table<HomeImprovement>
   meals!: Table<Meal>
   mealCategories!: Table<MealCategory>
@@ -789,6 +804,12 @@ export class DomusDatabase extends Dexie {
       petMedicationLogs: 'id, medicationId, petId, givenDate, givenByUserId, householdId, createdAt',
       petVetVisits: 'id, petId, visitDate, visitType, householdId, createdAt',
       petVaccinations: 'id, petId, vaccineName, nextDueDate, householdId, createdAt'
+    })
+
+    // v25: Add task categories table and category index to tasks
+    this.version(25).stores({
+      tasks: 'id, title, householdId, assignedUserId, dueDate, priority, isCompleted, category, linkedProjectId, blockedByTaskId, createdAt',
+      taskCategories: 'id, name, householdId, isDefault, locale, createdAt'
     })
 
     // v24: Add linkedProjectId and blockedByTaskId indexes to tasks
@@ -1293,6 +1314,23 @@ export class DomusDatabase extends Dexie {
           { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.other', icon: 'MoreHorizontal', color: '#9CA3AF', isDefault: true, createdAt: now }
         ])
         console.log('Default expense categories seeded successfully')
+      }
+
+      // Seed task categories if needed
+      const taskCategoryCount = await this.taskCategories.count()
+      if (taskCategoryCount === 0) {
+        const now = new Date()
+        await this.taskCategories.bulkAdd([
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.personal', icon: 'User', color: '#8B5CF6', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.work', icon: 'Briefcase', color: '#3B82F6', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.home', icon: 'Home', color: '#10B981', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.shopping', icon: 'ShoppingCart', color: '#F59E0B', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.health', icon: 'Heart', color: '#EF4444', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.finance', icon: 'DollarSign', color: '#22C55E', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.errands', icon: 'MapPin', color: '#EC4899', isDefault: true, createdAt: now },
+          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.other', icon: 'MoreHorizontal', color: '#6B7280', isDefault: true, createdAt: now }
+        ])
+        console.log('Default task categories seeded successfully')
       }
 
       const categoryCount = await this.groceryCategories.count()

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { db, HomeImprovement } from '@/lib/db'
@@ -11,12 +11,15 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { AddProjectDialog } from './components/AddProjectDialog'
 import { EditProjectDialog } from './components/EditProjectDialog'
 
+type StatusType = 'todo' | 'in-progress' | 'done'
+
 export default function ProjectsPage() {
   const t = useTranslations('projects')
-  const tCommon = useTranslations('common')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<HomeImprovement | null>(null)
+  const [draggedProject, setDraggedProject] = useState<HomeImprovement | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<StatusType | null>(null)
 
   const projects = useLiveQuery(
     () => db.homeImprovements.orderBy('createdAt').reverse().toArray(),
@@ -27,6 +30,8 @@ export default function ProjectsPage() {
     () => db.users.toArray(),
     []
   ) || []
+
+  const priorityOrder = { high: 0, medium: 1, low: 2 }
 
   const priorityColors = {
     high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -54,73 +59,183 @@ export default function ProjectsPage() {
   }
 
   const getUserName = (userId?: string) => {
-    if (!userId) return tCommon('notAssigned')
+    if (!userId) return null
     const user = users.find(u => u.id === userId)
-    return user?.name || tCommon('notAssigned')
+    return user?.name || null
   }
 
-  // Group projects by status
+  const handleDragStart = (e: React.DragEvent, project: HomeImprovement) => {
+    setDraggedProject(project)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragEnd = () => {
+    setDraggedProject(null)
+    setDragOverColumn(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent, status: StatusType) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverColumn(status)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, newStatus: StatusType) => {
+    e.preventDefault()
+    if (draggedProject && draggedProject.status !== newStatus) {
+      try {
+        await db.homeImprovements.update(draggedProject.id!, { status: newStatus })
+      } catch (error) {
+        console.error('Error updating project status:', error)
+      }
+    }
+    setDraggedProject(null)
+    setDragOverColumn(null)
+  }
+
+  // Sort projects by priority (high first) then group by status
+  const sortByPriority = (projectList: HomeImprovement[]) => {
+    return [...projectList].sort((a, b) => {
+      const priorityA = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 2
+      const priorityB = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 2
+      return priorityA - priorityB
+    })
+  }
+
   const projectsByStatus = {
-    todo: projects.filter(p => p.status === 'todo'),
-    inProgress: projects.filter(p => p.status === 'in-progress'),
-    done: projects.filter(p => p.status === 'done')
+    todo: sortByPriority(projects.filter(p => p.status === 'todo')),
+    inProgress: sortByPriority(projects.filter(p => p.status === 'in-progress')),
+    done: sortByPriority(projects.filter(p => p.status === 'done'))
   }
 
-  const ProjectCard = ({ project }: { project: HomeImprovement }) => (
-    <Card className="mb-4 hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{project.title}</CardTitle>
-          <Badge className={priorityColors[project.priority as keyof typeof priorityColors]}>
-            {t(`priority.${project.priority}`)}
-          </Badge>
+  const ProjectCard = ({ project }: { project: HomeImprovement }) => {
+    const userName = getUserName(project.assignedUserId)
+    const isDragging = draggedProject?.id === project.id
+
+    return (
+      <Card
+        className={`mb-2 cursor-grab active:cursor-grabbing transition-all ${
+          isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md'
+        }`}
+        draggable
+        onDragStart={(e) => handleDragStart(e, project)}
+        onDragEnd={handleDragEnd}
+      >
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2">
+            <GripVertical className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h3 className="font-medium text-sm truncate">{project.title}</h3>
+                <Badge className={`${priorityColors[project.priority as keyof typeof priorityColors]} text-xs px-1.5 py-0`}>
+                  {t(`priority.${project.priority}`)}
+                </Badge>
+              </div>
+              {project.description && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{project.description}</p>
+              )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                  {userName && (
+                    <span className="flex items-center">
+                      <User className="mr-1 h-3 w-3" />
+                      {userName}
+                    </span>
+                  )}
+                  {project.estimatedCost && (
+                    <span className="flex items-center">
+                      <DollarSign className="mr-0.5 h-3 w-3" />
+                      {project.estimatedCost.toFixed(0)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id!); }}
+                  >
+                    <Trash2 className="h-3 w-3 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const KanbanColumn = ({
+    status,
+    title,
+    icon: Icon,
+    projects: columnProjects
+  }: {
+    status: StatusType
+    title: string
+    icon: React.ElementType
+    projects: HomeImprovement[]
+  }) => {
+    const isDropTarget = dragOverColumn === status && draggedProject?.status !== status
+
+    return (
+      <div
+        className={`p-3 rounded-lg border-2 transition-all min-h-[200px] ${statusColors[status]} ${
+          isDropTarget ? 'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900' : ''
+        }`}
+        onDragOver={(e) => handleDragOver(e, status)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, status)}
+      >
+        <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center">
+          <Icon className="mr-2 h-4 w-4" />
+          {title} ({columnProjects.length})
+        </h2>
+        <div className="space-y-2">
+          {columnProjects.map(project => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
         </div>
-        {project.description && (
-          <CardDescription className="text-base">{project.description}</CardDescription>
+        {columnProjects.length === 0 && (
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+            {t('dragHere')}
+          </p>
         )}
-        <div className="flex items-center gap-4 mt-2">
-          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-            <User className="mr-1 h-4 w-4" />
-            <span>{getUserName(project.assignedUserId)}</span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-            <DollarSign className="mr-1 h-4 w-4" />
-            {project.estimatedCost ? `$${project.estimatedCost.toFixed(2)}` : 'No cost estimate'}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={() => handleEditProject(project)}>
-              <Edit3 className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleDeleteProject(project.id!)}>
-              <Trash2 className="h-4 w-4 text-red-500" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+      </div>
+    )
+  }
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('title')}</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{t('title')}</h1>
+            <p className="text-base text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
-          <Button size="lg" className="h-14 px-8 text-lg" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-6 w-6" />
+          <Button size="lg" className="h-12 px-6" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="mr-2 h-5 w-5" />
             {t('addProject')}
           </Button>
         </div>
-        
+
         {projects.length === 0 ? (
-          <Card className="border-dashed border-2 border-gray-300">
-            <CardContent className="flex items-center justify-center h-64 text-gray-500">
+          <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
+            <CardContent className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
               <div className="text-center">
                 <Plus className="mx-auto h-12 w-12 mb-4" />
                 <p className="text-xl mb-2">{t('noProjects')}</p>
@@ -130,67 +245,58 @@ export default function ProjectsPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* To Do Column */}
-              <div className={`p-4 rounded-lg border-2 ${statusColors.todo}`}>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-                  <Hammer className="mr-2 h-5 w-5" />
-                  {t('status.todo')} ({projectsByStatus.todo.length})
-                </h2>
-                {projectsByStatus.todo.map(project => <ProjectCard key={project.id} project={project} />)}
-              </div>
-
-              {/* In Progress Column */}
-              <div className={`p-4 rounded-lg border-2 ${statusColors['in-progress']}`}>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-                  <Calendar className="mr-2 h-5 w-5" />
-                  {t('status.inProgress')} ({projectsByStatus.inProgress.length})
-                </h2>
-                {projectsByStatus.inProgress.map(project => <ProjectCard key={project.id} project={project} />)}
-              </div>
-
-              {/* Done Column */}
-              <div className={`p-4 rounded-lg border-2 ${statusColors.done}`}>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  {t('status.done')} ({projectsByStatus.done.length})
-                </h2>
-                {projectsByStatus.done.map(project => <ProjectCard key={project.id} project={project} />)}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <KanbanColumn
+                status="todo"
+                title={t('status.todo')}
+                icon={Hammer}
+                projects={projectsByStatus.todo}
+              />
+              <KanbanColumn
+                status="in-progress"
+                title={t('status.inProgress')}
+                icon={Calendar}
+                projects={projectsByStatus.inProgress}
+              />
+              <KanbanColumn
+                status="done"
+                title={t('status.done')}
+                icon={CheckCircle}
+                projects={projectsByStatus.done}
+              />
             </div>
-            
+
             {/* Project Summary */}
-            <div className="mt-8 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Project Summary</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div className="mt-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{projectsByStatus.todo.length + projectsByStatus.inProgress.length}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('summary.activeProjects')}</p>
+                  <p className="text-xl font-bold text-gray-600 dark:text-gray-300">{projectsByStatus.todo.length + projectsByStatus.inProgress.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('summary.activeProjects')}</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{projectsByStatus.done.length}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('summary.completed')}</p>
+                  <p className="text-xl font-bold text-green-600 dark:text-green-400">{projectsByStatus.done.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('summary.completed')}</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
                     ${[...projectsByStatus.todo, ...projectsByStatus.inProgress]
                       .reduce((sum, p) => sum + (p.estimatedCost || 0), 0)
-                      .toFixed(2)}
+                      .toFixed(0)}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('summary.estimatedCost')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('summary.estimatedCost')}</p>
                 </div>
               </div>
             </div>
           </>
         )}
-        
-        <AddProjectDialog 
-          open={addDialogOpen} 
+
+        <AddProjectDialog
+          open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           users={users}
         />
-        
-        <EditProjectDialog 
+
+        <EditProjectDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           project={editingProject}

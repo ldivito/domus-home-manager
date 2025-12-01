@@ -408,25 +408,47 @@ export class DomusDatabase extends Dexie {
       console.log('Database upgraded to v13 with fasting support in Keto tracking')
     })
 
-    // Database ready handler
+    // Database ready handler with timeout protection
     this.on('ready', async () => {
       console.log('Database ready - local IndexedDB mode')
 
-      try {
-        // Check if we have migrated data to import
-        await importMigratedData(this)
-      } catch (error) {
-        console.error('Error importing migrated data:', error)
+      // Helper to wrap async operations with timeout
+      const withTimeout = <T>(promise: Promise<T>, ms: number, name: string): Promise<T | null> => {
+        return Promise.race([
+          promise,
+          new Promise<null>((resolve) => {
+            setTimeout(() => {
+              console.warn(`${name} timed out after ${ms}ms`)
+              resolve(null)
+            }, ms)
+          })
+        ])
       }
 
       try {
-        await this.ensureMealIngredientStructure()
+        // Check if we have migrated data to import (with 5s timeout)
+        await withTimeout(importMigratedData(this), 5000, 'importMigratedData')
+      } catch (error) {
+        console.error('Error importing migrated data:', error)
+        // Clear potentially corrupted migration data
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('domus_migration_data')
+        }
+      }
+
+      try {
+        // Run meal ingredient structure check (with 5s timeout)
+        await withTimeout(this.ensureMealIngredientStructure(), 5000, 'ensureMealIngredientStructure')
       } catch (error) {
         console.warn('Meal ingredient migration issue:', error)
       }
 
-      // Seed default categories if needed
-      await this.seedDefaultCategoriesIfNeeded()
+      try {
+        // Seed default categories if needed (with 5s timeout)
+        await withTimeout(this.seedDefaultCategoriesIfNeeded(), 5000, 'seedDefaultCategoriesIfNeeded')
+      } catch (error) {
+        console.warn('Error seeding default categories:', error)
+      }
     })
   }
 

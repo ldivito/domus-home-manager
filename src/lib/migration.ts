@@ -283,6 +283,7 @@ export async function importMigratedData(db: {
   [key: string]: {
     bulkAdd?: (records: unknown[]) => Promise<unknown>
     add?: (record: unknown) => Promise<unknown>
+    count?: () => Promise<number>
   }
 }): Promise<void> {
   if (typeof window === 'undefined') return
@@ -295,13 +296,34 @@ export async function importMigratedData(db: {
 
   try {
     const migratedData = JSON.parse(migratedDataStr) as Record<string, unknown[]>
+
+    // Validate that this is actually migration data
+    if (!migratedData || typeof migratedData !== 'object' || Object.keys(migratedData).length === 0) {
+      console.log('Invalid or empty migration data, clearing...')
+      localStorage.removeItem('domus_migration_data')
+      setMigrationCompleted()
+      return
+    }
+
     console.log('Importing migrated data into new database...')
+
+    let successCount = 0
+    let errorCount = 0
 
     for (const [tableName, records] of Object.entries(migratedData)) {
       const table = db[tableName]
-      if (!table || records.length === 0) continue
+      if (!table || !Array.isArray(records) || records.length === 0) continue
 
       try {
+        // Check if table already has data (avoid duplicate imports)
+        if (table.count) {
+          const existingCount = await table.count()
+          if (existingCount > 0) {
+            console.log(`Table ${tableName} already has ${existingCount} records, skipping import`)
+            continue
+          }
+        }
+
         if (table.bulkAdd) {
           await table.bulkAdd(records)
         } else if (table.add) {
@@ -310,18 +332,25 @@ export async function importMigratedData(db: {
           }
         }
         console.log(`Imported ${records.length} records into ${tableName}`)
+        successCount++
       } catch (error) {
         console.error(`Error importing ${tableName}:`, error)
+        errorCount++
+        // Continue with other tables even if one fails
       }
     }
 
-    // Clear migrated data and mark migration as complete
+    // Clear migrated data and mark migration as complete regardless of errors
+    // This prevents infinite retry loops
     localStorage.removeItem('domus_migration_data')
     setMigrationCompleted()
 
-    console.log('Migration completed successfully')
+    console.log(`Migration completed: ${successCount} tables imported, ${errorCount} errors`)
   } catch (error) {
     console.error('Error importing migrated data:', error)
+    // Clear corrupted migration data to prevent infinite loops
+    localStorage.removeItem('domus_migration_data')
+    setMigrationCompleted()
     throw error
   }
 }
@@ -333,4 +362,22 @@ export function resetMigrationFlag(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(MIGRATION_FLAG_KEY)
   localStorage.removeItem('domus_migration_data')
+}
+
+/**
+ * Clear all migration-related localStorage items
+ * Call this from browser console if app is stuck: clearMigrationState()
+ */
+export function clearMigrationState(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(MIGRATION_FLAG_KEY)
+  localStorage.removeItem('domus_migration_data')
+  localStorage.removeItem('lastSyncAt')
+  console.log('Migration state cleared. Please refresh the page.')
+}
+
+// Make clearMigrationState available in browser console for debugging
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).clearMigrationState = clearMigrationState
 }

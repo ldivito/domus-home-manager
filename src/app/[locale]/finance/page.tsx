@@ -6,7 +6,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
-import { DollarSign, Receipt, Scale, Calendar } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { DollarSign, Receipt, Scale, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { IncomeTab } from './components/IncomeTab'
 import { ExpensesTab } from './components/ExpensesTab'
 import { PaymentsTab } from './components/PaymentsTab'
@@ -17,28 +18,63 @@ export default function FinancePage() {
   const t = useTranslations('finance')
   const [activeTab, setActiveTab] = useState('income')
 
+  // Current date for reference
+  const currentDate = new Date()
+  const actualMonth = currentDate.getMonth() + 1
+  const actualYear = currentDate.getFullYear()
+
+  // Selected month/year for navigation (defaults to current)
+  const [selectedMonth, setSelectedMonth] = useState(actualMonth)
+  const [selectedYear, setSelectedYear] = useState(actualYear)
+
+  // Calculate if viewing current, past, or future month
+  const isCurrentMonth = selectedMonth === actualMonth && selectedYear === actualYear
+  const isPastMonth = selectedYear < actualYear || (selectedYear === actualYear && selectedMonth < actualMonth)
+  const isFutureMonth = selectedYear > actualYear || (selectedYear === actualYear && selectedMonth > actualMonth)
+
   // Load data
   const users = useLiveQuery(() => db.users.toArray()) || []
-  const currentDate = new Date()
-  const currentMonth = currentDate.getMonth() + 1
-  const currentYear = currentDate.getFullYear()
 
-  // Get current month's income
-  const currentIncomes = useLiveQuery(
+  // Navigation functions
+  const goToPreviousMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12)
+      setSelectedYear(selectedYear - 1)
+    } else {
+      setSelectedMonth(selectedMonth - 1)
+    }
+  }
+
+  const goToNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1)
+      setSelectedYear(selectedYear + 1)
+    } else {
+      setSelectedMonth(selectedMonth + 1)
+    }
+  }
+
+  const goToCurrentMonth = () => {
+    setSelectedMonth(actualMonth)
+    setSelectedYear(actualYear)
+  }
+
+  // Get selected month's income
+  const selectedIncomes = useLiveQuery(
     () => db.monthlyIncomes
       .where('[month+year]')
-      .equals([currentMonth, currentYear])
+      .equals([selectedMonth, selectedYear])
       .toArray(),
-    [currentMonth, currentYear]
+    [selectedMonth, selectedYear]
   ) || []
 
-  // Get current month's exchange rate
-  const currentExchangeRate = useLiveQuery(
+  // Get selected month's exchange rate
+  const selectedExchangeRate = useLiveQuery(
     () => db.monthlyExchangeRates
       .where('[month+year]')
-      .equals([currentMonth, currentYear])
+      .equals([selectedMonth, selectedYear])
       .first(),
-    [currentMonth, currentYear]
+    [selectedMonth, selectedYear]
   )
 
   // Get all recurring expenses
@@ -55,10 +91,18 @@ export default function FinancePage() {
   ) || []
 
   // Get exchange rate value (default to 1 if not set)
-  const exchangeRate = currentExchangeRate?.rate || 1
+  const exchangeRate = selectedExchangeRate?.rate || 1
+
+  // Month names for display
+  const monthNames = [
+    t('months.january'), t('months.february'), t('months.march'),
+    t('months.april'), t('months.may'), t('months.june'),
+    t('months.july'), t('months.august'), t('months.september'),
+    t('months.october'), t('months.november'), t('months.december')
+  ]
 
   // Calculate totals - convert USD to ARS
-  const totalHouseholdIncome = currentIncomes.reduce((sum, inc) => {
+  const totalHouseholdIncome = selectedIncomes.reduce((sum, inc) => {
     if (inc.currency === 'USD') {
       return sum + (inc.amount * exchangeRate)
     }
@@ -74,8 +118,8 @@ export default function FinancePage() {
   return (
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-8">
+        {/* Header with Month Navigator */}
+        <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {t('title')}
@@ -83,6 +127,54 @@ export default function FinancePage() {
             <p className="text-xl text-gray-600 dark:text-gray-400">
               {t('subtitle')}
             </p>
+          </div>
+
+          {/* Compact Month Navigator */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToPreviousMonth}
+              className="h-10 w-10"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+
+            <div className="flex flex-col items-center min-w-[140px]">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold whitespace-nowrap">
+                  {monthNames[selectedMonth - 1]} {selectedYear}
+                </span>
+                {isPastMonth && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    {t('navigator.history')}
+                  </span>
+                )}
+                {isFutureMonth && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    {t('navigator.upcoming')}
+                  </span>
+                )}
+              </div>
+              {!isCurrentMonth && (
+                <Button
+                  variant="link"
+                  onClick={goToCurrentMonth}
+                  className="text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
+                >
+                  {t('navigator.backToCurrent')}
+                </Button>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNextMonth}
+              className="h-10 w-10"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
           </div>
         </div>
 
@@ -167,10 +259,11 @@ export default function FinancePage() {
           <TabsContent value="income">
             <IncomeTab
               users={users}
-              currentIncomes={currentIncomes}
-              currentMonth={currentMonth}
-              currentYear={currentYear}
-              exchangeRate={currentExchangeRate}
+              currentIncomes={selectedIncomes}
+              currentMonth={selectedMonth}
+              currentYear={selectedYear}
+              exchangeRate={selectedExchangeRate}
+              isFutureMonth={isFutureMonth}
             />
           </TabsContent>
 
@@ -178,7 +271,9 @@ export default function FinancePage() {
             <ExpensesTab
               expenses={recurringExpenses}
               categories={expenseCategories}
-              exchangeRate={currentExchangeRate}
+              exchangeRate={selectedExchangeRate}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
             />
           </TabsContent>
 
@@ -187,10 +282,11 @@ export default function FinancePage() {
               expenses={recurringExpenses}
               payments={payments}
               users={users}
-              incomes={currentIncomes}
-              currentMonth={currentMonth}
-              currentYear={currentYear}
-              exchangeRate={currentExchangeRate}
+              incomes={selectedIncomes}
+              currentMonth={selectedMonth}
+              currentYear={selectedYear}
+              exchangeRate={selectedExchangeRate}
+              isFutureMonth={isFutureMonth}
             />
           </TabsContent>
 
@@ -198,9 +294,11 @@ export default function FinancePage() {
             <BalanceTab
               users={users}
               payments={payments}
-              incomes={currentIncomes}
+              incomes={selectedIncomes}
               expenses={recurringExpenses}
-              exchangeRate={currentExchangeRate}
+              exchangeRate={selectedExchangeRate}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
             />
           </TabsContent>
         </Tabs>

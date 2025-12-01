@@ -1126,6 +1126,25 @@
   "finance": {
     "title": "Finance",
     "subtitle": "Manage household expenses and income sharing",
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "navigator": {
+      "history": "History",
+      "upcoming": "Upcoming",
+      "backToCurrent": "Back to current month"
+    },
     "tabs": {
       "income": "Income",
       "expenses": "Expenses",
@@ -1148,6 +1167,7 @@
       "exchangeRate": "Exchange Rate",
       "noExchangeRate": "No exchange rate set",
       "exchangeRateUpdated": "Exchange rate updated successfully",
+      "futureMonthNotice": "You are viewing a future month. Income cannot be set for future months, but you can set the exchange rate in advance.",
       "dialog": {
         "title": "Set Monthly Income",
         "description": "Enter income for {month} {year}",
@@ -1240,6 +1260,7 @@
       "paidBy": "Paid by {name}",
       "yourShare": "Your Share",
       "split": "Split",
+      "futureMonthNotice": "You are viewing a future month. Payments cannot be marked as paid until the month arrives.",
       "dialog": {
         "title": "Mark Payment as Paid",
         "description": "Record who paid this expense",
@@ -1266,6 +1287,7 @@
       "summary": "Balance Summary",
       "totalIncome": "Total Income",
       "totalPaidExpenses": "Total Paid",
+      "netBalance": "Net Balance",
       "remaining": "Remaining",
       "shouldPay": "Should pay",
       "actuallyPaid": "Paid",
@@ -1282,11 +1304,23 @@
       "receives": "receives",
       "owes": "{from} owes {to}",
       "markSettled": "Mark as Settled",
+      "paid": "Paid",
+      "paidOn": "Paid on {date}",
+      "unmarkPaid": "Unmark",
       "periodSelect": "Select Period",
       "thisMonth": "This Month",
       "lastMonth": "Last Month",
       "last3Months": "Last 3 Months",
-      "allTime": "All Time"
+      "allTime": "All Time",
+      "settlementDialog": {
+        "title": "Confirm Settlement",
+        "description": "{from} pays {to} $ {amount}",
+        "notes": "Notes (Optional)",
+        "notesPlaceholder": "e.g., Bank transfer, Cash, etc.",
+        "cancel": "Cancel",
+        "confirm": "Confirm Settlement",
+        "confirming": "Confirming..."
+      }
     },
     "defaultExpenseCategories": {
       "housing": "Housing",
@@ -1307,6 +1341,8 @@
       "paymentMarkedPaid": "Payment marked as paid",
       "paymentUnmarked": "Payment unmarked successfully",
       "paymentDeleted": "Payment deleted successfully",
+      "settlementMarkedPaid": "Settlement recorded successfully",
+      "settlementUnmarked": "Settlement unmarked successfully",
       "error": "An error occurred"
     }
   }

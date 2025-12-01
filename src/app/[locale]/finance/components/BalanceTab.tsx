@@ -1,11 +1,19 @@
 'use client'
 
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { User, ExpensePayment, MonthlyIncome, MonthlyExchangeRate, RecurringExpense } from '@/lib/db'
-import { formatARS } from '@/lib/utils'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db, User, ExpensePayment, MonthlyIncome, MonthlyExchangeRate, RecurringExpense, SettlementPayment } from '@/lib/db'
+import { formatARS, generateId } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Scale, ArrowRight, Check, TrendingUp, TrendingDown, Wallet, Receipt, PiggyBank } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Scale, ArrowRight, Check, TrendingUp, TrendingDown, Wallet, Receipt, PiggyBank, Undo2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { format } from 'date-fns'
 
 interface BalanceTabProps {
   users: User[]
@@ -13,6 +21,8 @@ interface BalanceTabProps {
   incomes: MonthlyIncome[]
   expenses: RecurringExpense[]
   exchangeRate?: MonthlyExchangeRate
+  selectedMonth: number
+  selectedYear: number
 }
 
 interface UserBalance {
@@ -35,11 +45,32 @@ interface Settlement {
   amount: number
 }
 
-export function BalanceTab({ users, payments, incomes, expenses, exchangeRate }: BalanceTabProps) {
+export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, selectedMonth, selectedYear }: BalanceTabProps) {
   const t = useTranslations('finance.balance')
+  const tMessages = useTranslations('finance.messages')
+
+  const [showSettlementDialog, setShowSettlementDialog] = useState(false)
+  const [selectedSettlement, setSelectedSettlement] = useState<Settlement | null>(null)
+  const [settlementNotes, setSettlementNotes] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const residents = users.filter(u => u.type === 'resident')
   const rate = exchangeRate?.rate || 1
+
+  // Get settlement payments for this month
+  const settlementPaymentsForMonth = useLiveQuery(
+    () => db.settlementPayments
+      .where('[month+year]')
+      .equals([selectedMonth, selectedYear])
+      .toArray(),
+    [selectedMonth, selectedYear]
+  ) || []
+
+  // Filter payments for the selected month
+  const monthPayments = payments.filter(p => {
+    const dueDate = new Date(p.dueDate)
+    return dueDate.getMonth() + 1 === selectedMonth && dueDate.getFullYear() === selectedYear
+  })
 
   // Calculate total household income in ARS
   const totalIncomeARS = incomes.reduce((sum, inc) => {
@@ -49,8 +80,8 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate }:
     return sum + inc.amount
   }, 0)
 
-  // Get paid payments only
-  const paidPayments = payments.filter(p => p.status === 'paid')
+  // Get paid payments only (filtered by selected month)
+  const paidPayments = monthPayments.filter(p => p.status === 'paid')
 
   // Get expense amount in ARS
   const getExpenseAmountARS = (expenseId: string, fallbackAmount: number): number => {
@@ -142,7 +173,70 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate }:
   }
 
   const settlements = calculateSettlements()
+
+  // Check if a settlement has been paid
+  const isSettlementPaid = (settlement: Settlement): boolean => {
+    return settlementPaymentsForMonth.some(
+      sp => sp.fromUserId === settlement.from && sp.toUserId === settlement.to
+    )
+  }
+
+  // Get the settlement payment record if exists
+  const getSettlementPayment = (settlement: Settlement): SettlementPayment | undefined => {
+    return settlementPaymentsForMonth.find(
+      sp => sp.fromUserId === settlement.from && sp.toUserId === settlement.to
+    )
+  }
+
   const isAllSettled = settlements.length === 0 && paidPayments.length > 0
+
+  // Handle opening settlement dialog
+  const handleMarkSettlementPaid = (settlement: Settlement) => {
+    setSelectedSettlement(settlement)
+    setSettlementNotes('')
+    setShowSettlementDialog(true)
+  }
+
+  // Submit settlement payment
+  const handleSubmitSettlement = async () => {
+    if (!selectedSettlement) return
+
+    setIsSubmitting(true)
+    try {
+      await db.settlementPayments.add({
+        id: generateId('sett'),
+        fromUserId: selectedSettlement.from,
+        toUserId: selectedSettlement.to,
+        amount: selectedSettlement.amount,
+        month: selectedMonth,
+        year: selectedYear,
+        paidDate: new Date(),
+        notes: settlementNotes.trim() || undefined,
+        createdAt: new Date()
+      })
+
+      toast.success(tMessages('settlementMarkedPaid'))
+      setShowSettlementDialog(false)
+      setSelectedSettlement(null)
+      setSettlementNotes('')
+    } catch (error) {
+      console.error('Error saving settlement:', error)
+      toast.error(tMessages('error'))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Delete settlement payment (unmark as paid)
+  const handleUnmarkSettlement = async (settlementPayment: SettlementPayment) => {
+    try {
+      await db.settlementPayments.delete(settlementPayment.id!)
+      toast.success(tMessages('settlementUnmarked'))
+    } catch (error) {
+      console.error('Error deleting settlement:', error)
+      toast.error(tMessages('error'))
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -322,41 +416,90 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate }:
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {settlements.map((settlement, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-xl"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
-                            style={{ backgroundColor: settlement.fromColor }}
-                          >
-                            {settlement.fromName.charAt(0).toUpperCase()}
+                    {settlements.map((settlement, index) => {
+                      const isPaid = isSettlementPaid(settlement)
+                      const settlementPayment = getSettlementPayment(settlement)
+
+                      return (
+                        <div
+                          key={index}
+                          className={`p-4 border rounded-xl transition-all ${
+                            isPaid
+                              ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800'
+                              : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
+                                style={{ backgroundColor: settlement.fromColor }}
+                              >
+                                {settlement.fromName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-semibold">{settlement.fromName}</span>
+                                <p className="text-xs text-muted-foreground">{t('pays')}</p>
+                              </div>
+                              <ArrowRight className={`h-5 w-5 mx-2 ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                              <div
+                                className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
+                                style={{ backgroundColor: settlement.toColor }}
+                              >
+                                {settlement.toName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-semibold">{settlement.toName}</span>
+                                <p className="text-xs text-muted-foreground">{t('receives')}</p>
+                              </div>
+                            </div>
+                            <div className="text-right flex items-center gap-3">
+                              <p className={`text-2xl font-bold ${isPaid ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                $ {formatARS(settlement.amount)}
+                              </p>
+                              {isPaid && (
+                                <Badge className="bg-green-500">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  {t('paid')}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-semibold">{settlement.fromName}</span>
-                            <p className="text-xs text-muted-foreground">{t('pays')}</p>
-                          </div>
-                          <ArrowRight className="h-5 w-5 text-amber-600 dark:text-amber-400 mx-2" />
-                          <div
-                            className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
-                            style={{ backgroundColor: settlement.toColor }}
-                          >
-                            {settlement.toName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <span className="font-semibold">{settlement.toName}</span>
-                            <p className="text-xs text-muted-foreground">{t('receives')}</p>
-                          </div>
+
+                          {/* Action buttons */}
+                          {isPaid ? (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Check className="h-4 w-4 text-green-500" />
+                                {settlementPayment?.paidDate && (
+                                  <span>{t('paidOn', { date: format(new Date(settlementPayment.paidDate), 'MMM d, yyyy') })}</span>
+                                )}
+                                {settlementPayment?.notes && (
+                                  <span className="text-muted-foreground/70">• {settlementPayment.notes}</span>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUnmarkSettlement(settlementPayment!)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Undo2 className="h-4 w-4 mr-1" />
+                                {t('unmarkPaid')}
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              onClick={() => handleMarkSettlementPaid(settlement)}
+                              className="w-full h-11"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              {t('markSettled')}
+                            </Button>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                            $ {formatARS(settlement.amount)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -364,6 +507,78 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate }:
           )}
         </CardContent>
       </Card>
+
+      {/* Settlement Dialog */}
+      <Dialog open={showSettlementDialog} onOpenChange={setShowSettlementDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{t('settlementDialog.title')}</DialogTitle>
+            <DialogDescription>
+              {selectedSettlement && t('settlementDialog.description', {
+                from: selectedSettlement.fromName,
+                to: selectedSettlement.toName,
+                amount: formatARS(selectedSettlement.amount)
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedSettlement && (
+              <div className="flex items-center justify-center gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                    style={{ backgroundColor: selectedSettlement.fromColor }}
+                  >
+                    {selectedSettlement.fromName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-medium">{selectedSettlement.fromName}</span>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                    style={{ backgroundColor: selectedSettlement.toColor }}
+                  >
+                    {selectedSettlement.toName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-medium">{selectedSettlement.toName}</span>
+                </div>
+              </div>
+            )}
+            <div className="text-center">
+              <p className="text-3xl font-bold">
+                $ {selectedSettlement ? formatARS(selectedSettlement.amount) : 0}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('settlementDialog.notes')}</Label>
+              <Input
+                value={settlementNotes}
+                onChange={(e) => setSettlementNotes(e.target.value)}
+                placeholder={t('settlementDialog.notesPlaceholder')}
+                className="h-12"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSettlementDialog(false)}
+              className="h-12"
+            >
+              {t('settlementDialog.cancel')}
+            </Button>
+            <Button
+              onClick={handleSubmitSettlement}
+              disabled={isSubmitting}
+              className="h-12"
+            >
+              {isSubmitting ? t('settlementDialog.confirming') : t('settlementDialog.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

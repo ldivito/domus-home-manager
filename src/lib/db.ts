@@ -643,7 +643,8 @@ export class DomusDatabase extends Dexie {
 
       try {
         // Check if we have migrated data to import (with 5s timeout)
-        await withTimeout(importMigratedData(this), 5000, 'importMigratedData')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await withTimeout(importMigratedData(this as any), 5000, 'importMigratedData')
       } catch (error) {
         console.error('Error importing migrated data:', error)
         // Clear potentially corrupted migration data

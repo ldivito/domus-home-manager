@@ -287,8 +287,6 @@ export default function FinancePage() {
               expenses={recurringExpenses}
               categories={expenseCategories}
               exchangeRate={selectedExchangeRate}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
             />
           </TabsContent>
 

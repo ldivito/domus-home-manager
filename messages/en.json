@@ -155,6 +155,24 @@
         "moreReminders": "more reminders",
         "allCaughtUp": "All caught up!",
         "noUrgent": "No urgent notifications or reminders"
+      },
+      "finance": {
+        "title": "Finance",
+        "balance": "Net Balance",
+        "income": "Income",
+        "expenses": "Expenses",
+        "pending": "Pending",
+        "overdue": "Overdue",
+        "activeExpenses": "active expenses"
+      },
+      "keto": {
+        "title": "Keto Tracker",
+        "streak": "Current Streak",
+        "weeklySuccess": "Weekly Success",
+        "successDays": "Success Days",
+        "cheatDays": "Cheat Days",
+        "notStarted": "Not tracking yet",
+        "startTracking": "Start Tracking"
       }
     },
     "quickActions": {

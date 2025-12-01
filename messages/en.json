@@ -955,7 +955,10 @@
       "offlineModeDescription": "You are using Domus in offline-only mode. To enable sync, switch back to the setup screen.",
       "switchMode": "Switch Mode",
       "switchToSetup": "Switch to Setup",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "forceFullSync": "Force Full Sync",
+      "resetSyncState": "Reset Sync State",
+      "syncStateReset": "Sync state reset. Next sync will be a full sync."
     }
   },
   "planner": {
@@ -1087,7 +1090,11 @@
     "justNow": "Just now",
     "minutesAgo": "{count, plural, one {1 minute ago} other {{count} minutes ago}}",
     "hoursAgo": "{count, plural, one {1 hour ago} other {{count} hours ago}}",
-    "error": "Sync Error"
+    "error": "Sync Error",
+    "syncNow": "Sync Now",
+    "forceFullSync": "Force Full Sync",
+    "resetSyncState": "Reset Sync State",
+    "syncStateReset": "Sync state reset. Next sync will be a full sync."
   },
   "migration": {
     "title": "Database Migration Required",

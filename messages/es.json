@@ -1004,7 +1004,10 @@
       "offlineModeDescription": "Estás usando Domus en modo solo sin conexión. Para habilitar la sincronización, vuelve a la pantalla de configuración.",
       "switchMode": "Cambiar Modo",
       "switchToSetup": "Cambiar a Configuración",
-      "signOut": "Cerrar sesión"
+      "signOut": "Cerrar sesión",
+      "forceFullSync": "Forzar Sincronización Completa",
+      "resetSyncState": "Restablecer Estado de Sincronización",
+      "syncStateReset": "Estado de sincronización restablecido. La próxima sincronización será completa."
     }
   },
   "keto": {
@@ -1087,7 +1090,11 @@
     "justNow": "Hace un momento",
     "minutesAgo": "{count, plural, one {hace 1 minuto} other {hace {count} minutos}}",
     "hoursAgo": "{count, plural, one {hace 1 hora} other {hace {count} horas}}",
-    "error": "Error de sincronización"
+    "error": "Error de sincronización",
+    "syncNow": "Sincronizar Ahora",
+    "forceFullSync": "Forzar Sincronización Completa",
+    "resetSyncState": "Restablecer Estado de Sincronización",
+    "syncStateReset": "Estado de sincronización restablecido. La próxima sincronización será completa."
   },
   "migration": {
     "title": "Migración de Base de Datos Requerida",

@@ -627,7 +627,7 @@ export default function MaintenancePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('dialogs.deleteItem.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('dialogs.deleteItem.description', { name: selectedItem?.name })}
+              {t('dialogs.deleteItem.description', { name: selectedItem?.name ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -645,7 +645,7 @@ export default function MaintenancePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('dialogs.deleteTask.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('dialogs.deleteTask.description', { name: selectedTask?.name })}
+              {t('dialogs.deleteTask.description', { name: selectedTask?.name ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

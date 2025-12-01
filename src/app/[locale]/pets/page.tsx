@@ -454,7 +454,7 @@ export default function PetsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('dialogs.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('dialogs.delete.description', { name: selectedPet?.name })}
+              {t('dialogs.delete.description', { name: selectedPet?.name ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -51,6 +51,64 @@ export default function KetoPage() {
     }
   }, [selectedUser, users])
 
+  // Auto-mark past days as 'cheat' if not marked after a grace period (next day has passed)
+  useEffect(() => {
+    const autoMarkPastDays = async () => {
+      if (!selectedUser || !ketoSettings || !ketoDays) return
+
+      const startDate = ketoSettings.startDate instanceof Date
+        ? ketoSettings.startDate
+        : new Date(ketoSettings.startDate)
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // Grace period: only auto-mark days that are at least 2 days in the past
+      // (the whole day passed AND the next day passed too)
+      const cutoffDate = new Date(today)
+      cutoffDate.setDate(cutoffDate.getDate() - 1) // Yesterday is the cutoff
+
+      const msPerDay = 24 * 60 * 60 * 1000
+      const daysToCheck = Math.floor((cutoffDate.getTime() - startDate.getTime()) / msPerDay)
+
+      if (daysToCheck < 0) return
+
+      const daysToMark: Date[] = []
+
+      for (let i = 0; i <= daysToCheck; i++) {
+        const checkDate = new Date(startDate)
+        checkDate.setDate(startDate.getDate() + i)
+        checkDate.setHours(0, 0, 0, 0)
+
+        const dayKey = formatDateKey(checkDate)
+        const existingDay = ketoDays.find(day => {
+          const dayDate = day.date instanceof Date ? day.date : new Date(day.date)
+          return formatDateKey(dayDate) === dayKey
+        })
+
+        if (!existingDay) {
+          daysToMark.push(new Date(checkDate))
+        }
+      }
+
+      // Batch add all unmarked days as 'cheat'
+      if (daysToMark.length > 0) {
+        const newEntries: KetoDay[] = daysToMark.map(date => ({
+          id: generateId('keto'),
+          userId: selectedUser,
+          date: date,
+          status: 'cheat' as const,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }))
+
+        await db.ketoDays.bulkAdd(newEntries)
+      }
+    }
+
+    autoMarkPastDays()
+  }, [selectedUser, ketoSettings, ketoDays])
+
   // Generate calendar days for current month
   const generateCalendarDays = (): DayStatus[] => {
     const year = currentDate.getFullYear()
@@ -104,6 +162,7 @@ export default function KetoPage() {
     if (!ketoSettings || !ketoDays) {
       return {
         daysOnKeto: 0,
+        totalDaysSinceStart: 0,
         successfulDays: 0,
         fastingDays: 0,
         currentStreak: 0,
@@ -119,13 +178,16 @@ export default function KetoPage() {
     const today = new Date()
     const msPerDay = 24 * 60 * 60 * 1000
 
-    // Calculate days on keto
-    const daysOnKeto = Math.floor((today.getTime() - startDate.getTime()) / msPerDay) + 1
+    // Calculate total days since start (for internal calculations)
+    const totalDaysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / msPerDay) + 1
 
     // Calculate successful days (keto success + fasting combined)
     const successfulDays = ketoDays.filter(day =>
       day.status === 'success' || day.status === 'fasting'
     ).length
+
+    // Days on keto now only counts days that were actually done (success or fasting)
+    const daysOnKeto = successfulDays
 
     // Calculate fasting days specifically
     const fastingDays = ketoDays.filter(day => day.status === 'fasting').length
@@ -173,10 +235,15 @@ export default function KetoPage() {
     ).length
     const monthlySuccessRate = Math.round((monthlySuccessful / 30) * 100)
 
+    // Calculate cheat days (days with 'cheat' status)
+    const cheatDays = ketoDays.filter(day => day.status === 'cheat').length
+
     return {
       daysOnKeto,
+      totalDaysSinceStart,
       successfulDays,
       fastingDays,
+      cheatDays,
       currentStreak,
       weeklySuccessRate: Math.min(weeklySuccessRate, 100),
       monthlySuccessRate: Math.min(monthlySuccessRate, 100)
@@ -622,7 +689,7 @@ export default function KetoPage() {
                 </div>
                 <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
                   <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    {stats.daysOnKeto - stats.successfulDays}
+                    {stats.cheatDays}
                   </div>
                   <div className="text-xs text-red-600/70 dark:text-red-400/70">{t('progress.cheatDays')}</div>
                 </div>

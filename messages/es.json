@@ -14,12 +14,16 @@
     "grocery": "Compras",
     "meals": "Comidas",
     "keto": "Keto",
+    "finance": "Finanzas",
     "planner": "Planificador",
     "tasks": "Pendientes",
     "projects": "Proyectos",
     "reminders": "Notificaciones",
     "users": "Usuarios",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "theme": "Tema",
+    "language": "Idioma",
+    "sync": "Sincronizar"
   },
   "home": {
     "welcome": "Bienvenido a Domus",
@@ -180,6 +184,28 @@
       "selectColor": "Seleccionar Color",
       "cancel": "Cancelar",
       "create": "Crear Usuario"
+    },
+    "editUserModal": {
+      "title": "Editar Usuario",
+      "name": "Nombre",
+      "namePlaceholder": "Ingresa el nombre del usuario",
+      "userType": "Tipo de Usuario",
+      "resident": "Residente",
+      "guest": "Invitado",
+      "residentDescription": "Vive en la casa permanentemente",
+      "guestDescription": "Visitante temporal o invitado",
+      "selectColor": "Seleccionar Color",
+      "cancel": "Cancelar",
+      "save": "Guardar Cambios",
+      "deleteTitle": "Eliminar Usuario?",
+      "deleteDescription": "Estas seguro que deseas eliminar a {name}? Esta accion no se puede deshacer.",
+      "confirmDelete": "Eliminar"
+    },
+    "messages": {
+      "userCreated": "Usuario creado exitosamente",
+      "userUpdated": "Usuario actualizado exitosamente",
+      "userDeleted": "Usuario eliminado exitosamente",
+      "error": "Ocurrio un error"
     },
     "editProfile": "Editar Perfil",
     "familyMember": "Miembro de la Familia",
@@ -1066,5 +1092,161 @@
     "createHouseholdDescription": "Crea un hogar para comenzar a gestionar tu casa con miembros de la familia",
     "householdNameRequired": "El nombre del hogar es obligatorio",
     "householdCreated": "¡Hogar creado exitosamente!"
+  },
+  "finance": {
+    "title": "Finanzas",
+    "subtitle": "Gestiona gastos e ingresos compartidos del hogar",
+    "tabs": {
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "payments": "Pagos",
+      "balance": "Saldo"
+    },
+    "income": {
+      "title": "Ingresos Mensuales",
+      "subtitle": "Establece los ingresos de cada miembro del hogar",
+      "currentMonth": "Mes Actual",
+      "setIncome": "Establecer Ingresos",
+      "noIncome": "No hay ingresos registrados para este mes",
+      "noIncomeDescription": "Agrega ingresos para los miembros del hogar para calcular el reparto de gastos",
+      "totalHousehold": "Ingresos Totales del Hogar",
+      "share": "Participación",
+      "history": "Historial de Ingresos",
+      "viewHistory": "Ver Historial",
+      "noHistory": "No hay historial de ingresos",
+      "dialog": {
+        "title": "Establecer Ingresos Mensuales",
+        "description": "Ingresa los ingresos para {month} {year}",
+        "amount": "Monto",
+        "amountPlaceholder": "Ingresa el monto",
+        "selectUser": "Seleccionar Miembro",
+        "save": "Guardar Ingresos",
+        "saving": "Guardando...",
+        "cancel": "Cancelar"
+      }
+    },
+    "expenses": {
+      "title": "Gastos Recurrentes",
+      "subtitle": "Gestiona facturas y pagos recurrentes del hogar",
+      "addExpense": "Agregar Gasto",
+      "noExpenses": "No hay gastos recurrentes",
+      "noExpensesDescription": "Agrega tu primer gasto recurrente como renta, servicios o suscripciones",
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "dueOn": "Vence el día {day}",
+      "frequency": {
+        "monthly": "Mensual",
+        "bimonthly": "Cada 2 Meses",
+        "quarterly": "Trimestral",
+        "yearly": "Anual"
+      },
+      "dialog": {
+        "title": "Agregar Gasto Recurrente",
+        "editTitle": "Editar Gasto Recurrente",
+        "name": "Nombre",
+        "namePlaceholder": "ej., Renta, Electricidad",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Descripción opcional",
+        "amount": "Monto",
+        "amountPlaceholder": "Ingresa el monto",
+        "category": "Categoría",
+        "selectCategory": "Seleccionar categoría",
+        "frequency": "Frecuencia",
+        "dueDay": "Día de Vencimiento del Mes",
+        "dueDayPlaceholder": "1-31",
+        "save": "Guardar Gasto",
+        "saving": "Guardando...",
+        "cancel": "Cancelar"
+      },
+      "manageCategories": "Gestionar Categorías",
+      "categoriesDialog": {
+        "title": "Categorías de Gastos",
+        "description": "Gestionar categorías de gastos",
+        "addCategory": "Agregar Categoría",
+        "name": "Nombre",
+        "namePlaceholder": "Nombre de la categoría",
+        "icon": "Ícono",
+        "color": "Color",
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "done": "Listo",
+        "defaultCategory": "Predeterminada"
+      }
+    },
+    "payments": {
+      "title": "Pagos",
+      "subtitle": "Rastrea y gestiona los pagos de facturas",
+      "currentPeriod": "Período Actual",
+      "upcoming": "Próximos",
+      "overdue": "Vencidos",
+      "paid": "Pagados",
+      "pending": "Pendientes",
+      "noPayments": "No hay pagos para este período",
+      "noPaymentsDescription": "Los pagos aparecerán aquí cuando los gastos recurrentes venzan",
+      "markPaid": "Marcar como Pagado",
+      "dueDate": "Vence {date}",
+      "paidOn": "Pagado el {date}",
+      "paidBy": "Pagado por {name}",
+      "yourShare": "Tu Parte",
+      "split": "Reparto",
+      "dialog": {
+        "title": "Marcar Pago como Pagado",
+        "description": "Registra quién pagó este gasto",
+        "paidBy": "Pagado Por",
+        "selectPayer": "Selecciona quién pagó",
+        "paidDate": "Fecha de Pago",
+        "actualAmount": "Monto Real Pagado",
+        "notes": "Notas",
+        "notesPlaceholder": "Notas de pago opcionales",
+        "confirm": "Confirmar Pago",
+        "confirming": "Confirmando...",
+        "cancel": "Cancelar"
+      },
+      "filter": {
+        "all": "Todos",
+        "pending": "Pendientes",
+        "paid": "Pagados",
+        "overdue": "Vencidos"
+      }
+    },
+    "balance": {
+      "title": "Saldo y Liquidación",
+      "subtitle": "Ve quién le debe a quién según las participaciones de ingresos",
+      "summary": "Resumen de Saldo",
+      "totalOwed": "Total Adeudado",
+      "totalPaid": "Total Pagado",
+      "netBalance": "Saldo Neto",
+      "youOwe": "Usted debe",
+      "owesYou": "Le debe a usted",
+      "settled": "Liquidado",
+      "settlement": "Sugerencias de Liquidación",
+      "noSettlement": "¡Todos los saldos están liquidados!",
+      "owes": "{from} debe a {to}",
+      "markSettled": "Marcar como Liquidado",
+      "periodSelect": "Seleccionar Período",
+      "thisMonth": "Este Mes",
+      "lastMonth": "Mes Pasado",
+      "last3Months": "Últimos 3 Meses",
+      "allTime": "Todos los Tiempos"
+    },
+    "defaultExpenseCategories": {
+      "housing": "Vivienda",
+      "utilities": "Servicios",
+      "internet": "Internet y Teléfono",
+      "insurance": "Seguros",
+      "taxes": "Impuestos",
+      "subscriptions": "Suscripciones",
+      "maintenance": "Mantenimiento",
+      "other": "Otros"
+    },
+    "messages": {
+      "incomeAdded": "Ingresos agregados exitosamente",
+      "incomeUpdated": "Ingresos actualizados exitosamente",
+      "expenseAdded": "Gasto agregado exitosamente",
+      "expenseUpdated": "Gasto actualizado exitosamente",
+      "expenseDeleted": "Gasto eliminado exitosamente",
+      "paymentMarkedPaid": "Pago marcado como pagado",
+      "error": "Ocurrió un error"
+    }
   }
 }

@@ -14,12 +14,16 @@
     "grocery": "Grocery",
     "meals": "Meals",
     "keto": "Keto",
+    "finance": "Finance",
     "planner": "Planner",
     "tasks": "Tasks",
     "projects": "Projects",
     "reminders": "Notifications",
     "users": "Users",
-    "settings": "Settings"
+    "settings": "Settings",
+    "theme": "Theme",
+    "language": "Language",
+    "sync": "Sync"
   },
   "home": {
     "welcome": "Welcome to Domus",
@@ -180,6 +184,28 @@
       "selectColor": "Select Color",
       "cancel": "Cancel",
       "create": "Create User"
+    },
+    "editUserModal": {
+      "title": "Edit User",
+      "name": "Name",
+      "namePlaceholder": "Enter user name",
+      "userType": "User Type",
+      "resident": "Resident",
+      "guest": "Guest",
+      "residentDescription": "Lives in the home permanently",
+      "guestDescription": "Temporary visitor or guest",
+      "selectColor": "Select Color",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "deleteTitle": "Delete User?",
+      "deleteDescription": "Are you sure you want to delete {name}? This action cannot be undone.",
+      "confirmDelete": "Delete"
+    },
+    "messages": {
+      "userCreated": "User created successfully",
+      "userUpdated": "User updated successfully",
+      "userDeleted": "User deleted successfully",
+      "error": "An error occurred"
     },
     "editProfile": "Edit Profile",
     "familyMember": "Family Member",
@@ -1066,5 +1092,161 @@
     "createHouseholdDescription": "Create a household to start managing your home with family members",
     "householdNameRequired": "Household name is required",
     "householdCreated": "Household created successfully!"
+  },
+  "finance": {
+    "title": "Finance",
+    "subtitle": "Manage household expenses and income sharing",
+    "tabs": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "payments": "Payments",
+      "balance": "Balance"
+    },
+    "income": {
+      "title": "Monthly Income",
+      "subtitle": "Set income for each household member",
+      "currentMonth": "Current Month",
+      "setIncome": "Set Income",
+      "noIncome": "No income recorded for this month",
+      "noIncomeDescription": "Add income for household members to calculate expense splits",
+      "totalHousehold": "Total Household Income",
+      "share": "Share",
+      "history": "Income History",
+      "viewHistory": "View History",
+      "noHistory": "No income history",
+      "dialog": {
+        "title": "Set Monthly Income",
+        "description": "Enter income for {month} {year}",
+        "amount": "Amount",
+        "amountPlaceholder": "Enter amount",
+        "selectUser": "Select Member",
+        "save": "Save Income",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      }
+    },
+    "expenses": {
+      "title": "Recurring Expenses",
+      "subtitle": "Manage household bills and recurring payments",
+      "addExpense": "Add Expense",
+      "noExpenses": "No recurring expenses",
+      "noExpensesDescription": "Add your first recurring expense like rent, utilities, or subscriptions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "dueOn": "Due on day {day}",
+      "frequency": {
+        "monthly": "Monthly",
+        "bimonthly": "Every 2 Months",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly"
+      },
+      "dialog": {
+        "title": "Add Recurring Expense",
+        "editTitle": "Edit Recurring Expense",
+        "name": "Name",
+        "namePlaceholder": "e.g., Rent, Electricity",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional description",
+        "amount": "Amount",
+        "amountPlaceholder": "Enter amount",
+        "category": "Category",
+        "selectCategory": "Select category",
+        "frequency": "Frequency",
+        "dueDay": "Due Day of Month",
+        "dueDayPlaceholder": "1-31",
+        "save": "Save Expense",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      },
+      "manageCategories": "Manage Categories",
+      "categoriesDialog": {
+        "title": "Expense Categories",
+        "description": "Manage expense categories",
+        "addCategory": "Add Category",
+        "name": "Name",
+        "namePlaceholder": "Category name",
+        "icon": "Icon",
+        "color": "Color",
+        "save": "Save",
+        "cancel": "Cancel",
+        "done": "Done",
+        "defaultCategory": "Default"
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "subtitle": "Track and manage bill payments",
+      "currentPeriod": "Current Period",
+      "upcoming": "Upcoming",
+      "overdue": "Overdue",
+      "paid": "Paid",
+      "pending": "Pending",
+      "noPayments": "No payments for this period",
+      "noPaymentsDescription": "Payments will appear here when recurring expenses are due",
+      "markPaid": "Mark as Paid",
+      "dueDate": "Due {date}",
+      "paidOn": "Paid on {date}",
+      "paidBy": "Paid by {name}",
+      "yourShare": "Your Share",
+      "split": "Split",
+      "dialog": {
+        "title": "Mark Payment as Paid",
+        "description": "Record who paid this expense",
+        "paidBy": "Paid By",
+        "selectPayer": "Select who paid",
+        "paidDate": "Payment Date",
+        "actualAmount": "Actual Amount Paid",
+        "notes": "Notes",
+        "notesPlaceholder": "Optional payment notes",
+        "confirm": "Confirm Payment",
+        "confirming": "Confirming...",
+        "cancel": "Cancel"
+      },
+      "filter": {
+        "all": "All",
+        "pending": "Pending",
+        "paid": "Paid",
+        "overdue": "Overdue"
+      }
+    },
+    "balance": {
+      "title": "Balance & Settlement",
+      "subtitle": "See who owes whom based on income shares",
+      "summary": "Balance Summary",
+      "totalOwed": "Total Owed",
+      "totalPaid": "Total Paid",
+      "netBalance": "Net Balance",
+      "youOwe": "You owe",
+      "owesYou": "Owes you",
+      "settled": "Settled",
+      "settlement": "Settlement Suggestions",
+      "noSettlement": "All balances are settled!",
+      "owes": "{from} owes {to}",
+      "markSettled": "Mark as Settled",
+      "periodSelect": "Select Period",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month",
+      "last3Months": "Last 3 Months",
+      "allTime": "All Time"
+    },
+    "defaultExpenseCategories": {
+      "housing": "Housing",
+      "utilities": "Utilities",
+      "internet": "Internet & Phone",
+      "insurance": "Insurance",
+      "taxes": "Taxes",
+      "subscriptions": "Subscriptions",
+      "maintenance": "Maintenance",
+      "other": "Other"
+    },
+    "messages": {
+      "incomeAdded": "Income added successfully",
+      "incomeUpdated": "Income updated successfully",
+      "expenseAdded": "Expense added successfully",
+      "expenseUpdated": "Expense updated successfully",
+      "expenseDeleted": "Expense deleted successfully",
+      "paymentMarkedPaid": "Payment marked as paid",
+      "error": "An error occurred"
+    }
   }
 }

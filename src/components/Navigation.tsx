@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   Heart,
   LogOut,
-  User
+  User,
+  Wallet
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -26,6 +27,12 @@ import LanguageSelector from './LanguageSelector'
 import SyncButton from './SyncButton'
 import SyncLoadingScreen from './SyncLoadingScreen'
 import { Button } from './ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
 import { toast } from 'sonner'
@@ -110,6 +117,7 @@ export default function Navigation() {
     { nameKey: 'grocery', href: '/grocery', icon: ShoppingCart },
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },
     { nameKey: 'keto', href: '/keto', icon: Heart },
+    { nameKey: 'finance', href: '/finance', icon: Wallet },
     { nameKey: 'planner', href: '/planner', icon: Calendar },
     { nameKey: 'tasks', href: '/tasks', icon: List },
     { nameKey: 'projects', href: '/projects', icon: Hammer },
@@ -124,6 +132,7 @@ export default function Navigation() {
   }
 
   return (
+    <TooltipProvider delayDuration={200}>
     <nav aria-label="Sidebar" className={cn(
       "bg-card/50 backdrop-blur-xl border-r border-border/50 h-full flex flex-col shadow-modern transition-all duration-300",
       isExpanded ? "w-64" : "w-16"
@@ -176,45 +185,54 @@ export default function Navigation() {
           {navigationItems.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
-            
+
+            const linkElement = (
+              <Link
+                href={item.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'flex items-center py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                  isExpanded ? 'gap-3 px-2.5' : 'justify-center px-2',
+                  'hover:bg-muted/80 hover:scale-[1.02] active:scale-[0.98]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-modern hover:bg-primary/90'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Icon className={cn(
+                  "h-5 w-5 transition-colors duration-200 flex-shrink-0",
+                  isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                )} />
+                {isExpanded && (
+                  <>
+                    <span className="truncate">{t(item.nameKey)}</span>
+                    {isActive && (
+                      <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground/60 flex-shrink-0" />
+                    )}
+                  </>
+                )}
+              </Link>
+            )
+
             return (
               <li key={item.nameKey}>
-                <div className="relative group">
-                  <Link
-                    href={item.href}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'flex items-center py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                      isExpanded ? 'gap-3 px-2.5' : 'justify-center px-2',
-                      'hover:bg-muted/80 hover:scale-[1.02] active:scale-[0.98]',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      isActive
-                        ? 'bg-primary text-primary-foreground shadow-modern hover:bg-primary/90'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    <Icon className={cn(
-                      "h-5 w-5 transition-colors duration-200 flex-shrink-0",
-                      isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                    )} />
-                    {isExpanded && (
-                      <>
-                        <span className="truncate">{t(item.nameKey)}</span>
-                        {isActive && (
-                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground/60 flex-shrink-0" />
-                        )}
-                      </>
-                    )}
-                  </Link>
-                  
-                  {/* Hover tooltip when collapsed */}
-                  {!isExpanded && (
-                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                {!isExpanded ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="group">
+                        {linkElement}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
                       {t(item.nameKey)}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-popover" />
-                    </div>
-                  )}
-                </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <div className="group">
+                    {linkElement}
+                  </div>
+                )}
               </li>
             )
           })}
@@ -247,18 +265,31 @@ export default function Navigation() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
-                <Button
-                  onClick={handleLogout}
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title={tAuth('signOut')}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 cursor-default">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {user.email}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleLogout}
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {tAuth('signOut')}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             )}
           </div>
@@ -275,12 +306,40 @@ export default function Navigation() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <ThemeToggle />
-            <LanguageSelector />
-            <SyncButton compact />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <ThemeToggle />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {t('theme')}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <LanguageSelector />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {t('language')}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <SyncButton compact />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {t('sync')}
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
       </div>
     </nav>
+    </TooltipProvider>
   )
 }

@@ -336,19 +336,47 @@ export default function HomePage() {
   })
 
   const monthlySubscriptionTotal = activeSubscriptions.reduce((sum, sub) => {
-    let monthlyAmount = sub.amount
-    // Convert to monthly equivalent
-    switch (sub.billingCycle) {
-      case 'weekly': monthlyAmount *= 4; break
-      case 'quarterly': monthlyAmount /= 3; break
-      case 'biannually': monthlyAmount /= 6; break
-      case 'yearly': monthlyAmount /= 12; break
+    const usdRate = exchangeRate?.rate || 1000 // Fallback rate
+    let monthlyAmountARS = 0
+
+    // Calculate from ARS amount
+    if (sub.amountARS) {
+      let amount = sub.amountARS
+      switch (sub.billingCycle) {
+        case 'weekly': amount *= 4; break
+        case 'quarterly': amount /= 3; break
+        case 'biannually': amount /= 6; break
+        case 'yearly': amount /= 12; break
+      }
+      monthlyAmountARS += amount
     }
-    // Convert USD to ARS if exchange rate available
-    if (sub.currency === 'USD' && exchangeRate?.rate) {
-      monthlyAmount *= exchangeRate.rate
+
+    // Calculate from USD amount (convert to ARS)
+    if (sub.amountUSD) {
+      let amount = sub.amountUSD
+      switch (sub.billingCycle) {
+        case 'weekly': amount *= 4; break
+        case 'quarterly': amount /= 3; break
+        case 'biannually': amount /= 6; break
+        case 'yearly': amount /= 12; break
+      }
+      monthlyAmountARS += amount * usdRate
     }
-    return sum + monthlyAmount
+
+    // Fallback to legacy fields if new fields not set
+    if (!sub.amountARS && !sub.amountUSD) {
+      let amount = sub.amount
+      switch (sub.billingCycle) {
+        case 'weekly': amount *= 4; break
+        case 'quarterly': amount /= 3; break
+        case 'biannually': amount /= 6; break
+        case 'yearly': amount /= 12; break
+      }
+      if (sub.currency === 'USD') amount *= usdRate
+      monthlyAmountARS += amount
+    }
+
+    return sum + monthlyAmountARS
   }, 0)
 
   // Get next 4-5 chores for display

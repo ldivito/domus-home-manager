@@ -93,6 +93,29 @@ export default function SubscriptionsPage() {
   const subscriptions = useLiveQuery(() => db.subscriptions.orderBy('nextBillingDate').toArray()) ?? EMPTY_SUBSCRIPTIONS
   const payments = useLiveQuery(() => db.subscriptionPayments.orderBy('paymentDate').reverse().toArray()) ?? []
 
+  // Get exchange rate from Finance module (current month or last available)
+  const exchangeRate = useLiveQuery(async () => {
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+
+    // Try current month first
+    let rate = await db.monthlyExchangeRates
+      .where({ month: currentMonth, year: currentYear })
+      .first()
+
+    // If not found, get the most recent one
+    if (!rate) {
+      const rates = await db.monthlyExchangeRates
+        .orderBy('[year+month]')
+        .reverse()
+        .first()
+      rate = rates
+    }
+
+    return rate
+  }, [])
+
   // Filter subscriptions
   const filteredSubscriptions = useMemo(() => {
     return subscriptions.filter(sub => {
@@ -108,16 +131,43 @@ export default function SubscriptionsPage() {
   // Calculate stats
   const stats = useMemo(() => {
     const active = subscriptions.filter(s => s.status === 'active')
-    const monthlyTotal = active.reduce((sum, s) => {
-      let monthlyAmount = s.amount
-      if (s.billingCycle === 'yearly') monthlyAmount = s.amount / 12
-      else if (s.billingCycle === 'quarterly') monthlyAmount = s.amount / 3
-      else if (s.billingCycle === 'biannually') monthlyAmount = s.amount / 6
-      else if (s.billingCycle === 'weekly') monthlyAmount = s.amount * 4
+    const usdRate = exchangeRate?.rate || 1000 // Fallback rate if not set
 
-      // Convert USD to ARS if needed (rough estimate - ideally should use exchange rate)
-      if (s.currency === 'USD') monthlyAmount *= 1000 // Placeholder rate
-      return sum + monthlyAmount
+    const monthlyTotal = active.reduce((sum, s) => {
+      let monthlyAmountARS = 0
+
+      // Calculate monthly amount from ARS
+      if (s.amountARS) {
+        let amount = s.amountARS
+        if (s.billingCycle === 'yearly') amount /= 12
+        else if (s.billingCycle === 'quarterly') amount /= 3
+        else if (s.billingCycle === 'biannually') amount /= 6
+        else if (s.billingCycle === 'weekly') amount *= 4
+        monthlyAmountARS += amount
+      }
+
+      // Calculate monthly amount from USD (convert to ARS)
+      if (s.amountUSD) {
+        let amount = s.amountUSD
+        if (s.billingCycle === 'yearly') amount /= 12
+        else if (s.billingCycle === 'quarterly') amount /= 3
+        else if (s.billingCycle === 'biannually') amount /= 6
+        else if (s.billingCycle === 'weekly') amount *= 4
+        monthlyAmountARS += amount * usdRate
+      }
+
+      // Fallback to legacy fields if new fields not set
+      if (!s.amountARS && !s.amountUSD) {
+        let amount = s.amount
+        if (s.billingCycle === 'yearly') amount /= 12
+        else if (s.billingCycle === 'quarterly') amount /= 3
+        else if (s.billingCycle === 'biannually') amount /= 6
+        else if (s.billingCycle === 'weekly') amount *= 4
+        if (s.currency === 'USD') amount *= usdRate
+        monthlyAmountARS += amount
+      }
+
+      return sum + monthlyAmountARS
     }, 0)
 
     const now = new Date()
@@ -134,7 +184,7 @@ export default function SubscriptionsPage() {
       monthlyTotal,
       dueThisWeek: dueThisWeek.length
     }
-  }, [subscriptions])
+  }, [subscriptions, exchangeRate])
 
   // Get active subscriptions for the "active" tab
   const activeSubscriptions = useMemo(() => {

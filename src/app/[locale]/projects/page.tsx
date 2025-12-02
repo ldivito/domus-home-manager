@@ -28,7 +28,7 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<HomeImprovement | null>(null)
   const [draggedProject, setDraggedProject] = useState<HomeImprovement | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<StatusType | null>(null)
-  const isDraggingRef = useRef(false)
+  const lastDragEndTime = useRef(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterPriority, setFilterPriority] = useState<FilterPriority>('all')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
@@ -104,17 +104,13 @@ export default function ProjectsPage() {
   }
 
   const handleDragStart = (e: React.DragEvent, project: HomeImprovement) => {
-    isDraggingRef.current = true
     setDraggedProject(project)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', project.id || '')
   }
 
   const handleDragEnd = () => {
-    // Small delay to prevent click from firing after drag
-    setTimeout(() => {
-      isDraggingRef.current = false
-    }, 100)
+    lastDragEndTime.current = Date.now()
     setDraggedProject(null)
     setDragOverColumn(null)
   }
@@ -213,8 +209,9 @@ export default function ProjectsPage() {
     const totalTasks = taskCounts.pending + taskCounts.completed
 
     const handleCardClick = () => {
-      // Only open detail if not dragging
-      if (!isDraggingRef.current && !draggedProject) {
+      // Only open detail if not recently dragged (within 200ms)
+      const timeSinceDrag = Date.now() - lastDragEndTime.current
+      if (timeSinceDrag > 200 && !draggedProject) {
         handleViewProject(project)
       }
     }

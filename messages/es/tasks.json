@@ -14,11 +14,14 @@
   "completeBlockerFirst": "Completa primero la tarea bloqueadora",
   "manageCategories": "Categorías",
   "filters": {
+    "title": "Filtros",
     "priority": "Prioridad",
     "status": "Estado",
     "assignee": "Asignado a",
     "project": "Proyecto",
-    "category": "Categoría"
+    "category": "Categoría",
+    "clearAll": "Limpiar filtros",
+    "active": "Filtros activos"
   },
   "priority": {
     "low": "Baja",

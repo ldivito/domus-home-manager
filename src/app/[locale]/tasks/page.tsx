@@ -3,10 +3,12 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
-import { List, Plus, Calendar, CheckCircle, Edit3, Trash2, Search, Filter, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Calendar, CheckCircle, Edit3, Trash2, Search, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload, ChevronLeft, ChevronRight, Filter, X } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db, Task, HomeImprovement, TaskCategory } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -15,7 +17,7 @@ import { EditTaskDialog } from './components/EditTaskDialog'
 import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
 import { ImportTasksDialog } from './components/ImportTasksDialog'
 
-const TASKS_PER_PAGE = 10
+const TASKS_PER_PAGE = 20
 
 export default function TasksPage() {
   const t = useTranslations('tasks')
@@ -55,10 +57,10 @@ export default function TasksPage() {
     []
   ) || []
 
-  const priorityColors = {
-    high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+  const priorityBorderColors = {
+    high: 'border-l-red-500',
+    medium: 'border-l-yellow-500',
+    low: 'border-l-green-500'
   }
 
   const translateCategoryName = (categoryName: string) => {
@@ -100,12 +102,6 @@ export default function TasksPage() {
     setEditDialogOpen(true)
   }
 
-  const getUserName = (userId?: string) => {
-    if (!userId) return null
-    const user = users.find(u => u.id === userId)
-    return user?.name || null
-  }
-
   const getProjectName = (projectId?: string) => {
     if (!projectId) return null
     const project = projects.find(p => p.id === projectId)
@@ -115,12 +111,6 @@ export default function TasksPage() {
   const getCategory = (categoryId?: string) => {
     if (!categoryId) return null
     return categories.find(c => c.id === categoryId) || null
-  }
-
-  const getBlockerTask = (blockerTaskId?: string) => {
-    if (!blockerTaskId) return null
-    const blocker = tasks.find(t => t.id === blockerTaskId)
-    return blocker || null
   }
 
   const formatEstimatedTime = (estimatedTime?: { hours: number; minutes: number }) => {
@@ -201,97 +191,250 @@ export default function TasksPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="mb-4 space-y-2">
+          <div className="flex gap-2 items-center">
+            {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
               <Input
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
                 placeholder={t('searchPlaceholder')}
-                className="pl-10 h-9"
+                className="pl-10"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setCurrentPage(1) }}>
-                <SelectTrigger className="w-36 h-9">
-                  <Tag className="mr-1 h-3 w-3" />
-                  <SelectValue placeholder={t('filters.category')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="none">{t('form.noCategory')}</SelectItem>
-                  {categories.map((category: TaskCategory) => (
-                    <SelectItem key={category.id} value={category.id!.toString()}>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category.color || '#6b7280' }} />
-                        <span>{translateCategoryName(category.name)}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
-              <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setCurrentPage(1) }}>
-                <SelectTrigger className="w-32 h-9">
-                  <Filter className="mr-1 h-3 w-3" />
-                  <SelectValue placeholder={t('filters.priority')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="high">{t('priority.high')}</SelectItem>
-                  <SelectItem value="medium">{t('priority.medium')}</SelectItem>
-                  <SelectItem value="low">{t('priority.low')}</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Filter Button */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {t('filters.title')}
+                  {(categoryFilter !== 'all' || priorityFilter !== 'all' || statusFilter !== 'all' || assigneeFilter !== 'all' || projectFilter !== 'all') && (
+                    <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-[10px] text-white">
+                      {[categoryFilter, priorityFilter, statusFilter, assigneeFilter, projectFilter].filter(f => f !== 'all').length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm">{t('filters.title')}</h4>
 
-              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}>
-                <SelectTrigger className="w-32 h-9">
-                  <SelectValue placeholder={t('filters.status')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="pending">{t('status.pending')}</SelectItem>
-                  <SelectItem value="completed">{t('status.completed')}</SelectItem>
-                </SelectContent>
-              </Select>
+                  {/* Category */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.category')}</Label>
+                    <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setCurrentPage(1) }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="none">{t('form.noCategory')}</SelectItem>
+                        {categories.map((category: TaskCategory) => (
+                          <SelectItem key={category.id} value={category.id!.toString()}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category.color || '#6b7280' }} />
+                              <span>{translateCategoryName(category.name)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Select value={assigneeFilter} onValueChange={(v) => { setAssigneeFilter(v); setCurrentPage(1) }}>
-                <SelectTrigger className="w-32 h-9">
-                  <User className="mr-1 h-3 w-3" />
-                  <SelectValue placeholder={t('filters.assignee')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="unassigned">{tCommon('notAssigned')}</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id!.toString()}>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: user.color }} />
-                        <span>{user.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  {/* Priority */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.priority')}</Label>
+                    <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setCurrentPage(1) }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="high">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            {t('priority.high')}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                            {t('priority.medium')}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="low">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            {t('priority.low')}
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Select value={projectFilter} onValueChange={(v) => { setProjectFilter(v); setCurrentPage(1) }}>
-                <SelectTrigger className="w-36 h-9">
-                  <FolderKanban className="mr-1 h-3 w-3" />
-                  <SelectValue placeholder={t('filters.project')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="none">{t('form.noProject')}</SelectItem>
-                  {projects.map((project: HomeImprovement) => (
-                    <SelectItem key={project.id} value={project.id!.toString()}>
-                      {project.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  {/* Status */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.status')}</Label>
+                    <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="pending">{t('status.pending')}</SelectItem>
+                        <SelectItem value="completed">{t('status.completed')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Assignee */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.assignee')}</Label>
+                    <Select value={assigneeFilter} onValueChange={(v) => { setAssigneeFilter(v); setCurrentPage(1) }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="unassigned">{tCommon('notAssigned')}</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id!.toString()}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: user.color }} />
+                              <span>{user.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Project */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.project')}</Label>
+                    <Select value={projectFilter} onValueChange={(v) => { setProjectFilter(v); setCurrentPage(1) }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="none">{t('form.noProject')}</SelectItem>
+                        {projects.map((project: HomeImprovement) => (
+                          <SelectItem key={project.id} value={project.id!.toString()}>
+                            {project.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear all */}
+                  {(categoryFilter !== 'all' || priorityFilter !== 'all' || statusFilter !== 'all' || assigneeFilter !== 'all' || projectFilter !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-gray-500"
+                      onClick={() => {
+                        setCategoryFilter('all')
+                        setPriorityFilter('all')
+                        setStatusFilter('all')
+                        setAssigneeFilter('all')
+                        setProjectFilter('all')
+                        setCurrentPage(1)
+                      }}
+                    >
+                      {t('filters.clearAll')}
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
+
+          {/* Active Filters */}
+          {(categoryFilter !== 'all' || priorityFilter !== 'all' || statusFilter !== 'all' || assigneeFilter !== 'all' || projectFilter !== 'all') && (
+            <div className="flex gap-1.5 flex-wrap items-center">
+              <span className="text-xs text-gray-500">{t('filters.active')}:</span>
+
+              {categoryFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs">
+                  <Tag className="h-3 w-3" />
+                  {categoryFilter === 'none'
+                    ? t('form.noCategory')
+                    : translateCategoryName(categories.find(c => c.id === categoryFilter)?.name || '')}
+                  <button
+                    onClick={() => { setCategoryFilter('all'); setCurrentPage(1) }}
+                    className="ml-0.5 hover:text-purple-900 dark:hover:text-purple-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {priorityFilter !== 'all' && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                  priorityFilter === 'high'
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    : priorityFilter === 'medium'
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                }`}>
+                  {t(`priority.${priorityFilter}`)}
+                  <button
+                    onClick={() => { setPriorityFilter('all'); setCurrentPage(1) }}
+                    className="ml-0.5 hover:opacity-70"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {statusFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs">
+                  <CheckCircle className="h-3 w-3" />
+                  {t(`status.${statusFilter}`)}
+                  <button
+                    onClick={() => { setStatusFilter('all'); setCurrentPage(1) }}
+                    className="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {assigneeFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                  <User className="h-3 w-3" />
+                  {assigneeFilter === 'unassigned'
+                    ? tCommon('notAssigned')
+                    : users.find(u => u.id === assigneeFilter)?.name || ''}
+                  <button
+                    onClick={() => { setAssigneeFilter('all'); setCurrentPage(1) }}
+                    className="ml-0.5 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {projectFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs">
+                  <FolderKanban className="h-3 w-3" />
+                  {projectFilter === 'none'
+                    ? t('form.noProject')
+                    : projects.find(p => p.id === projectFilter)?.title || ''}
+                  <button
+                    onClick={() => { setProjectFilter('all'); setCurrentPage(1) }}
+                    className="ml-0.5 hover:text-violet-900 dark:hover:text-violet-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Results count */}
@@ -301,7 +444,7 @@ export default function TasksPage() {
         </div>
 
         {/* Compact Task List */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           {paginatedTasks.length === 0 ? (
             <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
               <CardContent className="flex items-center justify-center h-24 text-gray-500 dark:text-gray-400">
@@ -325,108 +468,135 @@ export default function TasksPage() {
               const projectName = getProjectName(task.linkedProjectId)
               const category = getCategory(task.category)
               const estimatedTimeStr = formatEstimatedTime(task.estimatedTime)
-              const blockerTask = getBlockerTask(task.blockedByTaskId)
               const isBlocked = isBlockedByIncompleteTask(task)
-              const userName = getUserName(task.assignedUserId)
+              const assignedUser = task.assignedUserId ? users.find(u => u.id === task.assignedUserId) : null
 
               return (
-                <Card
+                <div
                   key={task.id}
-                  className={`transition-all ${
+                  className={`group flex items-center gap-2 py-1.5 px-3 rounded-md border-l-3 transition-all ${
+                    priorityBorderColors[task.priority as keyof typeof priorityBorderColors]
+                  } ${
                     task.isCompleted
-                      ? 'opacity-60 bg-green-50/50 dark:bg-green-900/10'
+                      ? 'bg-gray-50/50 dark:bg-gray-800/30 opacity-50'
                       : isBlocked
-                        ? 'border-orange-300 dark:border-orange-700 bg-orange-50/30 dark:bg-orange-900/10'
-                        : 'hover:shadow-sm hover:border-gray-300 dark:hover:border-gray-600'
+                        ? 'bg-orange-50/30 dark:bg-orange-900/5 border-l-3 border-y border-r border-orange-100/50 dark:border-orange-900/20'
+                        : 'bg-transparent hover:bg-gray-50/50 dark:hover:bg-gray-800/30 border-l-3 border-y border-r border-transparent hover:border-gray-100 dark:hover:border-gray-800'
                   }`}
                 >
-                  <CardContent className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      {/* Status Icon */}
-                      <div className="flex-shrink-0">
-                        {task.isCompleted ? (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                        ) : isBlocked ? (
-                          <AlertTriangle className="h-5 w-5 text-orange-500" />
-                        ) : (
-                          <List className="h-5 w-5 text-gray-400" />
-                        )}
-                      </div>
+                  {/* Checkbox / Status */}
+                  <button
+                    onClick={() => !task.isCompleted && !isBlocked && handleMarkComplete(task.id!)}
+                    disabled={task.isCompleted || isBlocked}
+                    className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
+                      task.isCompleted
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : isBlocked
+                          ? 'border-orange-400 bg-orange-100 dark:bg-orange-900/30 cursor-not-allowed'
+                          : 'border-gray-300 dark:border-gray-500 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                    }`}
+                    title={task.isCompleted ? t('status.completed') : isBlocked ? t('completeBlockerFirst') : t('markComplete')}
+                  >
+                    {task.isCompleted && <CheckCircle className="h-2 w-2" />}
+                    {isBlocked && !task.isCompleted && <AlertTriangle className="h-2 w-2 text-orange-500" />}
+                  </button>
 
-                      {/* Main Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`font-medium truncate ${task.isCompleted ? 'line-through text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
-                            {task.title}
-                          </span>
-                          {category && (
-                            <Badge variant="outline" className="text-xs px-1.5 py-0" style={{ borderColor: category.color, color: category.color }}>
-                              {translateCategoryName(category.name)}
-                            </Badge>
-                          )}
-                          {blockerTask && !blockerTask.isCompleted && (
-                            <Badge variant="outline" className="text-xs px-1.5 py-0 border-orange-400 text-orange-600 dark:text-orange-400">
-                              {t('blocked')}
-                            </Badge>
-                          )}
+                  {/* Main Content */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    <span className={`font-medium text-sm truncate ${
+                      task.isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
+                    }`}>
+                      {task.title}
+                    </span>
+
+                    {/* Inline badges */}
+                    <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+                      {/* Priority badge */}
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                        task.priority === 'high'
+                          ? 'bg-red-100/70 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                          : task.priority === 'medium'
+                            ? 'bg-yellow-100/70 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-green-100/70 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                      }`}>
+                        {t(`priority.${task.priority}`)}
+                      </span>
+                      {category && (
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                          style={{ backgroundColor: `${category.color}15`, color: category.color }}
+                        >
+                          {translateCategoryName(category.name)}
+                        </span>
+                      )}
+                      {isBlocked && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-orange-100/70 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                          {t('blocked')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions - after badges */}
+                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button
+                        className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700"
+                        onClick={() => handleEditTask(task)}
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </button>
+                      <button
+                        className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        onClick={() => handleDeleteTask(task.id!)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Meta info - compact inline */}
+                  <div className="hidden md:flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">
+                    {assignedUser && (
+                      <span className="flex items-center gap-1">
+                        <div
+                          className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-medium flex-shrink-0"
+                          style={{ backgroundColor: assignedUser.color }}
+                        >
+                          {assignedUser.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          {userName && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {userName}
-                            </span>
-                          )}
-                          {task.dueDate && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(task.dueDate).toLocaleDateString()}
-                            </span>
-                          )}
-                          {estimatedTimeStr && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {estimatedTimeStr}
-                            </span>
-                          )}
-                          {projectName && (
-                            <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
-                              <FolderKanban className="h-3 w-3" />
+                        <span className="text-gray-600 dark:text-gray-300 max-w-[80px] truncate">
+                          {assignedUser.name}
+                        </span>
+                      </span>
+                    )}
+                    {task.dueDate && (
+                      <span className="flex items-center gap-0.5 whitespace-nowrap">
+                        <Calendar className="h-2.5 w-2.5" />
+                        {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                    {estimatedTimeStr && (
+                      <span className="flex items-center gap-0.5">
+                        <Clock className="h-2.5 w-2.5" />
+                        {estimatedTimeStr}
+                      </span>
+                    )}
+                    {projectName && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-0.5 text-purple-500 dark:text-purple-400 max-w-[150px] truncate cursor-default">
+                              <FolderKanban className="h-2.5 w-2.5 flex-shrink-0" />
                               {projectName}
                             </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Priority Badge */}
-                      <Badge className={`${priorityColors[task.priority as keyof typeof priorityColors]} text-xs px-2`}>
-                        {t(`priority.${task.priority}`).charAt(0).toUpperCase()}
-                      </Badge>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {!task.isCompleted && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            onClick={() => handleMarkComplete(task.id!)}
-                            disabled={isBlocked}
-                            title={isBlocked ? t('completeBlockerFirst') : t('markComplete')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEditTask(task)}>
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDeleteTask(task.id!)}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{projectName}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                </div>
               )
             })
           )}

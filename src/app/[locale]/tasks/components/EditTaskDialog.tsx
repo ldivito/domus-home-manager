@@ -137,174 +137,160 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{t('editTask')}</DialogTitle>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="text-xl font-semibold">{t('editTask')}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-title">{t('form.title')} *</Label>
+        <form onSubmit={handleSubmit} className="space-y-5 pt-4">
+          {/* Title - Full width */}
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-title" className="text-sm font-medium">{t('form.title')} *</Label>
             <Input
               id="edit-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('form.titlePlaceholder')}
+              className="h-10"
               required
             />
           </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-description">{t('form.description')}</Label>
+          {/* Description - Full width */}
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-description" className="text-sm font-medium">{t('form.description')}</Label>
             <Textarea
               id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t('form.descriptionPlaceholder')}
-              rows={3}
+              rows={2}
+              className="resize-none"
             />
           </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-category">{t('form.category')}</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <Tag className="mr-2 h-4 w-4" />
-                <SelectValue placeholder={t('form.selectCategory')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t('form.noCategory')}</SelectItem>
-                {categories.map((category: TaskCategory) => (
-                  <SelectItem key={category.id} value={category.id!.toString()}>
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: category.color || '#6b7280' }}
-                      />
-                      <span>{translateCategoryName(category.name)}</span>
+          {/* Row 1: Category & Priority */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{t('form.category')}</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="h-10">
+                  <div className="flex items-center">
+                    <Tag className="mr-2 h-4 w-4 text-gray-400" />
+                    <SelectValue placeholder={t('form.selectCategory')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('form.noCategory')}</SelectItem>
+                  {categories.map((category: TaskCategory) => (
+                    <SelectItem key={category.id} value={category.id!.toString()}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: category.color || '#6b7280' }}
+                        />
+                        <span>{translateCategoryName(category.name)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{t('form.priority')}</Label>
+              <Select value={priority} onValueChange={(value) => setPriority(value as 'low' | 'medium' | 'high')}>
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                      <span>{t('priority.low')}</span>
                     </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Assigned User */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-assignedUser">{t('form.assignedTo')}</Label>
-            <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-              <SelectTrigger>
-                <User className="mr-2 h-4 w-4" />
-                <SelectValue placeholder={t('form.selectUser')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">{tCommon('notAssigned')}</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id!.toString()}>
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: user.color }}
-                      />
-                      <span>{user.name}</span>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                      <span>{t('priority.medium')}</span>
                     </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Priority */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-priority">{t('form.priority')}</Label>
-            <Select value={priority} onValueChange={(value) => setPriority(value as 'low' | 'medium' | 'high')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span>{t('priority.low')}</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="medium">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <span>{t('priority.medium')}</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="high">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span>{t('priority.high')}</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Due Date */}
-          <div className="space-y-2">
-            <Label>{t('form.dueDate')}</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dueDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? format(dueDate, "PPP") : <span>{t('form.pickDate')}</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dueDate}
-                  onSelect={setDueDate}
-                  disabled={(date) =>
-                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Linked Project */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-linkedProject">{t('form.linkedProject')}</Label>
-            <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
-              <SelectTrigger>
-                <FolderKanban className="mr-2 h-4 w-4" />
-                <SelectValue placeholder={t('form.selectProject')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t('form.noProject')}</SelectItem>
-                {projects.map((project: HomeImprovement) => (
-                  <SelectItem key={project.id} value={project.id!.toString()}>
-                    <div className="flex items-center space-x-2">
-                      <span>{project.title}</span>
-                      <span className="text-xs text-gray-500">({project.status})</span>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                      <span>{t('priority.high')}</span>
                     </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Estimated Time */}
-          <div className="space-y-2">
-            <Label>{t('form.estimatedTime')}</Label>
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-gray-500" />
-              <div className="flex items-center space-x-2">
+          {/* Row 2: Assigned User & Due Date */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{t('form.assignedTo')}</Label>
+              <Select value={assignedUserId} onValueChange={setAssignedUserId}>
+                <SelectTrigger className="h-10">
+                  <div className="flex items-center">
+                    <User className="mr-2 h-4 w-4 text-gray-400" />
+                    <SelectValue placeholder={t('form.selectUser')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">{tCommon('notAssigned')}</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id!.toString()}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: user.color }}
+                        />
+                        <span>{user.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{t('form.dueDate')}</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-10 justify-start text-left font-normal",
+                      !dueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+                    {dueDate ? format(dueDate, "PPP") : <span>{t('form.pickDate')}</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Row 3: Estimated Time */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">{t('form.estimatedTime')}</Label>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-gray-400" />
                 <Input
                   type="number"
                   min="0"
@@ -312,11 +298,11 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
                   value={estimatedHours}
                   onChange={(e) => setEstimatedHours(e.target.value)}
                   placeholder="0"
-                  className="w-20"
+                  className="w-16 h-10 text-center"
                 />
                 <span className="text-sm text-gray-500">{t('form.hours')}</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Input
                   type="number"
                   min="0"
@@ -324,37 +310,61 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
                   value={estimatedMinutes}
                   onChange={(e) => setEstimatedMinutes(e.target.value)}
                   placeholder="0"
-                  className="w-20"
+                  className="w-16 h-10 text-center"
                 />
                 <span className="text-sm text-gray-500">{t('form.minutes')}</span>
               </div>
             </div>
           </div>
 
-          {/* Blocked By Task */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-blockedBy">{t('form.blockedBy')}</Label>
-            <Select value={blockedByTaskId} onValueChange={setBlockedByTaskId}>
-              <SelectTrigger>
-                <AlertTriangle className="mr-2 h-4 w-4" />
-                <SelectValue placeholder={t('form.selectBlocker')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t('form.noBlocker')}</SelectItem>
-                {blockerOptions.map((blockerTask: Task) => (
-                  <SelectItem key={blockerTask.id} value={blockerTask.id!.toString()}>
-                    <div className="flex items-center space-x-2">
-                      <span>{blockerTask.title}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500">{t('form.blockedByHint')}</p>
+          {/* Row 4: Project & Blocker */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{t('form.linkedProject')}</Label>
+              <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
+                <SelectTrigger className="h-10">
+                  <div className="flex items-center">
+                    <FolderKanban className="mr-2 h-4 w-4 text-gray-400" />
+                    <SelectValue placeholder={t('form.selectProject')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('form.noProject')}</SelectItem>
+                  {projects.map((project: HomeImprovement) => (
+                    <SelectItem key={project.id} value={project.id!.toString()}>
+                      <div className="flex items-center gap-2">
+                        <span>{project.title}</span>
+                        <span className="text-xs text-gray-400">({project.status})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{t('form.blockedBy')}</Label>
+              <Select value={blockedByTaskId} onValueChange={setBlockedByTaskId}>
+                <SelectTrigger className="h-10">
+                  <div className="flex items-center">
+                    <AlertTriangle className="mr-2 h-4 w-4 text-gray-400" />
+                    <SelectValue placeholder={t('form.selectBlocker')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('form.noBlocker')}</SelectItem>
+                  {blockerOptions.map((blockerTask: Task) => (
+                    <SelectItem key={blockerTask.id} value={blockerTask.id!.toString()}>
+                      {blockerTask.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={handleCancel}>
               {tCommon('cancel')}
             </Button>

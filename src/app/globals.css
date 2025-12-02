@@ -90,20 +90,6 @@
   @apply bg-muted-foreground;
 }
 
-/* Large touch targets for tablet interface */
-button:not([role="switch"]):not(.btn-compact),
-[role="button"]:not(.btn-compact),
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* Compact buttons for inline actions */
-.btn-compact {
-  min-height: auto;
-  min-width: auto;
-}
-
 /* Touch device detection - show elements on touch devices */
 @media (hover: none) and (pointer: coarse) {
   .touch-device\:opacity-100 {

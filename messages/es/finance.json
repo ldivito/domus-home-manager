@@ -24,7 +24,8 @@
     "income": "Ingresos",
     "expenses": "Gastos",
     "payments": "Pagos",
-    "balance": "Saldo"
+    "balance": "Saldo",
+    "analysis": "Análisis"
   },
   "income": {
     "title": "Ingresos Mensuales",
@@ -234,5 +235,29 @@
     "settlementMarkedPaid": "Liquidación registrada exitosamente",
     "settlementUnmarked": "Liquidación desmarcada exitosamente",
     "error": "Ocurrió un error"
+  },
+  "analysis": {
+    "title": "Análisis Financiero",
+    "subtitle": "Visualiza las finanzas del hogar a lo largo del tiempo con gráficos y tendencias detalladas",
+    "charts": {
+      "incomePerMonth": "Ingresos por Mes",
+      "expensesPerMonth": "Gastos por Mes",
+      "serviceProgression": "Progresión de Costos de Servicios",
+      "memberIncomeProgression": "Progresión de Ingresos por Miembro",
+      "incomeVsExpenses": "Ingresos vs Gastos",
+      "expenseCategories": "Categorías de Gastos",
+      "incomeShare": "Participación de Ingresos por Miembro",
+      "savingsTrend": "Tendencia de Ahorros",
+      "paymentStatus": "Estado de Pagos",
+      "exchangeRateTrend": "Tendencia del Tipo de Cambio (USD/ARS)",
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "monthlySavings": "Ahorros Mensuales",
+      "cumulativeSavings": "Ahorros Acumulados",
+      "paid": "Pagado",
+      "pending": "Pendiente",
+      "overdue": "Vencido",
+      "noPaymentData": "Sin datos de pagos para este mes"
+    }
   }
 }

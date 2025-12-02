@@ -24,7 +24,8 @@
     "income": "Income",
     "expenses": "Expenses",
     "payments": "Payments",
-    "balance": "Balance"
+    "balance": "Balance",
+    "analysis": "Analysis"
   },
   "income": {
     "title": "Monthly Income",
@@ -234,5 +235,29 @@
     "settlementMarkedPaid": "Settlement recorded successfully",
     "settlementUnmarked": "Settlement unmarked successfully",
     "error": "An error occurred"
+  },
+  "analysis": {
+    "title": "Financial Analysis",
+    "subtitle": "Visualize your household finances over time with detailed charts and trends",
+    "charts": {
+      "incomePerMonth": "Income per Month",
+      "expensesPerMonth": "Expenses per Month",
+      "serviceProgression": "Service Cost Progression",
+      "memberIncomeProgression": "Member Income Progression",
+      "incomeVsExpenses": "Income vs Expenses",
+      "expenseCategories": "Expense Categories",
+      "incomeShare": "Income Share by Member",
+      "savingsTrend": "Savings Trend",
+      "paymentStatus": "Payment Status",
+      "exchangeRateTrend": "Exchange Rate Trend (USD/ARS)",
+      "income": "Income",
+      "expenses": "Expenses",
+      "monthlySavings": "Monthly Savings",
+      "cumulativeSavings": "Cumulative Savings",
+      "paid": "Paid",
+      "pending": "Pending",
+      "overdue": "Overdue",
+      "noPaymentData": "No payment data for this month"
+    }
   }
 }

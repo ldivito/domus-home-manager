@@ -22,6 +22,7 @@ import documents from './documents.json';
 import maintenance from './maintenance.json';
 import subscriptions from './subscriptions.json';
 import pets from './pets.json';
+import savings from './savings.json';
 
 const messages = {
   common,
@@ -48,6 +49,7 @@ const messages = {
   maintenance,
   subscriptions,
   pets,
+  savings,
 };
 
 export default messages;

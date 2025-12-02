@@ -1,0 +1,302 @@
+{
+  "title": "Ahorros",
+  "subtitle": "Crea y rastrea metas de ahorro con tu hogar",
+  "addCampaign": "Nueva Campaña",
+  "search": {
+    "placeholder": "Buscar campañas..."
+  },
+  "filter": {
+    "all": "Todas",
+    "active": "Activas",
+    "completed": "Completadas"
+  },
+  "stats": {
+    "totalCampaigns": "Total de Campañas",
+    "activeCampaigns": "Activas",
+    "completedCampaigns": "Completadas",
+    "totalSaved": "Total Ahorrado"
+  },
+  "campaign": {
+    "goal": "Meta",
+    "deadline": "Fecha límite",
+    "daysLeft": "{days} días restantes",
+    "overdue": "Vencida",
+    "completed": "Completada",
+    "progress": "{percent}% completado",
+    "participants": "{count} participantes",
+    "of": "de",
+    "saved": "ahorrado",
+    "remaining": "restante"
+  },
+  "methods": {
+    "title": "Método de Ahorro",
+    "52_week_challenge": {
+      "name": "Desafío de 52 Semanas",
+      "description": "Ahorra progresivamente más cada semana, comenzando con una cantidad pequeña y aumentando semanalmente"
+    },
+    "envelope_method": {
+      "name": "Método de Sobres",
+      "description": "Divide tu meta de ahorro en sobres virtuales para diferentes propósitos"
+    },
+    "round_up": {
+      "name": "Ahorro por Redondeo",
+      "description": "Redondea las transacciones y ahorra la diferencia"
+    },
+    "fixed_monthly": {
+      "name": "Mensual Fijo",
+      "description": "Ahorra una cantidad fija cada mes hasta alcanzar tu meta"
+    },
+    "bi_weekly": {
+      "name": "Quincenal",
+      "description": "Ahorra cada dos semanas, alineado con los pagos de salario"
+    },
+    "custom": {
+      "name": "Personalizado",
+      "description": "Crea tu propio calendario y estrategia de ahorro"
+    }
+  },
+  "distribution": {
+    "title": "Método de Distribución",
+    "equal": "División Equitativa",
+    "percentage": "Basado en Porcentaje",
+    "equalDescription": "Todos los participantes contribuyen la misma cantidad",
+    "percentageDescription": "Cada participante contribuye según su porcentaje asignado"
+  },
+  "form": {
+    "name": "Nombre de la Campaña",
+    "namePlaceholder": "ej., Fondo de Vacaciones de Verano",
+    "description": "Descripción",
+    "descriptionPlaceholder": "¿Para qué están ahorrando?",
+    "goalAmount": "Monto de la Meta",
+    "deadline": "Fecha Objetivo",
+    "savingMethod": "Método de Ahorro",
+    "selectMethod": "Selecciona un método",
+    "distributionMethod": "Método de Distribución",
+    "currency": "Moneda",
+    "participants": "Participantes",
+    "selectParticipants": "Seleccionar participantes",
+    "sharePercentage": "% de Participación",
+    "customMethodDetails": "Detalles del Método Personalizado",
+    "customMethodPlaceholder": "Describe tu estrategia de ahorro...",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "create": "Crear Campaña",
+    "creating": "Creando...",
+    "update": "Actualizar Campaña",
+    "updating": "Actualizando..."
+  },
+  "milestones": {
+    "title": "Hitos",
+    "addMilestone": "Agregar Hito",
+    "editMilestone": "Editar Hito",
+    "noMilestones": "Aún no hay hitos",
+    "noMilestonesDescription": "Agrega hitos para rastrear el progreso en el camino",
+    "reached": "Alcanzado",
+    "upcoming": "Próximo",
+    "name": "Nombre del Hito",
+    "namePlaceholder": "ej., Meta del Primer Trimestre",
+    "targetAmount": "Monto Objetivo",
+    "targetDate": "Fecha Objetivo",
+    "delete": "Eliminar Hito",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este hito?",
+    "autoGenerate": {
+      "button": "Auto-Generar",
+      "title": "Auto-Generar Hitos",
+      "description": "Crea automáticamente hitos basados en un calendario desde hoy hasta tu fecha límite.",
+      "frequency": "Frecuencia",
+      "weekly": "Semanal",
+      "weeklyDescription": "Crear un hito por cada semana",
+      "biWeekly": "Quincenal",
+      "biWeeklyDescription": "Crear un hito cada dos semanas",
+      "monthly": "Mensual",
+      "monthlyDescription": "Crear un hito por cada mes",
+      "quarterly": "Trimestral",
+      "quarterlyDescription": "Crear un hito cada tres meses",
+      "preview": "Vista Previa",
+      "milestonesWillBeCreated": "Se crearán {count} hitos",
+      "milestonePreview": "Hito {number}",
+      "generate": "Generar Hitos",
+      "generating": "Generando...",
+      "success": "{count} hitos generados exitosamente",
+      "replaceExisting": "Reemplazar hitos existentes",
+      "replaceWarning": "Esto eliminará todos los hitos actuales antes de generar los nuevos"
+    }
+  },
+  "contributions": {
+    "title": "Aportes",
+    "addContribution": "Agregar Aporte",
+    "editContribution": "Editar Aporte",
+    "noContributions": "Aún no hay aportes",
+    "noContributionsDescription": "Comienza a ahorrar agregando tu primer aporte",
+    "amount": "Cantidad",
+    "date": "Fecha",
+    "contributor": "Contribuidor",
+    "selectContributor": "¿Quién está contribuyendo?",
+    "notes": "Notas",
+    "notesPlaceholder": "Notas opcionales...",
+    "by": "por {name}",
+    "total": "Total Aportado",
+    "delete": "Eliminar Aporte",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este aporte?"
+  },
+  "participants": {
+    "title": "Participantes",
+    "addParticipant": "Agregar Participante",
+    "editParticipant": "Editar Participante",
+    "removeParticipant": "Eliminar Participante",
+    "noParticipants": "Aún no hay participantes",
+    "share": "Participación",
+    "contributed": "Aportado",
+    "owes": "Debe",
+    "onTrack": "Al Día",
+    "behind": "Atrasado",
+    "ahead": "Adelantado",
+    "selectUser": "Seleccionar un usuario",
+    "removeConfirm": "¿Estás seguro de que quieres eliminar este participante?",
+    "percentageTotal": "Los porcentajes deben sumar 100%",
+    "currentTotal": "Total actual: {total}%"
+  },
+  "tabs": {
+    "overview": "Vista General",
+    "analytics": "Análisis",
+    "milestones": "Hitos",
+    "contributions": "Aportes",
+    "participants": "Participantes",
+    "settlement": "Liquidación"
+  },
+  "analytics": {
+    "title": "Análisis",
+    "progressChart": "Progreso de Ahorro",
+    "velocityChart": "Velocidad de Aportes",
+    "projectionCard": "Proyección",
+    "actual": "Real",
+    "expected": "Esperado",
+    "average": "Promedio",
+    "projectedCompletion": "Finalización Proyectada",
+    "atCurrentRate": "Al ritmo actual",
+    "status": {
+      "onTrack": "En Tiempo",
+      "ahead": "Adelantado",
+      "behind": "Atrasado",
+      "noData": "Datos insuficientes"
+    },
+    "daysAhead": "{days} días adelantado",
+    "daysBehind": "{days} días atrasado",
+    "savingsRate": "Tasa de Ahorro",
+    "perWeek": "por semana",
+    "perMonth": "por mes",
+    "totalContributions": "Total de Aportes",
+    "averageContribution": "Aporte Promedio",
+    "contributionCount": "{count} aportes",
+    "noContributions": "Aún no hay aportes para analizar"
+  },
+  "settlement": {
+    "title": "Liquidación",
+    "subtitle": "Calcula los saldos finales y quién debe a quién",
+    "summary": "Resumen de Saldos",
+    "transfers": "Transferencias Recomendadas",
+    "participant": "Participante",
+    "expected": "Esperado",
+    "contributed": "Aportado",
+    "balance": "Saldo",
+    "owes": "debe",
+    "isOwed": "le deben",
+    "settled": "Liquidado",
+    "noTransfers": "¡Todos los participantes están al día!",
+    "transferDescription": "{from} paga {amount} a {to}",
+    "copyTransfers": "Copiar al Portapapeles",
+    "copied": "Copiado al portapapeles",
+    "overpaid": "Pagó de más",
+    "underpaid": "Pagó de menos",
+    "evenBalance": "Parejo"
+  },
+  "quickContribute": {
+    "title": "Aporte Rápido",
+    "myShare": "Mi Parte",
+    "preset": "Montos Predefinidos",
+    "custom": "Monto Personalizado",
+    "addAmount": "Agregar {amount}"
+  },
+  "empty": {
+    "title": "No hay campañas de ahorro",
+    "description": "Inicia tu primera campaña de ahorro para rastrear las metas de ahorro del hogar juntos",
+    "action": "Crear Campaña"
+  },
+  "detail": {
+    "backToList": "Volver a Ahorros",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "markComplete": "Marcar como Completada",
+    "reopen": "Reabrir Campaña",
+    "createdBy": "Creado por {name}",
+    "createdOn": "Creado el {date}"
+  },
+  "overview": {
+    "campaignDetails": "Detalles de la Campaña",
+    "savingMethod": "Método de Ahorro",
+    "distribution": "Distribución",
+    "timeline": "Cronología",
+    "started": "Iniciada",
+    "deadline": "Fecha Límite",
+    "daysRemaining": "Días Restantes",
+    "contributionSummary": "Resumen de Aportes",
+    "whoOwesWhat": "Quién Debe Cuánto",
+    "totalOwed": "Total Adeudado",
+    "paidSoFar": "Pagado Hasta Ahora",
+    "suggestedContribution": "Aporte Sugerido",
+    "perPeriod": "por {period}",
+    "week": "semana",
+    "month": "mes",
+    "biweekly": "quincena"
+  },
+  "dialogs": {
+    "delete": {
+      "title": "Eliminar Campaña",
+      "description": "¿Estás seguro de que quieres eliminar \"{name}\"? Esto también eliminará todos los hitos y aportes. Esta acción no se puede deshacer.",
+      "confirm": "Eliminar Campaña",
+      "cancel": "Cancelar"
+    },
+    "complete": {
+      "title": "Marcar como Completada",
+      "description": "¡Felicitaciones! ¿Marcar \"{name}\" como completada?",
+      "confirm": "Marcar como Completada",
+      "cancel": "Cancelar"
+    }
+  },
+  "messages": {
+    "campaignCreated": "Campaña creada exitosamente",
+    "campaignUpdated": "Campaña actualizada exitosamente",
+    "campaignDeleted": "Campaña eliminada exitosamente",
+    "campaignCompleted": "¡Campaña marcada como completada!",
+    "campaignReopened": "Campaña reabierta",
+    "contributionAdded": "Aporte registrado",
+    "contributionUpdated": "Aporte actualizado",
+    "contributionDeleted": "Aporte eliminado",
+    "milestoneAdded": "Hito agregado",
+    "milestoneUpdated": "Hito actualizado",
+    "milestoneDeleted": "Hito eliminado",
+    "milestoneReached": "¡Hito alcanzado!",
+    "participantAdded": "Participante agregado",
+    "participantUpdated": "Participante actualizado",
+    "participantRemoved": "Participante eliminado",
+    "goalReached": "¡Felicitaciones! ¡Han alcanzado su meta de ahorro!",
+    "error": "Ocurrió un error"
+  },
+  "validation": {
+    "nameRequired": "El nombre de la campaña es obligatorio",
+    "goalRequired": "El monto de la meta es obligatorio",
+    "goalPositive": "La meta debe ser mayor a 0",
+    "deadlineRequired": "La fecha objetivo es obligatoria",
+    "deadlineFuture": "La fecha objetivo debe ser en el futuro",
+    "methodRequired": "El método de ahorro es obligatorio",
+    "participantsRequired": "Se requiere al menos un participante",
+    "percentageTotal": "Los porcentajes de participación deben sumar 100%",
+    "milestoneNameRequired": "El nombre del hito es obligatorio",
+    "milestoneAmountRequired": "El monto objetivo es obligatorio",
+    "milestoneDateRequired": "La fecha objetivo es obligatoria",
+    "contributionAmountRequired": "La cantidad del aporte es obligatoria",
+    "contributionAmountPositive": "La cantidad debe ser mayor a 0",
+    "contributorRequired": "Por favor selecciona un contribuidor"
+  }
+}

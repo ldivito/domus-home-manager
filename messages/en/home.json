@@ -183,6 +183,17 @@
       "addFirst": "Add your first pet",
       "vaccinationsDueSoon": "vaccination(s) due soon",
       "activeMedications": "active medication(s)"
+    },
+    "savings": {
+      "title": "Savings",
+      "activeCampaigns": "Active",
+      "completedCampaigns": "Completed",
+      "totalSaved": "Total Saved",
+      "progress": "Progress",
+      "noSavings": "No savings yet",
+      "startFirst": "Create your first campaign",
+      "goalReached": "Goal reached!",
+      "daysLeft": "days left"
     }
   },
   "quickActions": {

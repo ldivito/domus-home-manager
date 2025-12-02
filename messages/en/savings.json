@@ -1,0 +1,302 @@
+{
+  "title": "Savings",
+  "subtitle": "Create and track savings goals with your household",
+  "addCampaign": "New Campaign",
+  "search": {
+    "placeholder": "Search campaigns..."
+  },
+  "filter": {
+    "all": "All",
+    "active": "Active",
+    "completed": "Completed"
+  },
+  "stats": {
+    "totalCampaigns": "Total Campaigns",
+    "activeCampaigns": "Active",
+    "completedCampaigns": "Completed",
+    "totalSaved": "Total Saved"
+  },
+  "campaign": {
+    "goal": "Goal",
+    "deadline": "Deadline",
+    "daysLeft": "{days} days left",
+    "overdue": "Overdue",
+    "completed": "Completed",
+    "progress": "{percent}% complete",
+    "participants": "{count} participants",
+    "of": "of",
+    "saved": "saved",
+    "remaining": "remaining"
+  },
+  "methods": {
+    "title": "Saving Method",
+    "52_week_challenge": {
+      "name": "52-Week Challenge",
+      "description": "Save progressively more each week, starting with a small amount and increasing weekly"
+    },
+    "envelope_method": {
+      "name": "Envelope Method",
+      "description": "Divide your savings goal into virtual envelopes for different purposes"
+    },
+    "round_up": {
+      "name": "Round-Up Savings",
+      "description": "Round up transactions and save the difference"
+    },
+    "fixed_monthly": {
+      "name": "Fixed Monthly",
+      "description": "Save a fixed amount every month until you reach your goal"
+    },
+    "bi_weekly": {
+      "name": "Bi-Weekly",
+      "description": "Save every two weeks, aligned with paychecks"
+    },
+    "custom": {
+      "name": "Custom",
+      "description": "Create your own saving schedule and strategy"
+    }
+  },
+  "distribution": {
+    "title": "Distribution Method",
+    "equal": "Equal Split",
+    "percentage": "Percentage-Based",
+    "equalDescription": "All participants contribute the same amount",
+    "percentageDescription": "Each participant contributes based on their share percentage"
+  },
+  "form": {
+    "name": "Campaign Name",
+    "namePlaceholder": "e.g., Summer Vacation Fund",
+    "description": "Description",
+    "descriptionPlaceholder": "What are you saving for?",
+    "goalAmount": "Goal Amount",
+    "deadline": "Target Date",
+    "savingMethod": "Saving Method",
+    "selectMethod": "Select a method",
+    "distributionMethod": "Distribution Method",
+    "currency": "Currency",
+    "participants": "Participants",
+    "selectParticipants": "Select participants",
+    "sharePercentage": "Share %",
+    "customMethodDetails": "Custom Method Details",
+    "customMethodPlaceholder": "Describe your saving strategy...",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "create": "Create Campaign",
+    "creating": "Creating...",
+    "update": "Update Campaign",
+    "updating": "Updating..."
+  },
+  "milestones": {
+    "title": "Milestones",
+    "addMilestone": "Add Milestone",
+    "editMilestone": "Edit Milestone",
+    "noMilestones": "No milestones yet",
+    "noMilestonesDescription": "Add milestones to track progress along the way",
+    "reached": "Reached",
+    "upcoming": "Upcoming",
+    "name": "Milestone Name",
+    "namePlaceholder": "e.g., First Quarter Goal",
+    "targetAmount": "Target Amount",
+    "targetDate": "Target Date",
+    "delete": "Delete Milestone",
+    "deleteConfirm": "Are you sure you want to delete this milestone?",
+    "autoGenerate": {
+      "button": "Auto-Generate",
+      "title": "Auto-Generate Milestones",
+      "description": "Automatically create milestones based on a schedule from today until your deadline.",
+      "frequency": "Frequency",
+      "weekly": "Weekly",
+      "weeklyDescription": "Create a milestone for each week",
+      "biWeekly": "Bi-Weekly",
+      "biWeeklyDescription": "Create a milestone every two weeks",
+      "monthly": "Monthly",
+      "monthlyDescription": "Create a milestone for each month",
+      "quarterly": "Quarterly",
+      "quarterlyDescription": "Create a milestone every three months",
+      "preview": "Preview",
+      "milestonesWillBeCreated": "{count} milestones will be created",
+      "milestonePreview": "Milestone {number}",
+      "generate": "Generate Milestones",
+      "generating": "Generating...",
+      "success": "{count} milestones generated successfully",
+      "replaceExisting": "Replace existing milestones",
+      "replaceWarning": "This will delete all current milestones before generating new ones"
+    }
+  },
+  "contributions": {
+    "title": "Contributions",
+    "addContribution": "Add Contribution",
+    "editContribution": "Edit Contribution",
+    "noContributions": "No contributions yet",
+    "noContributionsDescription": "Start saving by adding your first contribution",
+    "amount": "Amount",
+    "date": "Date",
+    "contributor": "Contributor",
+    "selectContributor": "Who is contributing?",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes...",
+    "by": "by {name}",
+    "total": "Total Contributed",
+    "delete": "Delete Contribution",
+    "deleteConfirm": "Are you sure you want to delete this contribution?"
+  },
+  "participants": {
+    "title": "Participants",
+    "addParticipant": "Add Participant",
+    "editParticipant": "Edit Participant",
+    "removeParticipant": "Remove Participant",
+    "noParticipants": "No participants yet",
+    "share": "Share",
+    "contributed": "Contributed",
+    "owes": "Owes",
+    "onTrack": "On Track",
+    "behind": "Behind",
+    "ahead": "Ahead",
+    "selectUser": "Select a user",
+    "removeConfirm": "Are you sure you want to remove this participant?",
+    "percentageTotal": "Percentages must total 100%",
+    "currentTotal": "Current total: {total}%"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "analytics": "Analytics",
+    "milestones": "Milestones",
+    "contributions": "Contributions",
+    "participants": "Participants",
+    "settlement": "Settlement"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "progressChart": "Savings Progress",
+    "velocityChart": "Contribution Velocity",
+    "projectionCard": "Projection",
+    "actual": "Actual",
+    "expected": "Expected",
+    "average": "Average",
+    "projectedCompletion": "Projected Completion",
+    "atCurrentRate": "At current rate",
+    "status": {
+      "onTrack": "On Track",
+      "ahead": "Ahead of Schedule",
+      "behind": "Behind Schedule",
+      "noData": "Not enough data"
+    },
+    "daysAhead": "{days} days ahead",
+    "daysBehind": "{days} days behind",
+    "savingsRate": "Savings Rate",
+    "perWeek": "per week",
+    "perMonth": "per month",
+    "totalContributions": "Total Contributions",
+    "averageContribution": "Average Contribution",
+    "contributionCount": "{count} contributions",
+    "noContributions": "No contributions yet to analyze"
+  },
+  "settlement": {
+    "title": "Settlement",
+    "subtitle": "Calculate final balances and who owes whom",
+    "summary": "Balance Summary",
+    "transfers": "Recommended Transfers",
+    "participant": "Participant",
+    "expected": "Expected",
+    "contributed": "Contributed",
+    "balance": "Balance",
+    "owes": "owes",
+    "isOwed": "is owed",
+    "settled": "Settled",
+    "noTransfers": "All participants are settled!",
+    "transferDescription": "{from} pays {amount} to {to}",
+    "copyTransfers": "Copy to Clipboard",
+    "copied": "Copied to clipboard",
+    "overpaid": "Overpaid",
+    "underpaid": "Underpaid",
+    "evenBalance": "Even"
+  },
+  "quickContribute": {
+    "title": "Quick Contribute",
+    "myShare": "My Share",
+    "preset": "Preset Amounts",
+    "custom": "Custom Amount",
+    "addAmount": "Add {amount}"
+  },
+  "empty": {
+    "title": "No savings campaigns",
+    "description": "Start your first savings campaign to track household savings goals together",
+    "action": "Create Campaign"
+  },
+  "detail": {
+    "backToList": "Back to Savings",
+    "edit": "Edit",
+    "delete": "Delete",
+    "markComplete": "Mark as Complete",
+    "reopen": "Reopen Campaign",
+    "createdBy": "Created by {name}",
+    "createdOn": "Created on {date}"
+  },
+  "overview": {
+    "campaignDetails": "Campaign Details",
+    "savingMethod": "Saving Method",
+    "distribution": "Distribution",
+    "timeline": "Timeline",
+    "started": "Started",
+    "deadline": "Deadline",
+    "daysRemaining": "Days Remaining",
+    "contributionSummary": "Contribution Summary",
+    "whoOwesWhat": "Who Owes What",
+    "totalOwed": "Total Owed",
+    "paidSoFar": "Paid So Far",
+    "suggestedContribution": "Suggested Contribution",
+    "perPeriod": "per {period}",
+    "week": "week",
+    "month": "month",
+    "biweekly": "two weeks"
+  },
+  "dialogs": {
+    "delete": {
+      "title": "Delete Campaign",
+      "description": "Are you sure you want to delete \"{name}\"? This will also delete all milestones and contributions. This action cannot be undone.",
+      "confirm": "Delete Campaign",
+      "cancel": "Cancel"
+    },
+    "complete": {
+      "title": "Mark as Complete",
+      "description": "Congratulations! Mark \"{name}\" as complete?",
+      "confirm": "Mark Complete",
+      "cancel": "Cancel"
+    }
+  },
+  "messages": {
+    "campaignCreated": "Campaign created successfully",
+    "campaignUpdated": "Campaign updated successfully",
+    "campaignDeleted": "Campaign deleted successfully",
+    "campaignCompleted": "Campaign marked as complete!",
+    "campaignReopened": "Campaign reopened",
+    "contributionAdded": "Contribution recorded",
+    "contributionUpdated": "Contribution updated",
+    "contributionDeleted": "Contribution deleted",
+    "milestoneAdded": "Milestone added",
+    "milestoneUpdated": "Milestone updated",
+    "milestoneDeleted": "Milestone deleted",
+    "milestoneReached": "Milestone reached!",
+    "participantAdded": "Participant added",
+    "participantUpdated": "Participant updated",
+    "participantRemoved": "Participant removed",
+    "goalReached": "Congratulations! You've reached your savings goal!",
+    "error": "An error occurred"
+  },
+  "validation": {
+    "nameRequired": "Campaign name is required",
+    "goalRequired": "Goal amount is required",
+    "goalPositive": "Goal must be greater than 0",
+    "deadlineRequired": "Target date is required",
+    "deadlineFuture": "Target date must be in the future",
+    "methodRequired": "Saving method is required",
+    "participantsRequired": "At least one participant is required",
+    "percentageTotal": "Share percentages must total 100%",
+    "milestoneNameRequired": "Milestone name is required",
+    "milestoneAmountRequired": "Target amount is required",
+    "milestoneDateRequired": "Target date is required",
+    "contributionAmountRequired": "Contribution amount is required",
+    "contributionAmountPositive": "Amount must be greater than 0",
+    "contributorRequired": "Please select a contributor"
+  }
+}

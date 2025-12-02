@@ -11,7 +11,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, DollarSign, User as UserIcon, Percent, ArrowRightLeft, Pencil } from 'lucide-react'
+import {
+  Plus,
+  DollarSign,
+  User as UserIcon,
+  Percent,
+  ArrowRightLeft,
+  Pencil,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Briefcase
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 interface IncomeTabProps {
@@ -33,54 +44,72 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
   const tMessages = useTranslations('finance.messages')
   const [showDialog, setShowDialog] = useState(false)
   const [showExchangeDialog, setShowExchangeDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState('')
+  const [editingIncome, setEditingIncome] = useState<MonthlyIncome | null>(null)
+  const [deletingIncome, setDeletingIncome] = useState<MonthlyIncome | null>(null)
   const [amount, setAmount] = useState('')
   const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS')
+  const [source, setSource] = useState('')
   const [exchangeRateValue, setExchangeRateValue] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set())
 
   const rate = exchangeRate?.rate || 1
 
-  // Calculate total income in ARS
-  const totalIncome = currentIncomes.reduce((sum, inc) => {
-    if (inc.currency === 'USD') {
-      return sum + (inc.amount * rate)
-    }
-    return sum + inc.amount
-  }, 0)
+  // Get incomes grouped by user
+  const getIncomesForUser = (userId: string) => {
+    return currentIncomes.filter(inc => inc.userId === userId)
+  }
 
-  // Get user income map
-  const userIncomeMap = new Map<string, MonthlyIncome>()
-  currentIncomes.forEach(inc => {
-    userIncomeMap.set(inc.userId, inc)
-  })
-
-  // Calculate income in ARS for a user
-  const getIncomeInARS = (income: MonthlyIncome | undefined): number => {
-    if (!income) return 0
+  // Calculate income in ARS for a single entry
+  const getIncomeInARS = (income: MonthlyIncome): number => {
     if (income.currency === 'USD') {
       return income.amount * rate
     }
     return income.amount
   }
 
-  const handleOpenDialog = (userId?: string) => {
-    if (userId) {
-      setSelectedUserId(userId)
-      const existing = userIncomeMap.get(userId)
-      if (existing) {
-        setAmount(existing.amount.toString())
-        setCurrency(existing.currency || 'ARS')
-      } else {
-        setAmount('')
-        setCurrency('ARS')
-      }
+  // Calculate total income for a user in ARS
+  const getUserTotalInARS = (userId: string): number => {
+    const userIncomes = getIncomesForUser(userId)
+    return userIncomes.reduce((sum, inc) => sum + getIncomeInARS(inc), 0)
+  }
+
+  // Calculate total household income in ARS
+  const totalHouseholdIncome = currentIncomes.reduce((sum, inc) => sum + getIncomeInARS(inc), 0)
+
+  const toggleUserExpanded = (userId: string) => {
+    const newExpanded = new Set(expandedUsers)
+    if (newExpanded.has(userId)) {
+      newExpanded.delete(userId)
     } else {
-      setSelectedUserId('')
-      setAmount('')
-      setCurrency('ARS')
+      newExpanded.add(userId)
     }
+    setExpandedUsers(newExpanded)
+  }
+
+  const handleOpenAddDialog = (userId: string) => {
+    setSelectedUserId(userId)
+    setEditingIncome(null)
+    setAmount('')
+    setCurrency('ARS')
+    setSource('')
     setShowDialog(true)
+  }
+
+  const handleOpenEditDialog = (income: MonthlyIncome) => {
+    setSelectedUserId(income.userId)
+    setEditingIncome(income)
+    setAmount(income.amount.toString())
+    setCurrency(income.currency || 'ARS')
+    setSource(income.source || '')
+    setShowDialog(true)
+  }
+
+  const handleOpenDeleteDialog = (income: MonthlyIncome) => {
+    setDeletingIncome(income)
+    setShowDeleteDialog(true)
   }
 
   const handleOpenExchangeDialog = () => {
@@ -90,23 +119,22 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedUserId || !amount) return
+    if (!selectedUserId || !amount || !source) return
 
     setIsSubmitting(true)
     try {
       const amountNum = parseFloat(amount)
       if (isNaN(amountNum) || amountNum < 0) {
-        toast.error('Please enter a valid amount')
+        toast.error(t('dialog.invalidAmount'))
         return
       }
 
-      const existing = userIncomeMap.get(selectedUserId)
-
-      if (existing) {
+      if (editingIncome) {
         // Update existing
-        await db.monthlyIncomes.update(existing.id!, {
+        await db.monthlyIncomes.update(editingIncome.id!, {
           amount: amountNum,
           currency: currency,
+          source: source,
           updatedAt: new Date()
         })
         toast.success(tMessages('incomeUpdated'))
@@ -117,6 +145,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
           userId: selectedUserId,
           amount: amountNum,
           currency: currency,
+          source: source,
           month: currentMonth,
           year: currentYear,
           createdAt: new Date()
@@ -126,10 +155,29 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
 
       setShowDialog(false)
       setSelectedUserId('')
+      setEditingIncome(null)
       setAmount('')
       setCurrency('ARS')
+      setSource('')
     } catch (error) {
       console.error('Error saving income:', error)
+      toast.error(tMessages('error'))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingIncome) return
+
+    setIsSubmitting(true)
+    try {
+      await db.monthlyIncomes.delete(deletingIncome.id!)
+      toast.success(t('incomeDeleted'))
+      setShowDeleteDialog(false)
+      setDeletingIncome(null)
+    } catch (error) {
+      console.error('Error deleting income:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -176,6 +224,8 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
     }
   }
 
+  const residentUsers = users.filter(u => u.type === 'resident')
+
   return (
     <>
       <Card>
@@ -190,10 +240,6 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                 {t('subtitle')}
               </CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog()} className="h-12 px-6" disabled={isFutureMonth}>
-              <Plus className="h-5 w-5 mr-2" />
-              {t('setIncome')}
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -213,10 +259,10 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                 <p className="text-sm text-muted-foreground">{t('currentMonth')}</p>
                 <p className="text-2xl font-bold">{monthNames[currentMonth - 1]} {currentYear}</p>
                 <p className="text-lg text-muted-foreground mt-1">
-                  {t('totalHousehold')}: <span className="font-semibold text-foreground">$ {formatARS(totalIncome)}</span>
+                  {t('totalHousehold')}: <span className="font-semibold text-foreground">$ {formatARS(totalHouseholdIncome)}</span>
                   {rate > 1 && (
                     <span className="ml-2 text-sm text-muted-foreground/70">
-                      (USD {formatARS(totalIncome / rate)})
+                      (USD {formatARS(totalHouseholdIncome / rate)})
                     </span>
                   )}
                 </p>
@@ -241,7 +287,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
             </div>
           </div>
 
-          {users.length === 0 ? (
+          {residentUsers.length === 0 ? (
             <div className="text-center py-12">
               <UserIcon className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-medium mb-2">{t('noIncome')}</h3>
@@ -249,103 +295,214 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
             </div>
           ) : (
             <div className="space-y-4">
-              {users.filter(u => u.type === 'resident').map(user => {
-                const income = userIncomeMap.get(user.id!)
-                const incomeInARS = getIncomeInARS(income)
-                const percentage = totalIncome > 0 && income
-                  ? ((incomeInARS / totalIncome) * 100).toFixed(1)
+              {residentUsers.map(user => {
+                const userIncomes = getIncomesForUser(user.id!)
+                const userTotalARS = getUserTotalInARS(user.id!)
+                const percentage = totalHouseholdIncome > 0
+                  ? ((userTotalARS / totalHouseholdIncome) * 100).toFixed(1)
                   : '0'
+                const isExpanded = expandedUsers.has(user.id!) || userIncomes.length === 0
 
                 return (
                   <div
                     key={user.id}
-                    className={`flex items-center justify-between p-4 bg-card border rounded-lg transition-colors ${isFutureMonth ? 'opacity-75' : 'hover:bg-muted/30 cursor-pointer'}`}
-                    onClick={isFutureMonth ? undefined : () => handleOpenDialog(user.id)}
+                    className="border rounded-lg overflow-hidden"
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
-                        style={{ backgroundColor: user.color }}
-                      >
-                        {user.name.charAt(0).toUpperCase()}
+                    {/* User Header */}
+                    <div
+                      className={`flex items-center justify-between p-4 bg-card transition-colors ${userIncomes.length > 0 && !isFutureMonth ? 'cursor-pointer hover:bg-muted/30' : ''}`}
+                      onClick={userIncomes.length > 0 ? () => toggleUserExpanded(user.id!) : undefined}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                          style={{ backgroundColor: user.color }}
+                        >
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-lg">{user.name}</p>
+                          <div className="flex items-center gap-2">
+                            {userIncomes.length > 0 ? (
+                              <>
+                                <span className="text-sm text-muted-foreground">
+                                  {t('entries', { count: userIncomes.length })} · {t('share')}: {percentage}%
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">{t('noIncomeSet')}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-lg">{user.name}</p>
-                        <div className="flex items-center gap-2">
-                          {income ? (
-                            <>
-                              <span className="text-sm text-muted-foreground">
-                                {t('share')}: {percentage}%
-                              </span>
-                              {income.currency === 'USD' && (
-                                <Badge variant="secondary" className="text-xs">
-                                  USD {formatARS(income.amount)}
-                                </Badge>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">{t('noIncomeSet')}</span>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-2xl font-bold">
+                            $ {formatARS(userTotalARS)}
+                          </p>
+                          {rate > 1 && userTotalARS > 0 && (
+                            <p className="text-sm text-muted-foreground/70">
+                              USD {formatARS(userTotalARS / rate)}
+                            </p>
+                          )}
+                          {userIncomes.length > 0 && (
+                            <Badge variant="secondary" className="mt-1">
+                              <Percent className="h-3 w-3 mr-1" />
+                              {percentage}%
+                            </Badge>
                           )}
                         </div>
+                        {userIncomes.length > 0 && (
+                          <div className="text-muted-foreground">
+                            {isExpanded ? (
+                              <ChevronUp className="h-5 w-5" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5" />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">
-                        $ {formatARS(incomeInARS)}
-                      </p>
-                      {rate > 1 && incomeInARS > 0 && (
-                        <p className="text-sm text-muted-foreground/70">
-                          USD {formatARS(incomeInARS / rate)}
-                        </p>
-                      )}
-                      {income && (
-                        <div className="flex items-center justify-end gap-2 mt-1">
-                          <Badge variant="secondary">
-                            <Percent className="h-3 w-3 mr-1" />
-                            {percentage}%
-                          </Badge>
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
+
+                    {/* Income Entries List */}
+                    {isExpanded && (
+                      <div className="border-t bg-muted/20">
+                        {userIncomes.length > 0 ? (
+                          <div className="divide-y">
+                            {userIncomes.map(income => {
+                              const incomeARS = getIncomeInARS(income)
+                              return (
+                                <div
+                                  key={income.id}
+                                  className="flex items-center justify-between p-4 hover:bg-muted/30"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                                    <div>
+                                      <p className="font-medium">{income.source}</p>
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Badge variant="outline" className="text-xs">
+                                          {income.currency}
+                                        </Badge>
+                                        {income.currency === 'USD' && rate > 1 && (
+                                          <span>USD {formatARS(income.amount)}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                      <p className="font-semibold text-lg">
+                                        $ {formatARS(incomeARS)}
+                                      </p>
+                                      {income.currency === 'USD' && rate > 1 && (
+                                        <p className="text-xs text-muted-foreground">
+                                          = USD {formatARS(income.amount)}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {!isFutureMonth && (
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-9 w-9"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleOpenEditDialog(income)
+                                          }}
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-9 w-9 text-destructive hover:text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleOpenDeleteDialog(income)
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : null}
+
+                        {/* Add Income Button */}
+                        {!isFutureMonth && (
+                          <div className="p-4 border-t">
+                            <Button
+                              variant="outline"
+                              className="w-full h-12"
+                              onClick={() => handleOpenAddDialog(user.id!)}
+                            >
+                              <Plus className="h-5 w-5 mr-2" />
+                              {t('addIncome')}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
           )}
+
+          {/* Total Summary */}
+          {currentIncomes.length > 0 && (
+            <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{t('totalSummary')}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {currentIncomes.length} {t('totalEntries')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-primary">
+                    $ {formatARS(totalHouseholdIncome)}
+                  </p>
+                  {rate > 1 && (
+                    <p className="text-sm text-muted-foreground">
+                      USD {formatARS(totalHouseholdIncome / rate)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Set Income Dialog */}
+      {/* Add/Edit Income Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('dialog.title')}</DialogTitle>
+            <DialogTitle className="text-xl">
+              {editingIncome ? t('dialog.editTitle') : t('dialog.title')}
+            </DialogTitle>
             <DialogDescription>
               {t('dialog.description', { month: monthNames[currentMonth - 1], year: currentYear })}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="user" className="text-base">{t('dialog.selectUser')}</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder={t('dialog.selectUser')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.filter(u => u.type === 'resident').map(user => (
-                    <SelectItem key={user.id} value={user.id!}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: user.color }}
-                        />
-                        {user.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="source" className="text-base">{t('dialog.source')}</Label>
+              <Input
+                id="source"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder={t('dialog.sourcePlaceholder')}
+                className="h-12"
+                required
+              />
             </div>
 
             <div className="space-y-2">
@@ -417,13 +574,47 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !selectedUserId || !amount}
+                disabled={isSubmitting || !source || !amount}
                 className="h-12"
               >
                 {isSubmitting ? t('dialog.saving') : t('dialog.save')}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              {t('deleteDialog.title')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('deleteDialog.description', { source: deletingIncome?.source || '' })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              className="h-12"
+            >
+              {t('deleteDialog.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="h-12"
+            >
+              {isSubmitting ? t('deleteDialog.deleting') : t('deleteDialog.confirm')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -14,11 +14,14 @@
   "completeBlockerFirst": "Complete the blocking task first",
   "manageCategories": "Categories",
   "filters": {
+    "title": "Filters",
     "priority": "Priority",
     "status": "Status",
     "assignee": "Assignee",
     "project": "Project",
-    "category": "Category"
+    "category": "Category",
+    "clearAll": "Clear all filters",
+    "active": "Active filters"
   },
   "priority": {
     "low": "Low",

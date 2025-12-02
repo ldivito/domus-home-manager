@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
-import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical, ListTodo } from "lucide-react"
+import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical, ListTodo, Search, Filter, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db, HomeImprovement } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddProjectDialog } from './components/AddProjectDialog'
@@ -13,6 +15,9 @@ import { EditProjectDialog } from './components/EditProjectDialog'
 import { ProjectDetailDialog } from './components/ProjectDetailDialog'
 
 type StatusType = 'todo' | 'in-progress' | 'done'
+type SortOption = 'priority' | 'name' | 'date' | 'cost'
+type FilterPriority = 'all' | 'high' | 'medium' | 'low'
+type FilterStatus = 'all' | 'todo' | 'in-progress' | 'done'
 
 export default function ProjectsPage() {
   const t = useTranslations('projects')
@@ -23,6 +28,11 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<HomeImprovement | null>(null)
   const [draggedProject, setDraggedProject] = useState<HomeImprovement | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<StatusType | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterPriority, setFilterPriority] = useState<FilterPriority>('all')
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [filterUser, setFilterUser] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('priority')
 
   const projects = useLiveQuery(
     () => db.homeImprovements.orderBy('createdAt').reverse().toArray(),
@@ -38,8 +48,6 @@ export default function ProjectsPage() {
     () => db.tasks.toArray(),
     []
   ) || []
-
-  const priorityOrder = { high: 0, medium: 1, low: 2 }
 
   const priorityColors = {
     high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -127,19 +135,68 @@ export default function ProjectsPage() {
     setDragOverColumn(null)
   }
 
-  // Sort projects by priority (high first) then group by status
-  const sortByPriority = (projectList: HomeImprovement[]) => {
-    return [...projectList].sort((a, b) => {
-      const priorityA = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 2
-      const priorityB = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 2
-      return priorityA - priorityB
+  // Filter and sort projects
+  const filteredProjects = useMemo(() => {
+    const priorityOrder = { high: 0, medium: 1, low: 2 }
+    let result = [...projects]
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(p =>
+        p.title.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
+      )
+    }
+
+    // Priority filter
+    if (filterPriority !== 'all') {
+      result = result.filter(p => p.priority === filterPriority)
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      result = result.filter(p => p.status === filterStatus)
+    }
+
+    // User filter
+    if (filterUser !== 'all') {
+      result = result.filter(p => p.assignedUserId === filterUser)
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'priority':
+          return (priorityOrder[a.priority as keyof typeof priorityOrder] ?? 2) -
+                 (priorityOrder[b.priority as keyof typeof priorityOrder] ?? 2)
+        case 'name':
+          return a.title.localeCompare(b.title)
+        case 'date':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        case 'cost':
+          return (b.estimatedCost || 0) - (a.estimatedCost || 0)
+        default:
+          return 0
+      }
     })
-  }
+
+    return result
+  }, [projects, searchQuery, filterPriority, filterStatus, filterUser, sortBy])
 
   const projectsByStatus = {
-    todo: sortByPriority(projects.filter(p => p.status === 'todo')),
-    inProgress: sortByPriority(projects.filter(p => p.status === 'in-progress')),
-    done: sortByPriority(projects.filter(p => p.status === 'done'))
+    todo: filteredProjects.filter(p => p.status === 'todo'),
+    inProgress: filteredProjects.filter(p => p.status === 'in-progress'),
+    done: filteredProjects.filter(p => p.status === 'done')
+  }
+
+  const hasActiveFilters = searchQuery || filterPriority !== 'all' || filterStatus !== 'all' || filterUser !== 'all'
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setFilterPriority('all')
+    setFilterStatus('all')
+    setFilterUser('all')
   }
 
   const ProjectCard = ({ project }: { project: HomeImprovement }) => {
@@ -150,7 +207,7 @@ export default function ProjectsPage() {
 
     return (
       <Card
-        className={`mb-2 cursor-grab active:cursor-grabbing transition-all ${
+        className={`cursor-grab active:cursor-grabbing transition-all ${
           isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md hover:border-purple-300 dark:hover:border-purple-600'
         }`}
         draggable
@@ -158,7 +215,7 @@ export default function ProjectsPage() {
         onDragEnd={handleDragEnd}
         onClick={() => handleViewProject(project)}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-2.5">
           <div className="flex items-start gap-2">
             <GripVertical className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -235,24 +292,24 @@ export default function ProjectsPage() {
 
     return (
       <div
-        className={`p-3 rounded-lg border-2 transition-all min-h-[200px] ${statusColors[status]} ${
+        className={`p-2 rounded-lg border-2 transition-all min-h-[200px] ${statusColors[status]} ${
           isDropTarget ? 'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900' : ''
         }`}
         onDragOver={(e) => handleDragOver(e, status)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, status)}
       >
-        <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center">
-          <Icon className="mr-2 h-4 w-4" />
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
+          <Icon className="mr-1.5 h-4 w-4" />
           {title} ({columnProjects.length})
         </h2>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {columnProjects.map(project => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
         {columnProjects.length === 0 && (
-          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">
             {t('dragHere')}
           </p>
         )}
@@ -261,17 +318,106 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{t('title')}</h1>
-            <p className="text-base text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
-          <Button size="lg" className="h-12 px-6" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-5 w-5" />
+          <Button size="default" className="h-10 px-4" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
             {t('addProject')}
           </Button>
+        </div>
+
+        {/* Search, Filter, and Sort Toolbar */}
+        <div className="mb-4 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder={t('toolbar.searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+
+            {/* Priority Filter */}
+            <Select value={filterPriority} onValueChange={(v) => setFilterPriority(v as FilterPriority)}>
+              <SelectTrigger className="w-[130px] h-9">
+                <Filter className="mr-2 h-3.5 w-3.5" />
+                <SelectValue placeholder={t('toolbar.priority')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('toolbar.allPriorities')}</SelectItem>
+                <SelectItem value="high">{t('priority.high')}</SelectItem>
+                <SelectItem value="medium">{t('priority.medium')}</SelectItem>
+                <SelectItem value="low">{t('priority.low')}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
+              <SelectTrigger className="w-[130px] h-9">
+                <Filter className="mr-2 h-3.5 w-3.5" />
+                <SelectValue placeholder={t('toolbar.status')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('toolbar.allStatuses')}</SelectItem>
+                <SelectItem value="todo">{t('status.todo')}</SelectItem>
+                <SelectItem value="in-progress">{t('status.inProgress')}</SelectItem>
+                <SelectItem value="done">{t('status.done')}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Assigned User Filter */}
+            <Select value={filterUser} onValueChange={setFilterUser}>
+              <SelectTrigger className="w-[130px] h-9">
+                <User className="mr-2 h-3.5 w-3.5" />
+                <SelectValue placeholder={t('toolbar.assignee')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('toolbar.allUsers')}</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id!}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+              <SelectTrigger className="w-[130px] h-9">
+                <ArrowUpDown className="mr-2 h-3.5 w-3.5" />
+                <SelectValue placeholder={t('toolbar.sortBy')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="priority">{t('toolbar.sortPriority')}</SelectItem>
+                <SelectItem value="name">{t('toolbar.sortName')}</SelectItem>
+                <SelectItem value="date">{t('toolbar.sortDate')}</SelectItem>
+                <SelectItem value="cost">{t('toolbar.sortCost')}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+                {t('toolbar.clearFilters')}
+              </Button>
+            )}
+          </div>
+
+          {/* Active filters indicator */}
+          {hasActiveFilters && (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {t('toolbar.showingResults', { count: filteredProjects.length, total: projects.length })}
+            </div>
+          )}
         </div>
 
         {projects.length === 0 ? (
@@ -286,7 +432,7 @@ export default function ProjectsPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <KanbanColumn
                 status="todo"
                 title={t('status.todo')}
@@ -308,18 +454,18 @@ export default function ProjectsPage() {
             </div>
 
             {/* Project Summary */}
-            <div className="mt-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="mt-4 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
-                  <p className="text-xl font-bold text-gray-600 dark:text-gray-300">{projectsByStatus.todo.length + projectsByStatus.inProgress.length}</p>
+                  <p className="text-lg font-bold text-gray-600 dark:text-gray-300">{projectsByStatus.todo.length + projectsByStatus.inProgress.length}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('summary.activeProjects')}</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-green-600 dark:text-green-400">{projectsByStatus.done.length}</p>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">{projectsByStatus.done.length}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('summary.completed')}</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                     ${[...projectsByStatus.todo, ...projectsByStatus.inProgress]
                       .reduce((sum, p) => sum + (p.estimatedCost || 0), 0)
                       .toFixed(0)}

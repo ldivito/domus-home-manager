@@ -6,6 +6,22 @@
   "noProjects": "Aún no hay proyectos",
   "addFirstProject": "Crea tu primer proyecto de mejora del hogar",
   "dragHere": "Arrastra proyectos aquí",
+  "toolbar": {
+    "searchPlaceholder": "Buscar proyectos...",
+    "priority": "Prioridad",
+    "status": "Estado",
+    "assignee": "Asignado",
+    "sortBy": "Ordenar por",
+    "allPriorities": "Todas las prioridades",
+    "allStatuses": "Todos los estados",
+    "allUsers": "Todos los usuarios",
+    "sortPriority": "Prioridad",
+    "sortName": "Nombre",
+    "sortDate": "Fecha",
+    "sortCost": "Costo",
+    "clearFilters": "Limpiar filtros",
+    "showingResults": "Mostrando {count} de {total} proyectos"
+  },
   "status": {
     "todo": "Por Hacer",
     "inProgress": "En Progreso",

@@ -306,6 +306,7 @@ export interface MonthlyIncome {
   userId: string              // Reference to User
   amount: number              // Income amount
   currency: 'ARS' | 'USD'     // Currency of the income
+  source: string              // Source of the income (e.g., "Salary", "Freelance")
   month: number               // 1-12
   year: number                // e.g., 2024
   householdId?: string
@@ -804,6 +805,24 @@ export class DomusDatabase extends Dexie {
       petMedicationLogs: 'id, medicationId, petId, givenDate, givenByUserId, householdId, createdAt',
       petVetVisits: 'id, petId, visitDate, visitType, householdId, createdAt',
       petVaccinations: 'id, petId, vaccineName, nextDueDate, householdId, createdAt'
+    })
+
+    // v26: Add source field to monthly incomes for multiple income entries per user
+    this.version(26).stores({
+      monthlyIncomes: 'id, userId, [month+year], source, householdId, createdAt'
+    })
+
+    // v26 upgrade: add default source to existing incomes
+    this.version(26).upgrade(async (tx) => {
+      const incomes = await tx.table('monthlyIncomes').toArray()
+      for (const income of incomes) {
+        if (!income.source) {
+          await tx.table('monthlyIncomes').update(income.id, {
+            source: 'Salary'
+          })
+        }
+      }
+      console.log('Database upgraded to v26 with income source field')
     })
 
     // v25: Add task categories table and category index to tasks

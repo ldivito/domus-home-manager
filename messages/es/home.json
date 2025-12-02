@@ -183,6 +183,17 @@
       "addFirst": "Agrega tu primera mascota",
       "vaccinationsDueSoon": "vacuna(s) próxima(s)",
       "activeMedications": "medicamento(s) activo(s)"
+    },
+    "savings": {
+      "title": "Ahorros",
+      "activeCampaigns": "Activos",
+      "completedCampaigns": "Completados",
+      "totalSaved": "Total Ahorrado",
+      "progress": "Progreso",
+      "noSavings": "Sin ahorros aún",
+      "startFirst": "Crea tu primera campaña",
+      "goalReached": "¡Meta alcanzada!",
+      "daysLeft": "días restantes"
     }
   },
   "quickActions": {

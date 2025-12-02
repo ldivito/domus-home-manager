@@ -709,6 +709,67 @@ export interface PetVaccination {
   updatedAt?: Date
 }
 
+// Savings Module interfaces
+export type SavingMethod = '52_week_challenge' | 'envelope_method' | 'round_up' | 'fixed_monthly' | 'bi_weekly' | 'custom'
+export type DistributionMethod = 'equal' | 'percentage'
+
+export interface SavingsCampaign {
+  id?: string
+  name: string
+  description?: string
+  goalAmount: number
+  currency: 'ARS' | 'USD'
+  deadline: Date
+  savingMethod: SavingMethod
+  customMethodDetails?: string    // For custom methods
+  distributionMethod: DistributionMethod
+  currentAmount: number           // Cached total contributions
+  isActive: boolean
+  isCompleted: boolean
+  completedAt?: Date
+  householdId?: string
+  createdByUserId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface SavingsMilestone {
+  id?: string
+  campaignId: string              // Reference to SavingsCampaign
+  name: string
+  targetAmount: number
+  targetDate: Date
+  isReached: boolean
+  reachedAt?: Date
+  order: number                   // Display order (1, 2, 3...)
+  householdId?: string
+  createdAt: Date
+}
+
+export interface SavingsParticipant {
+  id?: string
+  campaignId: string              // Reference to SavingsCampaign
+  userId: string                  // Reference to User
+  sharePercentage?: number        // For percentage-based distribution (0-100)
+  isActive: boolean
+  joinedAt: Date
+  householdId?: string
+  createdAt: Date
+}
+
+export interface SavingsContribution {
+  id?: string
+  campaignId: string              // Reference to SavingsCampaign
+  participantId: string           // Reference to SavingsParticipant
+  userId: string                  // Direct reference for faster queries
+  amount: number
+  currency: 'ARS' | 'USD'
+  contributionDate: Date
+  notes?: string
+  householdId?: string
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -754,6 +815,11 @@ export class DomusDatabase extends Dexie {
   petMedicationLogs!: Table<PetMedicationLog>
   petVetVisits!: Table<PetVetVisit>
   petVaccinations!: Table<PetVaccination>
+  // Savings Module tables
+  savingsCampaigns!: Table<SavingsCampaign>
+  savingsMilestones!: Table<SavingsMilestone>
+  savingsParticipants!: Table<SavingsParticipant>
+  savingsContributions!: Table<SavingsContribution>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
@@ -823,6 +889,14 @@ export class DomusDatabase extends Dexie {
         }
       }
       console.log('Database upgraded to v26 with income source field')
+    })
+
+    // v27: Add Savings module tables
+    this.version(27).stores({
+      savingsCampaigns: 'id, name, deadline, isActive, isCompleted, savingMethod, householdId, createdAt',
+      savingsMilestones: 'id, campaignId, targetDate, isReached, order, householdId, createdAt',
+      savingsParticipants: 'id, campaignId, userId, isActive, householdId, createdAt',
+      savingsContributions: 'id, campaignId, participantId, userId, contributionDate, householdId, createdAt'
     })
 
     // v25: Add task categories table and category index to tasks

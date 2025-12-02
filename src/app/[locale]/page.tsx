@@ -25,7 +25,9 @@ import {
   CreditCard,
   PawPrint,
   Syringe,
-  Pill
+  Pill,
+  PiggyBank,
+  Target
 } from "lucide-react"
 import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
@@ -400,6 +402,21 @@ export default function HomePage() {
       .equals(1)
       .toArray()
   }, []) || []
+
+  // Savings data queries
+  const savingsCampaigns = useLiveQuery(() => db.savingsCampaigns.toArray(), []) || []
+  const activeSavingsCampaigns = savingsCampaigns.filter(c => !c.isCompleted)
+  const completedSavingsCampaigns = savingsCampaigns.filter(c => c.isCompleted)
+  const totalSaved = savingsCampaigns.reduce((sum, c) => sum + c.currentAmount, 0)
+
+  // Get top active campaign by progress
+  const topActiveCampaign = activeSavingsCampaigns.length > 0
+    ? activeSavingsCampaigns.sort((a, b) => {
+        const progressA = a.goalAmount > 0 ? (a.currentAmount / a.goalAmount) : 0
+        const progressB = b.goalAmount > 0 ? (b.currentAmount / b.goalAmount) : 0
+        return progressB - progressA
+      })[0]
+    : null
 
   // Get next 4-5 chores for display
   const nextChores = useLiveQuery(
@@ -1312,6 +1329,99 @@ export default function HomePage() {
                     <Link href="/pets">
                       <Button variant="outline" size="sm" className="mt-2">
                         {t('widgets.pets.addFirst')}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Savings Widget */}
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                    <div className="p-2 bg-purple-500/15 rounded-xl border border-purple-200/50">
+                      <PiggyBank className="h-6 w-6 text-purple-600" />
+                    </div>
+                    {t('widgets.savings.title')}
+                  </CardTitle>
+                  <Link href="/savings">
+                    <Button variant="ghost" size="lg" className="touch-target">
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-3">
+                {savingsCampaigns.length > 0 ? (
+                  <>
+                    {/* Savings Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/40 rounded-xl border border-purple-200/50 text-center">
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{activeSavingsCampaigns.length}</p>
+                        <p className="text-xs font-medium text-purple-600 dark:text-purple-400">{t('widgets.savings.activeCampaigns')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/40 rounded-xl border border-green-200/50 text-center">
+                        <p className="text-2xl font-bold text-green-700 dark:text-green-300">{completedSavingsCampaigns.length}</p>
+                        <p className="text-xs font-medium text-green-600 dark:text-green-400">{t('widgets.savings.completedCampaigns')}</p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/40 rounded-xl border border-emerald-200/50 text-center">
+                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">${totalSaved.toLocaleString('es-AR')}</p>
+                        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t('widgets.savings.totalSaved')}</p>
+                      </div>
+                    </div>
+
+                    {/* Top Active Campaign Progress */}
+                    {topActiveCampaign && (
+                      <div className="p-3 rounded-xl border bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/40 border-purple-200/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-purple-700 dark:text-purple-300 truncate flex-1 mr-2">
+                            {topActiveCampaign.name}
+                          </span>
+                          <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
+                            <Target className="h-3 w-3" />
+                            {Math.round((topActiveCampaign.currentAmount / topActiveCampaign.goalAmount) * 100)}%
+                          </div>
+                        </div>
+                        <div className="h-2 bg-purple-200 dark:bg-purple-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all"
+                            style={{ width: `${Math.min(100, (topActiveCampaign.currentAmount / topActiveCampaign.goalAmount) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between mt-2 text-xs text-purple-600 dark:text-purple-400">
+                          <span>${topActiveCampaign.currentAmount.toLocaleString('es-AR')} / ${topActiveCampaign.goalAmount.toLocaleString('es-AR')}</span>
+                          {topActiveCampaign.deadline && (
+                            <span>
+                              {Math.max(0, Math.ceil((new Date(topActiveCampaign.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} {t('widgets.savings.daysLeft')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Goal Reached Alert */}
+                    {completedSavingsCampaigns.length > 0 && (
+                      <div className="p-3 rounded-xl border bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/40 border-green-200/50">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                            {completedSavingsCampaigns.length} {t('widgets.savings.goalReached')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <PiggyBank className="h-7 w-7 text-purple-500" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">{t('widgets.savings.noSavings')}</p>
+                    <Link href="/savings">
+                      <Button variant="outline" size="sm" className="mt-2">
+                        {t('widgets.savings.startFirst')}
                       </Button>
                     </Link>
                   </div>

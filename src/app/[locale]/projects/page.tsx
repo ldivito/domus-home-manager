@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
 import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical, ListTodo, Search, Filter, ArrowUpDown } from "lucide-react"
@@ -28,6 +28,7 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<HomeImprovement | null>(null)
   const [draggedProject, setDraggedProject] = useState<HomeImprovement | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<StatusType | null>(null)
+  const isDraggingRef = useRef(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterPriority, setFilterPriority] = useState<FilterPriority>('all')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
@@ -103,11 +104,17 @@ export default function ProjectsPage() {
   }
 
   const handleDragStart = (e: React.DragEvent, project: HomeImprovement) => {
+    isDraggingRef.current = true
     setDraggedProject(project)
     e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', project.id || '')
   }
 
   const handleDragEnd = () => {
+    // Small delay to prevent click from firing after drag
+    setTimeout(() => {
+      isDraggingRef.current = false
+    }, 100)
     setDraggedProject(null)
     setDragOverColumn(null)
   }
@@ -205,45 +212,52 @@ export default function ProjectsPage() {
     const taskCounts = getTaskCounts(project.id)
     const totalTasks = taskCounts.pending + taskCounts.completed
 
+    const handleCardClick = () => {
+      // Only open detail if not dragging
+      if (!isDraggingRef.current && !draggedProject) {
+        handleViewProject(project)
+      }
+    }
+
     return (
       <Card
-        className={`cursor-grab active:cursor-grabbing transition-all ${
+        className={`group cursor-grab active:cursor-grabbing transition-all ${
           isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md hover:border-purple-300 dark:hover:border-purple-600'
         }`}
         draggable
         onDragStart={(e) => handleDragStart(e, project)}
         onDragEnd={handleDragEnd}
-        onClick={() => handleViewProject(project)}
+        onClick={handleCardClick}
       >
-        <CardContent className="p-2.5">
-          <div className="flex items-start gap-2">
-            <GripVertical className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+        <CardContent className="px-2 py-1.5">
+          <div className="flex items-start gap-1.5">
+            <GripVertical className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0 cursor-grab" />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center justify-between gap-2">
                 <h3 className="font-medium text-sm truncate">{project.title}</h3>
                 <Badge className={`${priorityColors[project.priority as keyof typeof priorityColors]} text-xs px-1.5 py-0`}>
                   {t(`priority.${project.priority}`)}
                 </Badge>
               </div>
               {project.description && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{project.description}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{project.description}</p>
               )}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center justify-between mt-1">
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                   {userName && (
                     <span className="flex items-center">
-                      <User className="mr-1 h-3 w-3" />
+                      <User className="mr-0.5 h-3 w-3" />
                       {userName}
                     </span>
                   )}
                   {project.estimatedCost && (
                     <span className="flex items-center">
-                      <DollarSign className="mr-0.5 h-3 w-3" />
+                      <DollarSign className="h-3 w-3" />
                       {project.estimatedCost.toFixed(0)}
                     </span>
                   )}
                   {totalTasks > 0 && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-0.5">
                       <ListTodo className="h-3 w-3" />
                       <span className="text-green-600 dark:text-green-400">{taskCounts.completed}</span>
                       <span>/</span>
@@ -251,12 +265,12 @@ export default function ProjectsPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity touch-device:opacity-100">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEditProject(project); }}
                   >
                     <Edit3 className="h-3 w-3" />
                   </Button>
@@ -264,7 +278,7 @@ export default function ProjectsPage() {
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id!); }}
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteProject(project.id!); }}
                   >
                     <Trash2 className="h-3 w-3 text-red-500" />
                   </Button>
@@ -292,27 +306,27 @@ export default function ProjectsPage() {
 
     return (
       <div
-        className={`p-2 rounded-lg border-2 transition-all min-h-[200px] ${statusColors[status]} ${
+        className={`p-2 rounded-lg border-2 transition-all h-[calc(100vh-320px)] min-h-[300px] flex flex-col ${statusColors[status]} ${
           isDropTarget ? 'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900' : ''
         }`}
         onDragOver={(e) => handleDragOver(e, status)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, status)}
       >
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center flex-shrink-0">
           <Icon className="mr-1.5 h-4 w-4" />
           {title} ({columnProjects.length})
         </h2>
-        <div className="space-y-1.5">
+        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
           {columnProjects.map(project => (
             <ProjectCard key={project.id} project={project} />
           ))}
+          {columnProjects.length === 0 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">
+              {t('dragHere')}
+            </p>
+          )}
         </div>
-        {columnProjects.length === 0 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">
-            {t('dragHere')}
-          </p>
-        )}
       </div>
     )
   }

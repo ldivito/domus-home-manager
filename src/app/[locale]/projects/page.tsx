@@ -3,11 +3,13 @@
 import { useState, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
-import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical, ListTodo, Search, Filter, ArrowUpDown } from "lucide-react"
+import { Hammer, Plus, DollarSign, User, Edit3, Trash2, CheckCircle, Calendar, GripVertical, ListTodo, Search, Filter, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Label } from "@/components/ui/label"
 import { db, HomeImprovement } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddProjectDialog } from './components/AddProjectDialog'
@@ -21,6 +23,7 @@ type FilterStatus = 'all' | 'todo' | 'in-progress' | 'done'
 
 export default function ProjectsPage() {
   const t = useTranslations('projects')
+  const tCommon = useTranslations('common')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
@@ -193,8 +196,6 @@ export default function ProjectsPage() {
     done: filteredProjects.filter(p => p.status === 'done')
   }
 
-  const hasActiveFilters = searchQuery || filterPriority !== 'all' || filterStatus !== 'all' || filterUser !== 'all'
-
   const clearFilters = () => {
     setSearchQuery('')
     setFilterPriority('all')
@@ -342,91 +343,185 @@ export default function ProjectsPage() {
           </Button>
         </div>
 
-        {/* Search, Filter, and Sort Toolbar */}
-        <div className="mb-4 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex flex-wrap items-center gap-3">
+        {/* Search and Filters */}
+        <div className="mb-4 space-y-2">
+          <div className="flex gap-2 items-center">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
               <Input
-                type="text"
-                placeholder={t('toolbar.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
+                placeholder={t('toolbar.searchPlaceholder')}
+                className="pl-10"
               />
             </div>
 
-            {/* Priority Filter */}
-            <Select value={filterPriority} onValueChange={(v) => setFilterPriority(v as FilterPriority)}>
-              <SelectTrigger className="w-[130px] h-9">
-                <Filter className="mr-2 h-3.5 w-3.5" />
-                <SelectValue placeholder={t('toolbar.priority')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('toolbar.allPriorities')}</SelectItem>
-                <SelectItem value="high">{t('priority.high')}</SelectItem>
-                <SelectItem value="medium">{t('priority.medium')}</SelectItem>
-                <SelectItem value="low">{t('priority.low')}</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Filter Button */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {t('toolbar.filters')}
+                  {(filterPriority !== 'all' || filterStatus !== 'all' || filterUser !== 'all') && (
+                    <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-[10px] text-white">
+                      {[filterPriority, filterStatus, filterUser].filter(f => f !== 'all').length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm">{t('toolbar.filters')}</h4>
 
-            {/* Status Filter */}
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
-              <SelectTrigger className="w-[130px] h-9">
-                <Filter className="mr-2 h-3.5 w-3.5" />
-                <SelectValue placeholder={t('toolbar.status')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('toolbar.allStatuses')}</SelectItem>
-                <SelectItem value="todo">{t('status.todo')}</SelectItem>
-                <SelectItem value="in-progress">{t('status.inProgress')}</SelectItem>
-                <SelectItem value="done">{t('status.done')}</SelectItem>
-              </SelectContent>
-            </Select>
+                  {/* Priority */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('toolbar.priority')}</Label>
+                    <Select value={filterPriority} onValueChange={(v) => setFilterPriority(v as FilterPriority)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="high">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            {t('priority.high')}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                            {t('priority.medium')}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="low">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            {t('priority.low')}
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* Assigned User Filter */}
-            <Select value={filterUser} onValueChange={setFilterUser}>
-              <SelectTrigger className="w-[130px] h-9">
-                <User className="mr-2 h-3.5 w-3.5" />
-                <SelectValue placeholder={t('toolbar.assignee')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('toolbar.allUsers')}</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id!}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  {/* Status */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('toolbar.status')}</Label>
+                    <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="todo">{t('status.todo')}</SelectItem>
+                        <SelectItem value="in-progress">{t('status.inProgress')}</SelectItem>
+                        <SelectItem value="done">{t('status.done')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="w-[130px] h-9">
-                <ArrowUpDown className="mr-2 h-3.5 w-3.5" />
-                <SelectValue placeholder={t('toolbar.sortBy')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="priority">{t('toolbar.sortPriority')}</SelectItem>
-                <SelectItem value="name">{t('toolbar.sortName')}</SelectItem>
-                <SelectItem value="date">{t('toolbar.sortDate')}</SelectItem>
-                <SelectItem value="cost">{t('toolbar.sortCost')}</SelectItem>
-              </SelectContent>
-            </Select>
+                  {/* Assignee */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('toolbar.assignee')}</Label>
+                    <Select value={filterUser} onValueChange={setFilterUser}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id!}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: user.color }} />
+                              <span>{user.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* Clear Filters */}
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-                {t('toolbar.clearFilters')}
-              </Button>
-            )}
+                  {/* Sort */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('toolbar.sortBy')}</Label>
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="priority">{t('toolbar.sortPriority')}</SelectItem>
+                        <SelectItem value="name">{t('toolbar.sortName')}</SelectItem>
+                        <SelectItem value="date">{t('toolbar.sortDate')}</SelectItem>
+                        <SelectItem value="cost">{t('toolbar.sortCost')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear all */}
+                  {(filterPriority !== 'all' || filterStatus !== 'all' || filterUser !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-gray-500"
+                      onClick={clearFilters}
+                    >
+                      {t('toolbar.clearFilters')}
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
-          {/* Active filters indicator */}
-          {hasActiveFilters && (
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {t('toolbar.showingResults', { count: filteredProjects.length, total: projects.length })}
+          {/* Active Filters */}
+          {(filterPriority !== 'all' || filterStatus !== 'all' || filterUser !== 'all') && (
+            <div className="flex gap-1.5 flex-wrap items-center">
+              <span className="text-xs text-gray-500">{t('toolbar.activeFilters')}:</span>
+
+              {filterPriority !== 'all' && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                  filterPriority === 'high'
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    : filterPriority === 'medium'
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                }`}>
+                  {t(`priority.${filterPriority}`)}
+                  <button
+                    onClick={() => setFilterPriority('all')}
+                    className="btn-compact ml-0.5 hover:opacity-70"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {filterStatus !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs">
+                  <CheckCircle className="h-3 w-3" />
+                  {t(`status.${filterStatus === 'in-progress' ? 'inProgress' : filterStatus}`)}
+                  <button
+                    onClick={() => setFilterStatus('all')}
+                    className="btn-compact ml-0.5 hover:text-blue-900 dark:hover:text-blue-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {filterUser !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                  <User className="h-3 w-3" />
+                  {users.find(u => u.id === filterUser)?.name || ''}
+                  <button
+                    onClick={() => setFilterUser('all')}
+                    className="btn-compact ml-0.5 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
             </div>
           )}
         </div>

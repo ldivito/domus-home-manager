@@ -8,6 +8,8 @@
   "dragHere": "Arrastra proyectos aquí",
   "toolbar": {
     "searchPlaceholder": "Buscar proyectos...",
+    "filters": "Filtros",
+    "activeFilters": "Activos",
     "priority": "Prioridad",
     "status": "Estado",
     "assignee": "Asignado",

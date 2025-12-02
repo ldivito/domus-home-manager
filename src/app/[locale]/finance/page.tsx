@@ -7,11 +7,12 @@ import { db } from '@/lib/db'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { DollarSign, Receipt, Scale, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { DollarSign, Receipt, Scale, Calendar, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
 import { IncomeTab } from './components/IncomeTab'
 import { ExpensesTab } from './components/ExpensesTab'
 import { PaymentsTab } from './components/PaymentsTab'
 import { BalanceTab } from './components/BalanceTab'
+import { AnalysisTab } from './components/AnalysisTab'
 import { formatARS } from '@/lib/utils'
 
 export default function FinancePage() {
@@ -89,6 +90,12 @@ export default function FinancePage() {
     () => db.expensePayments.toArray(),
     []
   ) || []
+
+  // Get all incomes for analysis
+  const allIncomes = useLiveQuery(() => db.monthlyIncomes.toArray()) || []
+
+  // Get all exchange rates for analysis
+  const allExchangeRates = useLiveQuery(() => db.monthlyExchangeRates.toArray()) || []
 
   // Get exchange rate value (default to 1 if not set)
   const exchangeRate = selectedExchangeRate?.rate || 1
@@ -252,7 +259,7 @@ export default function FinancePage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 h-14">
+          <TabsList className="grid w-full grid-cols-5 h-14">
             <TabsTrigger value="income" className="text-base py-3">
               <DollarSign className="h-4 w-4 mr-2" />
               {t('tabs.income')}
@@ -268,6 +275,10 @@ export default function FinancePage() {
             <TabsTrigger value="balance" className="text-base py-3">
               <Scale className="h-4 w-4 mr-2" />
               {t('tabs.balance')}
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="text-base py-3">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              {t('tabs.analysis')}
             </TabsTrigger>
           </TabsList>
 
@@ -312,6 +323,18 @@ export default function FinancePage() {
               exchangeRate={selectedExchangeRate}
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
+            />
+          </TabsContent>
+
+          <TabsContent value="analysis">
+            <AnalysisTab
+              users={users}
+              allIncomes={allIncomes}
+              allExpenses={recurringExpenses}
+              allPayments={payments}
+              allExchangeRates={allExchangeRates}
+              currentMonth={selectedMonth}
+              currentYear={selectedYear}
             />
           </TabsContent>
         </Tabs>

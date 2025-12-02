@@ -4,6 +4,7 @@
   "addChore": "Agregar Tarea",
   "addFirstChore": "Agregar Primera Tarea",
   "noChoresYet": "Aún No Hay Tareas",
+  "noChoresFound": "No se encontraron tareas",
   "createFirstChore": "Crea tu primera tarea doméstica recurrente",
   "notAssigned": "Sin asignar",
   "assignedTo": "Asignado a",
@@ -20,6 +21,25 @@
   "dueInDays": "Vence en {days} días",
   "overdueDays": "Vencido hace {days} días",
   "loadingChores": "Cargando tareas...",
+  "searchPlaceholder": "Buscar tareas...",
+  "chore": "tarea",
+  "chores": "tareas",
+  "completed": "completadas",
+  "dailyProgress": "Progreso de Hoy",
+  "sections": {
+    "pending": "Pendientes",
+    "completed": "Completadas"
+  },
+  "filters": {
+    "title": "Filtros",
+    "frequency": "Frecuencia",
+    "status": "Estado",
+    "assignee": "Asignado a",
+    "pending": "Pendiente",
+    "completed": "Completado",
+    "active": "Filtros activos",
+    "clearAll": "Limpiar todo"
+  },
   "addChoreModal": {
     "title": "Crear Tarea",
     "choreName": "Nombre de la Tarea",

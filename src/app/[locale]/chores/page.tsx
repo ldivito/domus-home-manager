@@ -1,20 +1,28 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useTranslations } from "next-intl"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckSquare, Plus, Calendar, User, Clock, Repeat, Edit, Undo } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { CheckSquare, Plus, Calendar, User, Clock, Repeat, Edit3, Undo, Trash2, Search, Filter, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AddChoreModal } from "@/components/AddChoreModal"
 import { EditChoreModal } from "@/components/EditChoreModal"
 import { CompleteChoreModal } from "@/components/CompleteChoreModal"
 import { db, Chore, User as UserType } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 
+type FrequencyFilter = 'all' | 'daily' | 'weekly' | 'monthly' | 'custom'
+type StatusFilter = 'all' | 'pending' | 'completed' | 'overdue'
+
 export default function ChoresPage() {
   const t = useTranslations('chores')
+  const tCommon = useTranslations('common')
   const tFreq = useTranslations('chores.frequency')
   const [chores, setChores] = useState<Chore[]>([])
   const [users, setUsers] = useState<UserType[]>([])
@@ -23,6 +31,12 @@ export default function ChoresPage() {
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false)
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
 
   // Load chores and users from database
   useEffect(() => {
@@ -51,9 +65,9 @@ export default function ChoresPage() {
         ...choreData,
         createdAt: new Date()
       }
-      
+
       await db.chores.add(newChore)
-      await loadData() // Reload data after creation
+      await loadData()
     } catch (error) {
       console.error('Error creating chore:', error)
       throw error
@@ -70,14 +84,23 @@ export default function ChoresPage() {
     setIsEditModalOpen(true)
   }
 
+  const handleDeleteChore = async (chore: Chore) => {
+    if (!chore.id) return
+    try {
+      await db.chores.delete(chore.id)
+      await loadData()
+    } catch (error) {
+      console.error('Error deleting chore:', error)
+    }
+  }
+
   const handleConfirmComplete = async (completedByUserId: string) => {
     if (!selectedChore?.id) return
-    
+
     try {
-      // Calculate next due date based on frequency
       const now = new Date()
       let nextDue: Date
-      
+
       switch (selectedChore.frequency) {
         case 'daily':
           nextDue = new Date(now.getTime() + 24 * 60 * 60 * 1000)
@@ -93,13 +116,13 @@ export default function ChoresPage() {
           if (selectedChore.customFrequency?.type === 'days_interval') {
             nextDue = new Date(now.getTime() + (selectedChore.customFrequency.value * 24 * 60 * 60 * 1000))
           } else {
-            nextDue = new Date(now.getTime() + 24 * 60 * 60 * 1000) // Default to tomorrow
+            nextDue = new Date(now.getTime() + 24 * 60 * 60 * 1000)
           }
           break
         default:
           nextDue = new Date(now.getTime() + 24 * 60 * 60 * 1000)
       }
-      
+
       await db.chores.update(selectedChore.id, {
         lastCompleted: now,
         lastCompletedBy: completedByUserId,
@@ -107,7 +130,7 @@ export default function ChoresPage() {
         nextDue,
         isCompleted: true
       })
-      
+
       await loadData()
     } catch (error) {
       console.error('Error completing chore:', error)
@@ -117,14 +140,14 @@ export default function ChoresPage() {
 
   const handleUndoComplete = async (chore: Chore) => {
     if (!chore.id) return
-    
+
     try {
       await db.chores.update(chore.id, {
         isCompleted: false,
         completedAt: undefined,
         lastCompletedBy: undefined
       })
-      
+
       await loadData()
     } catch (error) {
       console.error('Error undoing completion:', error)
@@ -161,7 +184,7 @@ export default function ChoresPage() {
           return tFreq('custom')
       }
     }
-    
+
     switch (chore.frequency) {
       case 'daily':
         return tFreq('daily')
@@ -192,9 +215,65 @@ export default function ChoresPage() {
     return t('dueInDays', { days })
   }
 
+  // Filter chores
+  const filteredChores = useMemo(() => {
+    return chores.filter(chore => {
+      const matchesSearch = !searchQuery ||
+        chore.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (chore.description && chore.description.toLowerCase().includes(searchQuery.toLowerCase()))
+
+      const matchesFrequency = frequencyFilter === 'all' || chore.frequency === frequencyFilter
+
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'completed' && chore.isCompleted) ||
+        (statusFilter === 'pending' && !chore.isCompleted && !isOverdue(chore.nextDue)) ||
+        (statusFilter === 'overdue' && !chore.isCompleted && isOverdue(chore.nextDue))
+
+      const matchesAssignee = assigneeFilter === 'all' ||
+        (assigneeFilter === 'unassigned' && !chore.assignedUserId) ||
+        chore.assignedUserId === assigneeFilter
+
+      return matchesSearch && matchesFrequency && matchesStatus && matchesAssignee
+    })
+  }, [chores, searchQuery, frequencyFilter, statusFilter, assigneeFilter])
+
+  // Separate pending and completed chores
+  const pendingChores = filteredChores.filter(c => !c.isCompleted)
+  const completedChores = filteredChores.filter(c => c.isCompleted)
+
+  // Calculate daily progress (chores due today that are completed)
+  const dailyProgress = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const dueTodayOrOverdue = chores.filter(c => {
+      const dueDate = c.nextDue instanceof Date ? c.nextDue : new Date(c.nextDue)
+      return dueDate < tomorrow
+    })
+
+    const completedToday = dueTodayOrOverdue.filter(c => c.isCompleted)
+
+    return {
+      total: dueTodayOrOverdue.length,
+      completed: completedToday.length,
+      percentage: dueTodayOrOverdue.length > 0 ? (completedToday.length / dueTodayOrOverdue.length) * 100 : 0
+    }
+  }, [chores])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setFrequencyFilter('all')
+    setStatusFilter('all')
+    setAssigneeFilter('all')
+  }
+
+  const hasActiveFilters = frequencyFilter !== 'all' || statusFilter !== 'all' || assigneeFilter !== 'all'
+
   if (isLoading) {
     return (
-      <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-center items-center h-96">
             <div className="flex flex-col items-center gap-4">
@@ -207,188 +286,381 @@ export default function ChoresPage() {
     )
   }
 
-  return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              {t('title')}
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl">
-              {t('subtitle')}
-            </p>
+  const ChoreCard = ({ chore }: { chore: Chore }) => {
+    const assignedUser = getUserById(chore.assignedUserId)
+    const completedByUser = getUserById(chore.lastCompletedBy)
+    const overdue = !chore.isCompleted && isOverdue(chore.nextDue)
+    const isCompleted = chore.isCompleted
+
+    return (
+      <Card className={`group h-full flex flex-col transition-all hover:shadow-md ${
+        isCompleted ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800' :
+        overdue ? 'border-red-300 dark:border-red-700' : 'hover:border-purple-300 dark:hover:border-purple-600'
+      }`}>
+        <CardContent className="p-3 flex flex-col h-full">
+          {/* Title and badges */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-medium text-sm truncate ${isCompleted ? 'line-through text-green-700 dark:text-green-400' : ''}`}>
+                {chore.title}
+              </h3>
+              {chore.description && (
+                <p className={`text-xs line-clamp-1 mt-0.5 ${isCompleted ? 'text-green-600/70 dark:text-green-500/70' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {chore.description}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {overdue && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{t('overdue')}</Badge>}
+              {isCompleted && <Badge className="text-[10px] px-1.5 py-0 bg-green-500">✓</Badge>}
+            </div>
           </div>
-          <Button 
-            size="lg" 
-            className="h-14 px-8 text-lg shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus className="mr-2 h-6 w-6" />
+
+          {/* Info row: frequency, due date, assignee */}
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3 flex-wrap">
+            <span className="flex items-center gap-0.5">
+              <Repeat className="h-3 w-3" />
+              {getFrequencyDisplay(chore)}
+            </span>
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span className={`flex items-center gap-0.5 ${overdue ? 'text-red-600 dark:text-red-400' : isCompleted ? 'text-green-600 dark:text-green-400' : ''}`}>
+              <Calendar className="h-3 w-3" />
+              {isCompleted && chore.completedAt
+                ? new Date(chore.completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                : formatDueDate(chore.nextDue)
+              }
+            </span>
+            {assignedUser && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <span className="flex items-center gap-1">
+                  <div
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-medium"
+                    style={{ backgroundColor: assignedUser.color }}
+                  >
+                    {assignedUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="truncate max-w-[60px]">{assignedUser.name}</span>
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Completed by info */}
+          {isCompleted && completedByUser && (
+            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-3 bg-green-100/50 dark:bg-green-900/20 rounded px-2 py-1">
+              <CheckSquare className="h-3 w-3" />
+              <span>{t('completedBy')}: {completedByUser.name}</span>
+            </div>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800">
+            {!isCompleted ? (
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => handleCompleteChore(chore)}
+              >
+                <CheckSquare className="mr-1 h-3 w-3" />
+                {t('markComplete')}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                onClick={() => handleUndoComplete(chore)}
+              >
+                <Undo className="mr-1 h-3 w-3" />
+                {t('undoComplete')}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => handleEditChore(chore)}
+            >
+              <Edit3 className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              onClick={() => handleDeleteChore(chore)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+          </div>
+          <Button size="default" className="h-10 px-4" onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
             {t('addChore')}
           </Button>
         </div>
-        
+
+        {/* Daily Progress Bar */}
+        {chores.length > 0 && (
+          <div className="mb-4 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dailyProgress')}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {dailyProgress.completed}/{dailyProgress.total} {t('completed')}
+              </span>
+            </div>
+            <Progress value={dailyProgress.percentage} className="h-2" />
+          </div>
+        )}
+
+        {/* Search and Filters */}
+        <div className="mb-4 space-y-2">
+          <div className="flex gap-2 items-center">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('searchPlaceholder')}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filter Button */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {t('filters.title')}
+                  {hasActiveFilters && (
+                    <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-[10px] text-white">
+                      {[frequencyFilter, statusFilter, assigneeFilter].filter(f => f !== 'all').length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm">{t('filters.title')}</h4>
+
+                  {/* Frequency */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.frequency')}</Label>
+                    <Select value={frequencyFilter} onValueChange={(v) => setFrequencyFilter(v as FrequencyFilter)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="daily">{tFreq('daily')}</SelectItem>
+                        <SelectItem value="weekly">{tFreq('weekly')}</SelectItem>
+                        <SelectItem value="monthly">{tFreq('monthly')}</SelectItem>
+                        <SelectItem value="custom">{tFreq('custom')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.status')}</Label>
+                    <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="pending">{t('filters.pending')}</SelectItem>
+                        <SelectItem value="completed">{t('filters.completed')}</SelectItem>
+                        <SelectItem value="overdue">{t('overdue')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Assignee */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">{t('filters.assignee')}</Label>
+                    <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{tCommon('all')}</SelectItem>
+                        <SelectItem value="unassigned">{t('notAssigned')}</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id!}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: user.color }} />
+                              <span>{user.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear all */}
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-gray-500"
+                      onClick={clearFilters}
+                    >
+                      {t('filters.clearAll')}
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Active Filters */}
+          {hasActiveFilters && (
+            <div className="flex gap-1.5 flex-wrap items-center">
+              <span className="text-xs text-gray-500">{t('filters.active')}:</span>
+
+              {frequencyFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs">
+                  <Repeat className="h-3 w-3" />
+                  {tFreq(frequencyFilter)}
+                  <button
+                    onClick={() => setFrequencyFilter('all')}
+                    className="btn-compact ml-0.5 hover:text-purple-900 dark:hover:text-purple-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {statusFilter !== 'all' && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                  statusFilter === 'overdue'
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    : statusFilter === 'completed'
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                }`}>
+                  <CheckSquare className="h-3 w-3" />
+                  {statusFilter === 'pending' ? t('filters.pending') : statusFilter === 'completed' ? t('filters.completed') : t('overdue')}
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className="btn-compact ml-0.5 hover:opacity-70"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              {assigneeFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                  <User className="h-3 w-3" />
+                  {assigneeFilter === 'unassigned'
+                    ? t('notAssigned')
+                    : users.find(u => u.id === assigneeFilter)?.name || ''}
+                  <button
+                    onClick={() => setAssigneeFilter('all')}
+                    className="btn-compact ml-0.5 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Results count */}
+        <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+          {filteredChores.length} {filteredChores.length === 1 ? t('chore') : t('chores')}
+        </div>
+
         {chores.length === 0 ? (
-          <Card className="glass-card border-2 border-dashed border-primary/30 shadow-modern-lg">
-            <CardContent className="text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
-                <Repeat className="h-10 w-10 text-primary" />
+          <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
+            <CardContent className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <Repeat className="mx-auto h-12 w-12 mb-4" />
+                <p className="text-xl mb-2">{t('noChoresYet')}</p>
+                <p className="text-base mb-4">{t('createFirstChore')}</p>
+                <Button onClick={() => setIsAddModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('addFirstChore')}
+                </Button>
               </div>
-              <h3 className="text-3xl font-bold text-foreground mb-3">{t('noChoresYet')}</h3>
-              <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
-                {t('createFirstChore')}
-              </p>
-              <Button 
-                size="lg" 
-                onClick={() => setIsAddModalOpen(true)}
-                className="h-14 px-8 text-lg shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                <Plus className="mr-2 h-6 w-6" />
-                {t('addFirstChore')}
-              </Button>
+            </CardContent>
+          </Card>
+        ) : filteredChores.length === 0 ? (
+          <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
+            <CardContent className="flex items-center justify-center h-24 text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <Search className="mx-auto h-6 w-6 mb-1" />
+                <p>{t('noChoresFound')}</p>
+              </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {chores.map((chore) => {
-              const assignedUser = getUserById(chore.assignedUserId)
-              const completedByUser = getUserById(chore.lastCompletedBy)
-              const overdue = !chore.isCompleted && isOverdue(chore.nextDue)
-              const isCompleted = chore.isCompleted
-              
-              return (
-                <Card key={chore.id} className={`glass-card shadow-modern hover:shadow-modern-lg transition-all duration-300 hover:scale-[1.02] ${
-                  isCompleted ? 'opacity-75 bg-green-50 border-green-200' : 
-                  overdue ? 'border-red-500/50' : ''
-                }`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className={`text-xl mb-2 flex items-center gap-2 ${isCompleted ? 'line-through text-green-700' : ''}`}>
-                          {chore.title}
-                          {overdue && <Badge variant="destructive" className="text-xs">{t('overdue')}</Badge>}
-                          {isCompleted && <Badge variant="default" className="text-xs bg-green-500">✓</Badge>}
-                        </CardTitle>
-                        {chore.description && (
-                          <CardDescription className={`text-base ${isCompleted ? 'text-green-600/70' : ''}`}>
-                            {chore.description}
-                          </CardDescription>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditChore(chore)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <CheckSquare className={`h-6 w-6 ${
-                          isCompleted ? 'text-green-500' :
-                          overdue ? 'text-red-500' : 'text-primary'
-                        }`} />
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Clock className="mr-2 h-4 w-4" />
-                        {getFrequencyDisplay(chore)}
-                      </div>
-                      
-                      {chore.scheduledTime && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="mr-2 h-4 w-4" />
-                          {t('scheduledFor')} {chore.scheduledTime}
-                        </div>
-                      )}
-                      
-                      {!isCompleted ? (
-                        <div className={`flex items-center text-sm ${overdue ? 'text-red-600' : 'text-muted-foreground'}`}>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formatDueDate(chore.nextDue)}
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-sm text-green-600">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {t('completedOn')} {chore.completedAt ? new Date(chore.completedAt).toLocaleDateString() : ''} {chore.completedAt ? new Date(chore.completedAt).toLocaleTimeString() : ''}
-                        </div>
-                      )}
-                      
-                      {assignedUser ? (
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <Avatar className={`h-8 w-8 ${assignedUser.color}`}>
-                            <AvatarFallback className="text-white text-sm font-bold">
-                              {assignedUser.avatar || assignedUser.name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium">
-                            {t('assignedTo')}: {assignedUser.name}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="mr-2 h-4 w-4" />
-                          {t('notAssigned')}
-                        </div>
-                      )}
-                      
-                      {isCompleted && completedByUser && (
-                        <div className="flex items-center gap-3 p-3 bg-green-100 rounded-lg border border-green-200">
-                          <Avatar className={`h-8 w-8 ${completedByUser.color}`}>
-                            <AvatarFallback className="text-white text-sm font-bold">
-                              {completedByUser.avatar || completedByUser.name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium text-green-700">
-                            {t('completedBy')}: {completedByUser.name}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {!isCompleted ? (
-                        <Button 
-                          className="w-full h-12 text-base shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95" 
-                          onClick={() => handleCompleteChore(chore)}
-                        >
-                          <CheckSquare className="mr-2 h-4 w-4" />
-                          {t('markComplete')}
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="outline"
-                          className="w-full h-12 text-base border-green-300 text-green-700 hover:bg-green-50" 
-                          onClick={() => handleUndoComplete(chore)}
-                        >
-                          <Undo className="mr-2 h-4 w-4" />
-                          {t('undoComplete')}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+          <div className="space-y-6">
+            {/* Pending Chores Section */}
+            {pendingChores.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  {t('sections.pending')} ({pendingChores.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {pendingChores.map((chore) => (
+                    <ChoreCard key={chore.id} chore={chore} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completed Chores Section */}
+            {completedChores.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4 text-green-500" />
+                  {t('sections.completed')} ({completedChores.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {completedChores.map((chore) => (
+                    <ChoreCard key={chore.id} chore={chore} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
-        
+
         <AddChoreModal
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
           onCreateChore={handleCreateChore}
         />
-        
+
         <EditChoreModal
           open={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           onEditChore={handleEditChoreSubmit}
           chore={selectedChore}
         />
-        
+
         <CompleteChoreModal
           open={isCompleteModalOpen}
           onOpenChange={setIsCompleteModalOpen}

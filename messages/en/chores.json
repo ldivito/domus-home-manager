@@ -4,6 +4,7 @@
   "addChore": "Add Chore",
   "addFirstChore": "Add First Chore",
   "noChoresYet": "No Chores Yet",
+  "noChoresFound": "No chores found",
   "createFirstChore": "Create your first recurring household task",
   "notAssigned": "Not assigned",
   "assignedTo": "Assigned to",
@@ -20,6 +21,25 @@
   "dueInDays": "Due in {days} days",
   "overdueDays": "Overdue {days} days",
   "loadingChores": "Loading chores...",
+  "searchPlaceholder": "Search chores...",
+  "chore": "chore",
+  "chores": "chores",
+  "completed": "completed",
+  "dailyProgress": "Today's Progress",
+  "sections": {
+    "pending": "Pending",
+    "completed": "Completed"
+  },
+  "filters": {
+    "title": "Filters",
+    "frequency": "Frequency",
+    "status": "Status",
+    "assignee": "Assignee",
+    "pending": "Pending",
+    "completed": "Completed",
+    "active": "Active filters",
+    "clearAll": "Clear all"
+  },
   "addChoreModal": {
     "title": "Create Chore",
     "choreName": "Chore Name",

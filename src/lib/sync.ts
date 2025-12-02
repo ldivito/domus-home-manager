@@ -35,6 +35,7 @@ const SYNC_TABLES = [
   'groceryCategories',
   'savedGroceryItems',
   'tasks',
+  'taskCategories',
   'homeImprovements',
   'meals',
   'mealCategories',
@@ -70,7 +71,12 @@ const SYNC_TABLES = [
   'petMedications',
   'petMedicationLogs',
   'petVetVisits',
-  'petVaccinations'
+  'petVaccinations',
+  // Savings module
+  'savingsCampaigns',
+  'savingsMilestones',
+  'savingsParticipants',
+  'savingsContributions'
 ] as const
 
 type SyncTable = typeof SYNC_TABLES[number]

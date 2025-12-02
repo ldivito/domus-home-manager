@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,7 @@ export function ProjectDetailDialog({
 }: ProjectDetailDialogProps) {
   const t = useTranslations('projects')
   const tTasks = useTranslations('tasks')
+  const locale = useLocale()
 
   if (!project) return null
 
@@ -71,7 +72,7 @@ export function ProjectDetailDialog({
   }
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString(undefined, {
+    return new Date(date).toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -144,9 +145,9 @@ export function ProjectDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
         {/* Header with gradient */}
-        <div className={`p-6 ${
+        <div className={`p-6 pr-12 ${
           project.status === 'done'
             ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-900/20 dark:to-emerald-900/20'
             : project.status === 'in-progress'
@@ -166,12 +167,12 @@ export function ProjectDetailDialog({
                 </div>
                 <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
               </div>
-              <Button variant="outline" size="sm" onClick={onEdit} className="flex-shrink-0">
-                <Edit3 className="h-4 w-4 mr-1" />
-                {t('editProject')}
-              </Button>
             </div>
           </DialogHeader>
+          <Button variant="outline" size="sm" onClick={onEdit} className="mt-4">
+            <Edit3 className="h-4 w-4 mr-1" />
+            {t('editProject')}
+          </Button>
         </div>
 
         <ScrollArea className="max-h-[calc(90vh-180px)]">

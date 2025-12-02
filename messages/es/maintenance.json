@@ -1,0 +1,173 @@
+{
+  "title": "Programador de Mantenimiento",
+  "description": "Rastrea y programa el mantenimiento de electrodomésticos, vehículos y sistemas del hogar",
+  "tabs": {
+    "items": "Artículos",
+    "tasks": "Tareas",
+    "history": "Historial"
+  },
+  "stats": {
+    "overdue": "Vencidas",
+    "dueThisWeek": "Vencen Esta Semana",
+    "upcoming": "Próximas",
+    "totalItems": "Total de Artículos"
+  },
+  "search": {
+    "placeholder": "Buscar artículos..."
+  },
+  "filter": {
+    "allTypes": "Todos los Tipos"
+  },
+  "itemTypes": {
+    "appliance": "Electrodoméstico",
+    "hvac": "Climatización",
+    "plumbing": "Plomería",
+    "electrical": "Eléctrico",
+    "vehicle": "Vehículo",
+    "roof": "Techo",
+    "exterior": "Exterior",
+    "landscaping": "Jardinería",
+    "pool": "Piscina",
+    "security": "Seguridad",
+    "other": "Otro"
+  },
+  "frequencies": {
+    "once": "Una Vez",
+    "weekly": "Semanal",
+    "monthly": "Mensual",
+    "quarterly": "Trimestral",
+    "biannually": "Cada 6 Meses",
+    "yearly": "Anual",
+    "custom": "Personalizado"
+  },
+  "priorities": {
+    "low": "Baja",
+    "medium": "Media",
+    "high": "Alta",
+    "critical": "Crítica"
+  },
+  "actions": {
+    "addItem": "Agregar Artículo",
+    "addTask": "Agregar Tarea",
+    "edit": "Editar",
+    "complete": "Completar",
+    "logMaintenance": "Registrar Mantenimiento"
+  },
+  "form": {
+    "name": "Nombre",
+    "namePlaceholder": "ej., Refrigerador, Sistema de Climatización",
+    "type": "Tipo",
+    "location": "Ubicación",
+    "locationPlaceholder": "ej., Cocina, Garaje",
+    "brand": "Marca",
+    "brandPlaceholder": "ej., Samsung, LG",
+    "model": "Modelo",
+    "modelPlaceholder": "Número de modelo",
+    "serialNumber": "Número de Serie",
+    "serialNumberPlaceholder": "Número de serie",
+    "purchaseDate": "Fecha de Compra",
+    "warrantyExpiration": "Vencimiento de Garantía",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Descripción del artículo",
+    "notes": "Notas",
+    "notesPlaceholder": "Notas adicionales",
+    "item": "Artículo",
+    "selectItem": "Seleccionar un artículo",
+    "taskName": "Nombre de la Tarea",
+    "taskNamePlaceholder": "ej., Cambiar aceite, Reemplazar filtro",
+    "taskDescriptionPlaceholder": "Qué se necesita hacer",
+    "frequency": "Frecuencia",
+    "customDays": "Cada X Días",
+    "nextDue": "Próxima Fecha de Vencimiento",
+    "priority": "Prioridad",
+    "assignee": "Asignado a",
+    "unassigned": "Sin asignar",
+    "enableReminder": "Habilitar Recordatorio",
+    "reminderDescription": "Recibir notificación antes de que venza el mantenimiento",
+    "reminderDaysBefore": "Recordar Días Antes",
+    "estimatedCostMin": "Costo Estimado (Mín)",
+    "estimatedCostMax": "Costo Estimado (Máx)",
+    "preferredProvider": "Proveedor de Servicio Preferido",
+    "providerPlaceholder": "Nombre del proveedor de servicio",
+    "workPerformed": "Trabajo Realizado",
+    "workPerformedPlaceholder": "Describe el mantenimiento realizado",
+    "completedDate": "Fecha de Finalización",
+    "completedBy": "Completado Por",
+    "selectUser": "Seleccionar usuario",
+    "notSpecified": "No especificado",
+    "externalService": "Profesional Contratado",
+    "externalServiceDescription": "Marcar si fue realizado por un proveedor de servicio",
+    "serviceProvider": "Proveedor de Servicio",
+    "actualCost": "Costo Real",
+    "currency": "Moneda",
+    "logDescriptionPlaceholder": "Detalles sobre el mantenimiento realizado"
+  },
+  "dialogs": {
+    "addItem": {
+      "title": "Agregar Artículo de Mantenimiento"
+    },
+    "editItem": {
+      "title": "Editar Artículo de Mantenimiento"
+    },
+    "deleteItem": {
+      "title": "¿Eliminar Artículo?",
+      "description": "¿Estás seguro de que quieres eliminar \"{name}\"? Esto también eliminará todas las tareas asociadas y el historial de mantenimiento."
+    },
+    "addTask": {
+      "title": "Agregar Tarea de Mantenimiento"
+    },
+    "editTask": {
+      "title": "Editar Tarea de Mantenimiento"
+    },
+    "deleteTask": {
+      "title": "¿Eliminar Tarea?",
+      "description": "¿Estás seguro de que quieres eliminar \"{name}\"?"
+    },
+    "logMaintenance": {
+      "title": "Registrar Mantenimiento Completado"
+    }
+  },
+  "empty": {
+    "items": {
+      "title": "Sin Artículos de Mantenimiento",
+      "description": "Agrega tu primer electrodoméstico, vehículo o sistema del hogar para rastrear"
+    },
+    "tasks": {
+      "title": "Sin Tareas Programadas",
+      "description": "Agrega tareas de mantenimiento a los artículos para verlas aquí"
+    },
+    "history": {
+      "title": "Sin Historial de Mantenimiento",
+      "description": "El mantenimiento completado aparecerá aquí"
+    }
+  },
+  "overdue": "Vencida",
+  "noLocation": "Sin ubicación",
+  "nextMaintenance": "Próximo mantenimiento",
+  "noScheduledTasks": "Sin tareas programadas",
+  "scheduledTasks": "Tareas Programadas",
+  "maintenanceHistory": "Historial de Mantenimiento",
+  "noMaintenanceHistory": "Sin historial de mantenimiento",
+  "totalMaintenanceCost": "Costo Total de Mantenimiento",
+  "expired": "Vencida",
+  "professional": "Profesional",
+  "diy": "Hazlo Tú Mismo",
+  "validation": {
+    "nameRequired": "El nombre es obligatorio",
+    "itemRequired": "Por favor selecciona un artículo",
+    "titleRequired": "El título es obligatorio"
+  },
+  "messages": {
+    "itemAdded": "Artículo agregado exitosamente",
+    "itemUpdated": "Artículo actualizado exitosamente",
+    "itemDeleted": "Artículo eliminado exitosamente",
+    "taskAdded": "Tarea programada exitosamente",
+    "taskUpdated": "Tarea actualizada exitosamente",
+    "taskDeleted": "Tarea eliminada exitosamente",
+    "maintenanceLogged": "Mantenimiento registrado exitosamente",
+    "addError": "Error al agregar artículo",
+    "updateError": "Error al actualizar",
+    "deleteError": "Error al eliminar",
+    "logError": "Error al registrar mantenimiento"
+  }
+}

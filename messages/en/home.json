@@ -1,0 +1,196 @@
+{
+  "welcome": "Welcome to Domus",
+  "subtitle": "Your family home management dashboard",
+  "dashboard": "Dashboard",
+  "modules": {
+    "chores": {
+      "title": "Chores Manager",
+      "description": "Assign recurring tasks and track completion"
+    },
+    "grocery": {
+      "title": "Grocery List",
+      "description": "Shared shopping list for the family"
+    },
+    "planner": {
+      "title": "Daily Planner",
+      "description": "Calendar view with drag & drop tasks"
+    },
+    "tasks": {
+      "title": "Task List",
+      "description": "General to-do list for one-off things"
+    },
+    "projects": {
+      "title": "Home Projects",
+      "description": "Kanban board for improvement tasks"
+    },
+    "meals": {
+      "title": "Meal Planner",
+      "description": "Plan meals and connect to grocery list"
+    },
+    "reminders": {
+      "title": "Notifications",
+      "description": "System-generated alerts and reminders"
+    },
+    "users": {
+      "title": "User Profiles",
+      "description": "Manage family members and assignments"
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Customize app preferences and manage data"
+    }
+  },
+  "widgets": {
+    "chores": {
+      "title": "Next Chores",
+      "none": "No chores scheduled",
+      "addFirst": "Add First Chore",
+      "complete": "Complete",
+      "completed": "You're all caught up!",
+      "error": "Error completing chore",
+      "moreChores": "more chores"
+    },
+    "grocery": {
+      "title": "Shopping List",
+      "empty": "Shopping list is empty",
+      "placeholder": "Add quick item...",
+      "viewAll": "View All Items",
+      "added": "Item added to shopping list!",
+      "error": "Error adding item",
+      "moreItems": "more items",
+      "addFirst": "Add some items to get started"
+    },
+    "meals": {
+      "title": "Today's Meals",
+      "none": "No meals planned for today",
+      "planToday": "Plan today's menu to keep everyone on track",
+      "addFirst": "Plan First Meal",
+      "viewAll": "View All Meals"
+    },
+    "tasks": {
+      "title": "Upcoming Tasks",
+      "none": "No upcoming tasks",
+      "addFirst": "Add First Task",
+      "viewAll": "View All Tasks",
+      "upcoming": "Upcoming Tasks",
+      "moreTasks": "more tasks",
+      "getOrganized": "Start organizing your daily tasks",
+      "high": "High Priority",
+      "medium": "Medium Priority",
+      "low": "Low Priority"
+    },
+    "projects": {
+      "title": "Current Projects",
+      "none": "No projects in progress",
+      "addFirst": "Start First Project",
+      "viewAll": "View All Projects"
+    },
+    "users": {
+      "title": "Family Members",
+      "none": "No family members added",
+      "addFirst": "Add First Member",
+      "manage": "Manage Members",
+      "members": "Members",
+      "residents": "Residents"
+    },
+    "stats": {
+      "priority": "Priority",
+      "items": "Items",
+      "planned": "Planned",
+      "ingredients": "Ingredients",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "recent": "Recent",
+      "active": "Active",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "title": "Quick Stats",
+      "chores": "Chores",
+      "choresComplete": "Chores Complete",
+      "urgentShopping": "Urgent Shopping",
+      "todaysEvents": "Today's Events",
+      "activeReminders": "Active Reminders"
+    },
+    "schedule": {
+      "title": "Today's Schedule",
+      "none": "No events scheduled",
+      "free": "Your day is free!",
+      "allDay": "All day",
+      "upcomingEvents": "Upcoming",
+      "tomorrow": "Tomorrow",
+      "dayAfterTomorrow": "Day after tomorrow"
+    },
+    "notifications": {
+      "title": "Notifications & Reminders",
+      "overdueChores": "Overdue Chore{count, plural, one {} other {s}}",
+      "highPriorityTasks": "High Priority Task{count, plural, one {} other {s}}",
+      "moreReminders": "more reminders",
+      "allCaughtUp": "All caught up!",
+      "noUrgent": "No urgent notifications or reminders"
+    },
+    "finance": {
+      "title": "Finance",
+      "balance": "Net Balance",
+      "income": "Income",
+      "expenses": "Expenses",
+      "pending": "Pending",
+      "overdue": "Overdue",
+      "activeExpenses": "active expenses"
+    },
+    "keto": {
+      "title": "Keto Tracker",
+      "streak": "Current Streak",
+      "weeklySuccess": "Weekly Success",
+      "successDays": "Success Days",
+      "cheatDays": "Cheat Days",
+      "notStarted": "Not tracking yet",
+      "startTracking": "Start Tracking"
+    },
+    "documents": {
+      "title": "Documents",
+      "total": "Total Documents",
+      "expiring": "Expiring Soon",
+      "expired": "Expired",
+      "noDocuments": "No documents yet",
+      "uploadFirst": "Upload your first document"
+    },
+    "maintenance": {
+      "title": "Maintenance",
+      "items": "Items",
+      "dueSoon": "Due Soon",
+      "overdue": "Overdue",
+      "overdueAlert": "overdue tasks",
+      "dueSoonAlert": "tasks due this week",
+      "noItems": "No items tracked yet",
+      "addFirst": "Add your first item"
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "active": "Active",
+      "monthlyTotal": "Monthly",
+      "dueSoon": "Due Soon",
+      "noSubscriptions": "No subscriptions yet",
+      "addFirst": "Add your first subscription",
+      "dueThisWeek": "due this week"
+    },
+    "pets": {
+      "title": "Pets",
+      "totalPets": "Total Pets",
+      "vaccinesDue": "Vaccines Due",
+      "medications": "Medications",
+      "noPets": "No pets yet",
+      "addFirst": "Add your first pet",
+      "vaccinationsDueSoon": "vaccination(s) due soon",
+      "activeMedications": "active medication(s)"
+    }
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "description": "Jump into your most common tasks",
+    "addChore": "Add Chore",
+    "addTask": "Add Task",
+    "planMeal": "Plan Meal",
+    "newProject": "New Project"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "title": "Migración de Base de Datos Requerida",
+  "description": "Tu base de datos necesita ser actualizada para funcionar con la última versión de Domus. Esto preservará todos tus datos.",
+  "warning": "Este proceso tomará unos momentos. Por favor no cierres la aplicación.",
+  "startMigration": "Iniciar Migración",
+  "migrating": "Migrando tus datos...",
+  "success": "¡Migración exitosa!",
+  "migrated": "Se migraron {records} registros en {tables} tablas",
+  "reloading": "Recargando la aplicación...",
+  "failed": "Migración fallida",
+  "retry": "Reintentar Migración"
+}

@@ -1,0 +1,13 @@
+{
+  "syncing": "Sincronizando...",
+  "notLoggedIn": "No has iniciado sesión",
+  "notSynced": "No sincronizado",
+  "justNow": "Hace un momento",
+  "minutesAgo": "{count, plural, one {hace 1 minuto} other {hace {count} minutos}}",
+  "hoursAgo": "{count, plural, one {hace 1 hora} other {hace {count} horas}}",
+  "error": "Error de sincronización",
+  "syncNow": "Sincronizar Ahora",
+  "forceFullSync": "Forzar Sincronización Completa",
+  "resetSyncState": "Restablecer Estado de Sincronización",
+  "syncStateReset": "Estado de sincronización restablecido. La próxima sincronización será completa."
+}

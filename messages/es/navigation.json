@@ -1,0 +1,21 @@
+{
+  "home": "Inicio",
+  "chores": "Tareas",
+  "grocery": "Compras",
+  "meals": "Comidas",
+  "keto": "Keto",
+  "finance": "Finanzas",
+  "subscriptions": "Suscripciones",
+  "pets": "Mascotas",
+  "planner": "Planificador",
+  "tasks": "Pendientes",
+  "projects": "Proyectos",
+  "documents": "Documentos",
+  "maintenance": "Mantenimiento",
+  "reminders": "Notificaciones",
+  "users": "Usuarios",
+  "settings": "Configuración",
+  "theme": "Tema",
+  "language": "Idioma",
+  "sync": "Sincronizar"
+}

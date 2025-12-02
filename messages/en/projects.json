@@ -1,0 +1,49 @@
+{
+  "title": "Home Projects",
+  "subtitle": "Kanban board for home improvement tasks",
+  "addProject": "Add Project",
+  "editProject": "Edit Project",
+  "noProjects": "No projects yet",
+  "addFirstProject": "Create your first home improvement project",
+  "dragHere": "Drag projects here",
+  "status": {
+    "todo": "To Do",
+    "inProgress": "In Progress",
+    "done": "Done"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "summary": {
+    "activeProjects": "Active Projects",
+    "completed": "Completed",
+    "estimatedCost": "Estimated Cost"
+  },
+  "detail": {
+    "createdAt": "Created",
+    "linkedTasks": "Linked Tasks",
+    "completed": "completed",
+    "noLinkedTasks": "No linked tasks",
+    "noLinkedTasksHint": "Link tasks to this project from the Tasks page",
+    "pendingTasks": "Pending",
+    "completedTasks": "Completed"
+  },
+  "form": {
+    "name": "Project Name",
+    "namePlaceholder": "Enter project name",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the project",
+    "estimatedCost": "Estimated Cost",
+    "costPlaceholder": "Enter estimated cost (optional)",
+    "priority": "Priority",
+    "status": "Status",
+    "assignedTo": "Assigned To",
+    "selectUser": "Select user",
+    "createProject": "Create Project",
+    "creating": "Creating...",
+    "updateProject": "Update Project",
+    "updating": "Updating..."
+  }
+}

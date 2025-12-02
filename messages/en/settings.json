@@ -1,0 +1,116 @@
+{
+  "title": "Settings",
+  "subtitle": "Customize your Domus experience and manage your data",
+  "saved": "Settings saved",
+  "homeSettings": {
+    "title": "Home Information",
+    "description": "Personalize your home details and important information for effective household management",
+    "saved": "Home information saved successfully!",
+    "saveError": "Error saving home information",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "sections": {
+      "basicInfo": "Basic Information",
+      "address": "Address",
+      "emergency": "Emergency Contact",
+      "notes": "General Notes"
+    },
+    "fields": {
+      "homeName": "Home Name",
+      "homeType": "Home Type",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "street": "Street Address",
+      "city": "City",
+      "stateProvince": "State/Province",
+      "postalCode": "Postal Code",
+      "emergencyName": "Name",
+      "emergencyPhone": "Phone Number",
+      "emergencyRelationship": "Relationship",
+      "optional": "(Optional)"
+    },
+    "placeholders": {
+      "homeName": "e.g., The Johnson Family Home",
+      "homeType": "Select home type",
+      "street": "123 Main Street",
+      "city": "City",
+      "stateProvince": "State/Province",
+      "postalCode": "12345",
+      "emergencyName": "Full Name",
+      "emergencyPhone": "+1 (555) 123-4567",
+      "emergencyRelationship": "e.g., Spouse, Parent, Friend",
+      "notes": "Add any important notes about your home, family rules, maintenance reminders, etc."
+    },
+    "homeTypes": {
+      "house": "House",
+      "apartment": "Apartment",
+      "condo": "Condominium",
+      "townhouse": "Townhouse",
+      "other": "Other"
+    },
+    "notSet": "Not set",
+    "noNotes": "No notes added yet"
+  },
+  "languageAppearance": {
+    "title": "Language & Appearance",
+    "description": "Choose your language and customize the visual appearance",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "calendar": {
+    "title": "Calendar Settings",
+    "description": "Configure calendar display preferences",
+    "startOfWeek": "Start of Week",
+    "startOfWeekDescription": "Choose which day the calendar week starts with",
+    "sunday": "Sunday",
+    "monday": "Monday"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "toggleTheme": "Toggle theme"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Manage when and how you receive notifications",
+    "choreReminders": "Chore Reminders",
+    "choreRemindersDesc": "Get notified when chores are due",
+    "taskReminders": "Task Reminders",
+    "taskRemindersDesc": "Get notified about task deadlines",
+    "dailySummary": "Daily Summary",
+    "dailySummaryDesc": "Show daily overview at startup"
+  },
+  "dataManagement": {
+    "title": "Data Management",
+    "description": "Export, import, or reset your family data",
+    "totalRecords": "Total Records",
+    "localStorage": "Local Storage",
+    "exportData": "Export Data",
+    "importData": "Import Data",
+    "dataExported": "Data exported successfully",
+    "dataImported": "Data imported successfully",
+    "exportError": "Error exporting data",
+    "importError": "Error importing data",
+    "dangerZone": "Danger Zone",
+    "resetWarning": "This action cannot be undone. It will permanently delete all your family data.",
+    "resetAllData": "Reset All Data",
+    "confirmReset": "Are you sure you want to reset all data? This cannot be undone.",
+    "dataReset": "All data has been reset",
+    "resetError": "Error resetting data"
+  },
+  "about": {
+    "title": "About Domus",
+    "description": "Domus is designed for tablet-first home management. All data is stored locally for privacy and offline access.",
+    "version": "Version",
+    "platform": "Platform",
+    "webApp": "Web Application",
+    "storage": "Storage",
+    "indexedDB": "IndexedDB (Local)",
+    "lastUpdated": "Last Updated"
+  }
+}

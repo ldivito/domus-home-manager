@@ -1,0 +1,94 @@
+{
+  "title": "Bóveda de Documentos",
+  "subtitle": "Almacena y organiza documentos importantes del hogar",
+  "searchPlaceholder": "Buscar documentos...",
+  "noDocumentsFound": "No se encontraron documentos",
+  "tryDifferentFilter": "Intenta ajustar tu búsqueda o filtros",
+  "categories": {
+    "warranty": "Garantía",
+    "manual": "Manual",
+    "receipt": "Recibo",
+    "contract": "Contrato",
+    "insurance": "Seguro",
+    "medical": "Médico",
+    "legal": "Legal",
+    "financial": "Financiero",
+    "vehicle": "Vehículo",
+    "property": "Propiedad",
+    "pet": "Mascota",
+    "other": "Otro"
+  },
+  "filters": {
+    "category": "Categoría"
+  },
+  "status": {
+    "expired": "Vencido",
+    "expiringSoon": "próximo a vencer",
+    "daysLeft": "días restantes"
+  },
+  "actions": {
+    "upload": "Subir Documento",
+    "download": "Descargar",
+    "preview": "Vista Previa",
+    "edit": "Editar Documento",
+    "delete": "Eliminar"
+  },
+  "form": {
+    "file": "Archivo",
+    "dropOrClick": "Haz clic o arrastra un archivo para subir",
+    "maxSize": "Tamaño máximo de archivo: 10MB",
+    "name": "Nombre del Documento",
+    "namePlaceholder": "Ingresa el nombre del documento",
+    "category": "Categoría",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Descripción opcional",
+    "tags": "Etiquetas",
+    "tagsPlaceholder": "Ingresa etiquetas separadas por comas",
+    "tagsHelp": "Separa las etiquetas con comas (ej., hogar, seguro, 2024)",
+    "expirationDate": "Fecha de Vencimiento",
+    "pickDate": "Selecciona una fecha",
+    "expires": "Vence",
+    "enableReminder": "Habilitar recordatorio de vencimiento",
+    "reminderDays": "Recordar días antes",
+    "purchaseInfo": "Información de Compra",
+    "purchaseDate": "Fecha de Compra",
+    "vendor": "Vendedor / Tienda",
+    "vendorPlaceholder": "Dónde se compró",
+    "price": "Precio",
+    "currency": "Moneda",
+    "uploadedBy": "Subido Por",
+    "selectUser": "Seleccionar usuario",
+    "notes": "Notas",
+    "notesPlaceholder": "Notas adicionales sobre este documento",
+    "uploading": "Subiendo...",
+    "saving": "Guardando..."
+  },
+  "preview": {
+    "noPreview": "Vista previa no disponible para este tipo de archivo",
+    "fileInfo": "Información del Archivo",
+    "fileName": "Nombre del Archivo",
+    "fileSize": "Tamaño",
+    "fileType": "Tipo",
+    "dates": "Fechas",
+    "uploaded": "Subido"
+  },
+  "empty": {
+    "title": "Sin Documentos",
+    "description": "Sube tu primer documento para comenzar"
+  },
+  "messages": {
+    "uploaded": "Documento subido exitosamente",
+    "updated": "Documento actualizado exitosamente",
+    "deleted": "Documento eliminado exitosamente",
+    "downloaded": "Documento descargado",
+    "uploadError": "Error al subir documento",
+    "updateError": "Error al actualizar documento",
+    "deleteError": "Error al eliminar documento",
+    "downloadError": "Error al descargar documento",
+    "nameRequired": "El nombre del documento es obligatorio",
+    "fileRequired": "Por favor selecciona un archivo para subir",
+    "fileTooLarge": "El archivo es demasiado grande. El tamaño máximo es 10MB",
+    "fileReadError": "Error al leer el archivo",
+    "noFileData": "No hay datos de archivo disponibles"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "title": "Daily Planner",
+  "subtitle": "Calendar with day, week and month views",
+  "today": "Today",
+  "views": {
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  "days": {
+    "short": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
+  },
+  "addEvent": "Add Event",
+  "noUsers": "No users available",
+  "types": {
+    "general": "General",
+    "task": "Task",
+    "meal": "Meal",
+    "reminder": "Reminder"
+  },
+  "form": {
+    "title": "Title",
+    "titlePlaceholder": "Enter event title",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "date": "Date",
+    "time": "Time",
+    "type": "Type",
+    "assignedUsers": "Assigned Users",
+    "createEvent": "Create Event",
+    "creating": "Creating..."
+  },
+  "close": "Close",
+  "edit": "Edit",
+  "delete": "Delete",
+  "editEvent": "Edit Event",
+  "cancel": "Cancel",
+  "save": "Save",
+  "more": "more",
+  "noEvents": "No events"
+}

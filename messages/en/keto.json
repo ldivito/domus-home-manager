@@ -1,0 +1,73 @@
+{
+  "title": "Keto Tracker",
+  "subtitle": "Track your ketogenic diet progress and stay motivated",
+  "stats": {
+    "daysOnKeto": "Days on Keto",
+    "successfulDays": "Successful Days",
+    "fastingDays": "Fasting Days",
+    "currentStreak": "Current Streak",
+    "days": "days",
+    "settings": "Settings"
+  },
+  "calendar": {
+    "title": "Monthly Progress",
+    "clickToToggle": "Click to cycle through: Success → Fasting → Cheat → Clear",
+    "success": "Keto Success",
+    "fasting": "Fasting Day",
+    "cheat": "Cheat Day",
+    "noData": "No Data"
+  },
+  "settings": {
+    "title": "Keto Settings",
+    "startDate": "Start Date",
+    "startDateLabel": "When did you start your keto diet?",
+    "save": "Save Settings",
+    "cancel": "Cancel"
+  },
+  "messages": {
+    "dayUpdated": "Day status updated!",
+    "settingsUpdated": "Settings updated successfully!",
+    "error": "Something went wrong. Please try again."
+  },
+  "progress": {
+    "weeklySuccess": "Weekly Success",
+    "monthlySuccess": "Monthly Success",
+    "successRate": "Success Rate",
+    "fastingRate": "Fasting Rate",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "cheatDays": "Cheat Days",
+    "insights": "Progress Insights",
+    "insightsSubtitle": "Your keto journey overview and motivation",
+    "keepGoing": "Keep Going!",
+    "streakMessage": "Amazing! You're on a {streak} day streak. Every day counts toward your goals!",
+    "journeyMessage": "Every journey has its ups and downs. Today is a new opportunity to succeed!",
+    "welcomeMessage": "Welcome to your keto journey! Start by marking today's progress.",
+    "weekCompleted": "Week {week} completed!",
+    "dayStreak": "Day Streak!"
+  },
+  "months": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "days": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat"
+  },
+  "loading": "Loading..."
+}

@@ -1,0 +1,278 @@
+{
+  "title": "Mascotas",
+  "description": "Gestiona tus mascotas familiares, su salud y horarios de cuidado",
+  "search": {
+    "placeholder": "Buscar mascotas..."
+  },
+  "stats": {
+    "totalPets": "Total de Mascotas",
+    "upcomingVaccinations": "Vacunas Pendientes",
+    "activeMedications": "Medicamentos Activos",
+    "upcomingVetVisits": "Próximas Visitas al Veterinario"
+  },
+  "types": {
+    "dog": "Perro",
+    "cat": "Gato",
+    "bird": "Ave",
+    "fish": "Pez",
+    "reptile": "Reptil",
+    "small_mammal": "Mamífero Pequeño",
+    "other": "Otro"
+  },
+  "gender": {
+    "male": "Macho",
+    "female": "Hembra",
+    "unknown": "Desconocido"
+  },
+  "age": {
+    "years": "{years} años",
+    "months": "{months} meses",
+    "yearsAndMonths": "{years}a {months}m"
+  },
+  "filter": {
+    "allTypes": "Todos los Tipos"
+  },
+  "tabs": {
+    "basic": "Información Básica",
+    "health": "Salud",
+    "vet": "Info del Veterinario"
+  },
+  "detailTabs": {
+    "overview": "Resumen",
+    "feeding": "Alimentación",
+    "health": "Salud",
+    "vetVisits": "Visitas al Veterinario"
+  },
+  "sections": {
+    "basicInfo": "Información Básica",
+    "allergies": "Alergias",
+    "vetInfo": "Información del Veterinario",
+    "insurance": "Seguro",
+    "feedingSchedules": "Horarios de Alimentación",
+    "medications": "Medicamentos",
+    "vaccinations": "Vacunaciones",
+    "vetVisitHistory": "Historial de Visitas al Veterinario"
+  },
+  "fields": {
+    "type": "Tipo",
+    "age": "Edad",
+    "weight": "Peso",
+    "caretaker": "Cuidador Principal",
+    "microchipId": "ID de Microchip",
+    "expires": "Vence",
+    "prescribedBy": "Prescrito por",
+    "administered": "Administrado",
+    "nextDue": "Próximo Vencimiento",
+    "diagnosis": "Diagnóstico",
+    "treatment": "Tratamiento",
+    "followUp": "Seguimiento"
+  },
+  "units": {
+    "kg": "kg",
+    "lb": "lb"
+  },
+  "form": {
+    "name": "Nombre",
+    "namePlaceholder": "Nombre de tu mascota",
+    "type": "Tipo",
+    "breed": "Raza",
+    "breedPlaceholder": "ej., Golden Retriever, Siamés",
+    "gender": "Género",
+    "birthDate": "Fecha de Nacimiento",
+    "weight": "Peso",
+    "weightUnit": "Unidad de Peso",
+    "microchipId": "ID de Microchip",
+    "microchipIdPlaceholder": "Número de microchip de 15 dígitos",
+    "isNeutered": "Castrado/Esterilizado",
+    "allergies": "Alergias",
+    "allergiesPlaceholder": "Lista de alergias separadas por comas",
+    "insurance": "Seguro",
+    "insuranceProvider": "Proveedor de Seguro",
+    "insuranceProviderPlaceholder": "ej., PetPlan, Trupanion",
+    "policyNumber": "Número de Póliza",
+    "insuranceExpiration": "Fecha de Vencimiento",
+    "primaryVet": "Veterinario Principal",
+    "vetName": "Nombre del Veterinario / Clínica",
+    "vetNamePlaceholder": "Hospital de Animales Dr. Smith",
+    "vetPhone": "Teléfono",
+    "vetPhonePlaceholder": "+1 (555) 123-4567",
+    "vetAddress": "Dirección",
+    "vetAddressPlaceholder": "Calle Principal 123, Ciudad",
+    "emergencyVet": "Veterinario de Emergencia",
+    "emergencyVetPlaceholder": "Veterinario de Emergencia 24 horas",
+    "primaryCaretaker": "Cuidador Principal",
+    "selectCaretaker": "Selecciona un cuidador",
+    "noCaretaker": "Sin cuidador principal",
+    "notes": "Notas",
+    "notesPlaceholder": "Notas adicionales sobre tu mascota",
+    "clickToUpload": "Haz clic para subir foto"
+  },
+  "feeding": {
+    "name": "Nombre de la Alimentación",
+    "namePlaceholder": "ej., Comida Matutina, Merienda Nocturna",
+    "foodType": "Tipo de Comida",
+    "foodTypePlaceholder": "ej., Croquetas secas, Comida húmeda",
+    "foodBrand": "Marca de Comida",
+    "foodBrandPlaceholder": "ej., Royal Canin, Blue Buffalo",
+    "amount": "Cantidad",
+    "amountPlaceholder": "ej., 1 taza, 100g",
+    "scheduledTime": "Hora",
+    "frequency": "Frecuencia",
+    "selectDays": "Seleccionar Días",
+    "assignedTo": "Asignado a",
+    "selectUser": "Selecciona quién alimenta",
+    "anyone": "Cualquiera",
+    "notesPlaceholder": "Instrucciones especiales de alimentación"
+  },
+  "feedingFrequency": {
+    "daily": "Diario",
+    "specific_days": "Días Específicos"
+  },
+  "days": {
+    "0": "Dom",
+    "1": "Lun",
+    "2": "Mar",
+    "3": "Mié",
+    "4": "Jue",
+    "5": "Vie",
+    "6": "Sáb"
+  },
+  "medication": {
+    "name": "Nombre del Medicamento",
+    "namePlaceholder": "ej., Heartgard, Frontline",
+    "dosage": "Dosis",
+    "dosagePlaceholder": "ej., 1 tableta, 10mg",
+    "frequency": "Frecuencia",
+    "startDate": "Fecha de Inicio",
+    "endDate": "Fecha de Fin (opcional)",
+    "prescribedBy": "Prescrito Por",
+    "prescribedByPlaceholder": "Nombre del veterinario",
+    "pharmacy": "Farmacia",
+    "pharmacyPlaceholder": "Dónde obtener recargas",
+    "refillsRemaining": "Recargas Restantes",
+    "enableReminder": "Habilitar Recordatorio",
+    "reminderTime": "Hora del Recordatorio",
+    "notesPlaceholder": "Instrucciones de administración"
+  },
+  "medicationFrequency": {
+    "once": "Una Vez",
+    "daily": "Diario",
+    "twice_daily": "Dos Veces al Día",
+    "weekly": "Semanal",
+    "monthly": "Mensual",
+    "as_needed": "Según Necesidad"
+  },
+  "vetVisit": {
+    "visitDate": "Fecha de Visita",
+    "visitType": "Tipo de Visita",
+    "vetName": "Nombre del Veterinario",
+    "clinicName": "Nombre de la Clínica",
+    "reason": "Motivo de la Visita",
+    "reasonPlaceholder": "¿Por qué visitaste al veterinario?",
+    "diagnosis": "Diagnóstico",
+    "treatment": "Tratamiento",
+    "prescriptions": "Prescripciones",
+    "prescriptionsPlaceholder": "Medicamentos prescritos",
+    "cost": "Costo",
+    "currency": "Moneda",
+    "followUp": "Seguimiento",
+    "followUpDate": "Fecha de Seguimiento",
+    "followUpNotes": "Notas de Seguimiento"
+  },
+  "visitTypes": {
+    "checkup": "Chequeo de Rutina",
+    "vaccination": "Vacunación",
+    "illness": "Enfermedad",
+    "injury": "Lesión",
+    "surgery": "Cirugía",
+    "dental": "Dental",
+    "grooming": "Peluquería",
+    "emergency": "Emergencia",
+    "other": "Otro"
+  },
+  "vaccination": {
+    "name": "Nombre de la Vacuna",
+    "namePlaceholder": "ej., Rabia, DHPP, Bordetella",
+    "dateAdministered": "Fecha de Administración",
+    "administeredBy": "Administrado Por",
+    "clinic": "Clínica",
+    "batchNumber": "Número de Lote",
+    "batchNumberPlaceholder": "Número de lote de la vacuna",
+    "expirationDate": "Vencimiento de la Vacuna",
+    "nextDueDate": "Próxima Fecha de Vencimiento",
+    "enableReminder": "Habilitar Recordatorio",
+    "reminderDaysBefore": "Recordar Días Antes"
+  },
+  "actions": {
+    "add": "Agregar Mascota",
+    "addFeeding": "Agregar Horario",
+    "addMedication": "Agregar Medicamento",
+    "addVetVisit": "Agregar Visita",
+    "addVaccination": "Agregar Vacunación"
+  },
+  "dialogs": {
+    "add": {
+      "title": "Agregar Mascota",
+      "description": "Agrega una nueva mascota a tu familia"
+    },
+    "edit": {
+      "title": "Editar Mascota",
+      "description": "Actualiza la información de tu mascota"
+    },
+    "delete": {
+      "title": "¿Eliminar Mascota?",
+      "description": "¿Estás seguro de que quieres eliminar a \"{name}\"? Esto también eliminará todos los horarios de alimentación, medicamentos, visitas al veterinario y registros de vacunación."
+    },
+    "addFeeding": {
+      "title": "Agregar Horario de Alimentación",
+      "description": "Configura un horario de alimentación para tu mascota"
+    },
+    "addMedication": {
+      "title": "Agregar Medicamento",
+      "description": "Rastrea un medicamento para tu mascota"
+    },
+    "addVetVisit": {
+      "title": "Registrar Visita al Veterinario",
+      "description": "Registra una visita al veterinario"
+    },
+    "addVaccination": {
+      "title": "Agregar Vacunación",
+      "description": "Registra una vacunación para tu mascota"
+    }
+  },
+  "empty": {
+    "title": "Sin Mascotas Aún",
+    "description": "Agrega tu primera mascota para comenzar a rastrear su cuidado",
+    "noFeedingSchedules": "Sin horarios de alimentación configurados aún",
+    "noMedications": "Sin medicamentos activos",
+    "noVaccinations": "Sin vacunaciones registradas",
+    "noVetVisits": "Sin visitas al veterinario registradas"
+  },
+  "alerts": {
+    "vaccinationDue": "{count} vacunación(es) próxima(s) a vencer",
+    "activeMedications": "{count} medicamento(s) activo(s)"
+  },
+  "messages": {
+    "added": "Mascota agregada exitosamente",
+    "updated": "Mascota actualizada exitosamente",
+    "deleted": "Mascota eliminada exitosamente",
+    "addError": "Error al agregar mascota",
+    "updateError": "Error al actualizar mascota",
+    "deleteError": "Error al eliminar mascota",
+    "nameRequired": "El nombre de la mascota es obligatorio",
+    "photoTooLarge": "La foto debe ser menor a 5MB",
+    "feedingAdded": "Horario de alimentación agregado",
+    "feedingAddError": "Error al agregar horario de alimentación",
+    "feedingFieldsRequired": "El nombre, tipo de comida y cantidad son obligatorios",
+    "selectDays": "Por favor selecciona al menos un día",
+    "medicationAdded": "Medicamento agregado",
+    "medicationAddError": "Error al agregar medicamento",
+    "medicationFieldsRequired": "El nombre del medicamento y la dosis son obligatorios",
+    "vetVisitAdded": "Visita al veterinario registrada",
+    "vetVisitAddError": "Error al registrar visita al veterinario",
+    "vetVisitReasonRequired": "Por favor ingresa un motivo para la visita",
+    "vaccinationAdded": "Vacunación registrada",
+    "vaccinationAddError": "Error al registrar vacunación",
+    "vaccineNameRequired": "El nombre de la vacuna es obligatorio"
+  }
+}

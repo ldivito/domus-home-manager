@@ -1,0 +1,9 @@
+{
+  "syncingLogin": "Sincronizando tus datos...",
+  "syncingLogout": "Sincronizando antes de cerrar sesión...",
+  "syncComplete": "Sincronización Completa",
+  "syncFailed": "Sincronización Fallida",
+  "syncSuccess": "Sincronizados {pushed} cambios, descargados {pulled} actualizaciones",
+  "syncError": "No se pudo sincronizar los datos",
+  "pleaseWait": "Por favor espera mientras sincronizamos tus datos"
+}

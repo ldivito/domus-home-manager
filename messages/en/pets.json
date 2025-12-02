@@ -1,0 +1,278 @@
+{
+  "title": "Pets",
+  "description": "Manage your family pets, their health, and care schedules",
+  "search": {
+    "placeholder": "Search pets..."
+  },
+  "stats": {
+    "totalPets": "Total Pets",
+    "upcomingVaccinations": "Vaccines Due",
+    "activeMedications": "Active Medications",
+    "upcomingVetVisits": "Upcoming Vet Visits"
+  },
+  "types": {
+    "dog": "Dog",
+    "cat": "Cat",
+    "bird": "Bird",
+    "fish": "Fish",
+    "reptile": "Reptile",
+    "small_mammal": "Small Mammal",
+    "other": "Other"
+  },
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "unknown": "Unknown"
+  },
+  "age": {
+    "years": "{years} years",
+    "months": "{months} months",
+    "yearsAndMonths": "{years}y {months}m"
+  },
+  "filter": {
+    "allTypes": "All Types"
+  },
+  "tabs": {
+    "basic": "Basic Info",
+    "health": "Health",
+    "vet": "Vet Info"
+  },
+  "detailTabs": {
+    "overview": "Overview",
+    "feeding": "Feeding",
+    "health": "Health",
+    "vetVisits": "Vet Visits"
+  },
+  "sections": {
+    "basicInfo": "Basic Information",
+    "allergies": "Allergies",
+    "vetInfo": "Veterinarian Information",
+    "insurance": "Insurance",
+    "feedingSchedules": "Feeding Schedules",
+    "medications": "Medications",
+    "vaccinations": "Vaccinations",
+    "vetVisitHistory": "Vet Visit History"
+  },
+  "fields": {
+    "type": "Type",
+    "age": "Age",
+    "weight": "Weight",
+    "caretaker": "Primary Caretaker",
+    "microchipId": "Microchip ID",
+    "expires": "Expires",
+    "prescribedBy": "Prescribed by",
+    "administered": "Administered",
+    "nextDue": "Next Due",
+    "diagnosis": "Diagnosis",
+    "treatment": "Treatment",
+    "followUp": "Follow-up"
+  },
+  "units": {
+    "kg": "kg",
+    "lb": "lb"
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "Your pet's name",
+    "type": "Type",
+    "breed": "Breed",
+    "breedPlaceholder": "e.g., Golden Retriever, Siamese",
+    "gender": "Gender",
+    "birthDate": "Birth Date",
+    "weight": "Weight",
+    "weightUnit": "Weight Unit",
+    "microchipId": "Microchip ID",
+    "microchipIdPlaceholder": "15-digit microchip number",
+    "isNeutered": "Neutered/Spayed",
+    "allergies": "Allergies",
+    "allergiesPlaceholder": "List allergies separated by commas",
+    "insurance": "Insurance",
+    "insuranceProvider": "Insurance Provider",
+    "insuranceProviderPlaceholder": "e.g., PetPlan, Trupanion",
+    "policyNumber": "Policy Number",
+    "insuranceExpiration": "Expiration Date",
+    "primaryVet": "Primary Veterinarian",
+    "vetName": "Vet Name / Clinic",
+    "vetNamePlaceholder": "Dr. Smith's Animal Hospital",
+    "vetPhone": "Phone",
+    "vetPhonePlaceholder": "+1 (555) 123-4567",
+    "vetAddress": "Address",
+    "vetAddressPlaceholder": "123 Main St, City",
+    "emergencyVet": "Emergency Veterinarian",
+    "emergencyVetPlaceholder": "24-hour Emergency Vet",
+    "primaryCaretaker": "Primary Caretaker",
+    "selectCaretaker": "Select a caretaker",
+    "noCaretaker": "No primary caretaker",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes about your pet",
+    "clickToUpload": "Click to upload photo"
+  },
+  "feeding": {
+    "name": "Feeding Name",
+    "namePlaceholder": "e.g., Morning Meal, Evening Snack",
+    "foodType": "Food Type",
+    "foodTypePlaceholder": "e.g., Dry kibble, Wet food",
+    "foodBrand": "Food Brand",
+    "foodBrandPlaceholder": "e.g., Royal Canin, Blue Buffalo",
+    "amount": "Amount",
+    "amountPlaceholder": "e.g., 1 cup, 100g",
+    "scheduledTime": "Time",
+    "frequency": "Frequency",
+    "selectDays": "Select Days",
+    "assignedTo": "Assigned To",
+    "selectUser": "Select who feeds",
+    "anyone": "Anyone",
+    "notesPlaceholder": "Special feeding instructions"
+  },
+  "feedingFrequency": {
+    "daily": "Daily",
+    "specific_days": "Specific Days"
+  },
+  "days": {
+    "0": "Sun",
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat"
+  },
+  "medication": {
+    "name": "Medication Name",
+    "namePlaceholder": "e.g., Heartgard, Frontline",
+    "dosage": "Dosage",
+    "dosagePlaceholder": "e.g., 1 tablet, 10mg",
+    "frequency": "Frequency",
+    "startDate": "Start Date",
+    "endDate": "End Date (optional)",
+    "prescribedBy": "Prescribed By",
+    "prescribedByPlaceholder": "Vet name",
+    "pharmacy": "Pharmacy",
+    "pharmacyPlaceholder": "Where to get refills",
+    "refillsRemaining": "Refills Remaining",
+    "enableReminder": "Enable Reminder",
+    "reminderTime": "Reminder Time",
+    "notesPlaceholder": "Administration instructions"
+  },
+  "medicationFrequency": {
+    "once": "One Time",
+    "daily": "Daily",
+    "twice_daily": "Twice Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "as_needed": "As Needed"
+  },
+  "vetVisit": {
+    "visitDate": "Visit Date",
+    "visitType": "Visit Type",
+    "vetName": "Vet Name",
+    "clinicName": "Clinic Name",
+    "reason": "Reason for Visit",
+    "reasonPlaceholder": "Why did you visit the vet?",
+    "diagnosis": "Diagnosis",
+    "treatment": "Treatment",
+    "prescriptions": "Prescriptions",
+    "prescriptionsPlaceholder": "Any medications prescribed",
+    "cost": "Cost",
+    "currency": "Currency",
+    "followUp": "Follow-up",
+    "followUpDate": "Follow-up Date",
+    "followUpNotes": "Follow-up Notes"
+  },
+  "visitTypes": {
+    "checkup": "Routine Checkup",
+    "vaccination": "Vaccination",
+    "illness": "Illness",
+    "injury": "Injury",
+    "surgery": "Surgery",
+    "dental": "Dental",
+    "grooming": "Grooming",
+    "emergency": "Emergency",
+    "other": "Other"
+  },
+  "vaccination": {
+    "name": "Vaccine Name",
+    "namePlaceholder": "e.g., Rabies, DHPP, Bordetella",
+    "dateAdministered": "Date Administered",
+    "administeredBy": "Administered By",
+    "clinic": "Clinic",
+    "batchNumber": "Batch/Lot Number",
+    "batchNumberPlaceholder": "Vaccine lot number",
+    "expirationDate": "Vaccine Expiration",
+    "nextDueDate": "Next Due Date",
+    "enableReminder": "Enable Reminder",
+    "reminderDaysBefore": "Remind Days Before"
+  },
+  "actions": {
+    "add": "Add Pet",
+    "addFeeding": "Add Schedule",
+    "addMedication": "Add Medication",
+    "addVetVisit": "Add Visit",
+    "addVaccination": "Add Vaccination"
+  },
+  "dialogs": {
+    "add": {
+      "title": "Add Pet",
+      "description": "Add a new pet to your family"
+    },
+    "edit": {
+      "title": "Edit Pet",
+      "description": "Update your pet's information"
+    },
+    "delete": {
+      "title": "Delete Pet?",
+      "description": "Are you sure you want to delete \"{name}\"? This will also delete all feeding schedules, medications, vet visits, and vaccination records."
+    },
+    "addFeeding": {
+      "title": "Add Feeding Schedule",
+      "description": "Set up a feeding schedule for your pet"
+    },
+    "addMedication": {
+      "title": "Add Medication",
+      "description": "Track a medication for your pet"
+    },
+    "addVetVisit": {
+      "title": "Record Vet Visit",
+      "description": "Log a visit to the veterinarian"
+    },
+    "addVaccination": {
+      "title": "Add Vaccination",
+      "description": "Record a vaccination for your pet"
+    }
+  },
+  "empty": {
+    "title": "No Pets Yet",
+    "description": "Add your first pet to start tracking their care",
+    "noFeedingSchedules": "No feeding schedules set up yet",
+    "noMedications": "No active medications",
+    "noVaccinations": "No vaccinations recorded",
+    "noVetVisits": "No vet visits recorded"
+  },
+  "alerts": {
+    "vaccinationDue": "{count} vaccination(s) due soon",
+    "activeMedications": "{count} active medication(s)"
+  },
+  "messages": {
+    "added": "Pet added successfully",
+    "updated": "Pet updated successfully",
+    "deleted": "Pet deleted successfully",
+    "addError": "Error adding pet",
+    "updateError": "Error updating pet",
+    "deleteError": "Error deleting pet",
+    "nameRequired": "Pet name is required",
+    "photoTooLarge": "Photo must be less than 5MB",
+    "feedingAdded": "Feeding schedule added",
+    "feedingAddError": "Error adding feeding schedule",
+    "feedingFieldsRequired": "Name, food type, and amount are required",
+    "selectDays": "Please select at least one day",
+    "medicationAdded": "Medication added",
+    "medicationAddError": "Error adding medication",
+    "medicationFieldsRequired": "Medication name and dosage are required",
+    "vetVisitAdded": "Vet visit recorded",
+    "vetVisitAddError": "Error recording vet visit",
+    "vetVisitReasonRequired": "Please enter a reason for the visit",
+    "vaccinationAdded": "Vaccination recorded",
+    "vaccinationAddError": "Error recording vaccination",
+    "vaccineNameRequired": "Vaccine name is required"
+  }
+}

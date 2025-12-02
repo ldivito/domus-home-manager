@@ -1,0 +1,196 @@
+{
+  "welcome": "Bienvenido a Domus",
+  "subtitle": "Tu panel de gestión del hogar familiar",
+  "dashboard": "Panel Principal",
+  "modules": {
+    "chores": {
+      "title": "Gestor de Tareas",
+      "description": "Asigna tareas recurrentes y rastrea su completación"
+    },
+    "grocery": {
+      "title": "Lista de Compras",
+      "description": "Lista de compras compartida para la familia"
+    },
+    "planner": {
+      "title": "Planificador Diario",
+      "description": "Vista de calendario con tareas de arrastrar y soltar"
+    },
+    "tasks": {
+      "title": "Lista de Pendientes",
+      "description": "Lista general de tareas por hacer de una sola vez"
+    },
+    "projects": {
+      "title": "Proyectos del Hogar",
+      "description": "Tablero Kanban para tareas de mejora"
+    },
+    "meals": {
+      "title": "Planificador de Comidas",
+      "description": "Planifica comidas y conecta con la lista de compras"
+    },
+    "reminders": {
+      "title": "Notificaciones",
+      "description": "Alertas generadas por el sistema y recordatorios"
+    },
+    "users": {
+      "title": "Perfiles de Usuario",
+      "description": "Gestiona miembros de la familia y asignaciones"
+    },
+    "settings": {
+      "title": "Configuración",
+      "description": "Personaliza preferencias de la app y gestiona datos"
+    }
+  },
+  "widgets": {
+    "chores": {
+      "title": "Próximas Tareas",
+      "none": "No hay tareas programadas",
+      "addFirst": "Agregar Primera Tarea",
+      "complete": "Completar",
+      "completed": "¡Todo al día!",
+      "error": "Error al completar tarea",
+      "moreChores": "más tareas"
+    },
+    "grocery": {
+      "title": "Lista de Compras",
+      "empty": "La lista de compras está vacía",
+      "placeholder": "Agregar artículo rápido...",
+      "viewAll": "Ver Todos los Artículos",
+      "added": "¡Artículo agregado a la lista!",
+      "error": "Error al agregar artículo",
+      "moreItems": "más artículos",
+      "addFirst": "Agrega algunos artículos para comenzar"
+    },
+    "meals": {
+      "title": "Comidas de Hoy",
+      "none": "No hay comidas planeadas para hoy",
+      "planToday": "Planifica el menú de hoy para mantener a todos al día",
+      "addFirst": "Planear Primera Comida",
+      "viewAll": "Ver Todas las Comidas"
+    },
+    "tasks": {
+      "title": "Tareas Pendientes",
+      "none": "No hay tareas pendientes",
+      "addFirst": "Agregar Primera Tarea",
+      "viewAll": "Ver Todas las Tareas",
+      "upcoming": "Tareas Próximas",
+      "moreTasks": "más tareas",
+      "getOrganized": "Comienza a organizar tus tareas diarias",
+      "high": "Alta Prioridad",
+      "medium": "Media Prioridad",
+      "low": "Baja Prioridad"
+    },
+    "projects": {
+      "title": "Proyectos Actuales",
+      "none": "No hay proyectos en progreso",
+      "addFirst": "Iniciar Primer Proyecto",
+      "viewAll": "Ver Todos los Proyectos"
+    },
+    "users": {
+      "title": "Miembros de la Familia",
+      "none": "No se han agregado miembros",
+      "addFirst": "Agregar Primer Miembro",
+      "manage": "Gestionar Miembros",
+      "members": "Miembros",
+      "residents": "Residentes"
+    },
+    "stats": {
+      "priority": "Prioridad",
+      "items": "Artículos",
+      "planned": "Planificado",
+      "ingredients": "Ingredientes",
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja",
+      "recent": "Reciente",
+      "active": "Activo",
+      "completed": "Completado",
+      "inProgress": "En Progreso",
+      "title": "Estadísticas Rápidas",
+      "chores": "Tareas",
+      "choresComplete": "Tareas Completadas",
+      "urgentShopping": "Compras Urgentes",
+      "todaysEvents": "Eventos de Hoy",
+      "activeReminders": "Recordatorios Activos"
+    },
+    "schedule": {
+      "title": "Horario de Hoy",
+      "none": "No hay eventos programados",
+      "free": "¡Tu día está libre!",
+      "allDay": "Todo el día",
+      "upcomingEvents": "Próximos",
+      "tomorrow": "Mañana",
+      "dayAfterTomorrow": "Pasado mañana"
+    },
+    "notifications": {
+      "title": "Notificaciones y Recordatorios",
+      "overdueChores": "Tarea{count, plural, one {} other {s}} Vencida{count, plural, one {} other {s}}",
+      "highPriorityTasks": "Tarea{count, plural, one {} other {s}} de Alta Prioridad",
+      "moreReminders": "más recordatorios",
+      "allCaughtUp": "¡Todo al día!",
+      "noUrgent": "No hay notificaciones urgentes o recordatorios"
+    },
+    "finance": {
+      "title": "Finanzas",
+      "balance": "Balance Neto",
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "pending": "Pendientes",
+      "overdue": "Vencidos",
+      "activeExpenses": "gastos activos"
+    },
+    "keto": {
+      "title": "Seguidor Keto",
+      "streak": "Racha Actual",
+      "weeklySuccess": "Éxito Semanal",
+      "successDays": "Días Exitosos",
+      "cheatDays": "Días Trampa",
+      "notStarted": "Sin seguimiento aún",
+      "startTracking": "Comenzar Seguimiento"
+    },
+    "documents": {
+      "title": "Documentos",
+      "total": "Total de Documentos",
+      "expiring": "Por Vencer",
+      "expired": "Vencidos",
+      "noDocuments": "Sin documentos aún",
+      "uploadFirst": "Sube tu primer documento"
+    },
+    "maintenance": {
+      "title": "Mantenimiento",
+      "items": "Items",
+      "dueSoon": "Próximos",
+      "overdue": "Vencidos",
+      "overdueAlert": "tareas vencidas",
+      "dueSoonAlert": "tareas esta semana",
+      "noItems": "Sin items aún",
+      "addFirst": "Agrega tu primer item"
+    },
+    "subscriptions": {
+      "title": "Suscripciones",
+      "active": "Activas",
+      "monthlyTotal": "Mensual",
+      "dueSoon": "Próximas",
+      "noSubscriptions": "Sin suscripciones aún",
+      "addFirst": "Agrega tu primera suscripción",
+      "dueThisWeek": "vencen esta semana"
+    },
+    "pets": {
+      "title": "Mascotas",
+      "totalPets": "Total Mascotas",
+      "vaccinesDue": "Vacunas Pendientes",
+      "medications": "Medicamentos",
+      "noPets": "Sin mascotas aún",
+      "addFirst": "Agrega tu primera mascota",
+      "vaccinationsDueSoon": "vacuna(s) próxima(s)",
+      "activeMedications": "medicamento(s) activo(s)"
+    }
+  },
+  "quickActions": {
+    "title": "Acciones Rápidas",
+    "description": "Accede a tus tareas más comunes",
+    "addChore": "Agregar Quehacer",
+    "addTask": "Agregar Tarea",
+    "planMeal": "Planear Comida",
+    "newProject": "Nuevo Proyecto"
+  }
+}

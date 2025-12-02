@@ -1,0 +1,110 @@
+{
+  "title": "Lista de Compras",
+  "subtitle": "Lista de compras compartida para la familia",
+  "addItem": "Agregar",
+  "categories": "Categorías",
+  "noItems": "No hay artículos aún",
+  "noItemsDescription": "Comienza agregando tu primer artículo",
+  "addFirstItem": "Agregar Primer Artículo",
+  "itemsTotal": "{count} artículos en total",
+  "bought": "Comprado",
+  "view": "Vista",
+  "sortBy": "Ordenar",
+  "viewModes": {
+    "list": "Lista",
+    "categories": "Categorías"
+  },
+  "sortOptions": {
+    "importance": "Importancia",
+    "category": "Categoría",
+    "name": "Nombre",
+    "created": "Fecha"
+  },
+  "importance": {
+    "high": "Alto",
+    "medium": "Medio",
+    "low": "Bajo"
+  },
+  "listView": "Lista de Compras",
+  "categoryView": "Vista por Categorías",
+  "addItemDialog": {
+    "title": "Agregar Nuevo Artículo",
+    "description": "Agrega un nuevo artículo a tu lista de compras",
+    "itemName": "Nombre del Artículo",
+    "itemNamePlaceholder": "ej., Leche, Manzanas",
+    "category": "Categoría",
+    "categoryPlaceholder": "Selecciona una categoría",
+    "amount": "Cantidad",
+    "amountPlaceholder": "ej., 2 litros, 1 kg, 6 piezas",
+    "importanceLabel": "Importancia",
+    "newCategory": "Nueva Categoría",
+    "newCategoryPlaceholder": "Nombre de nueva categoría",
+    "cancel": "Cancelar",
+    "addItem": "Agregar",
+    "adding": "Agregando..."
+  },
+  "manageCategoriesDialog": {
+    "title": "Administrar Categorías",
+    "description": "Agregar, editar o eliminar categorías de compras",
+    "addNewCategory": "Agregar Nueva Categoría",
+    "categoryName": "Nombre de la Categoría",
+    "categoryNamePlaceholder": "ej., Hierbas Frescas",
+    "color": "Color",
+    "selectedColor": "Color seleccionado",
+    "addCategory": "Agregar Categoría",
+    "adding": "Agregando...",
+    "existingCategories": "Categorías Existentes",
+    "defaultCategory": "Predeterminada",
+    "cannotDeleteDefault": "No se pueden eliminar categorías predeterminadas",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar esta categoría?",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "done": "Listo"
+  },
+  "defaultCategories": {
+    "produce": "Productos",
+    "dairy": "Lácteos",
+    "meatFish": "Carnes y Pescado",
+    "bakery": "Panadería",
+    "pantry": "Despensa",
+    "frozen": "Congelados",
+    "beverages": "Bebidas",
+    "snacks": "Aperitivos",
+    "healthBeauty": "Salud y Belleza",
+    "household": "Hogar"
+  },
+  "savedItems": {
+    "title": "Artículos Guardados",
+    "subtitle": "Artículos agregados previamente que puedes volver a agregar rápidamente",
+    "backToList": "Volver a la Lista",
+    "savedItemsButton": "Artículos Guardados",
+    "currentListButton": "Lista Actual",
+    "noSavedItems": "Aún no hay artículos guardados",
+    "noSavedItemsDescription": "Los artículos que agregues se guardarán aquí para volver a agregarlos rápidamente después",
+    "addToList": "Agregar a Lista",
+    "usedTimes": "Usado {count} veces",
+    "lastUsed": "Última vez usado: {date}",
+    "never": "Nunca",
+    "manage": "Gestionar Artículos Guardados",
+    "manageSaved": "Gestionar Guardados",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "close": "Cerrar",
+    "importance": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "form": {
+      "name": "Nombre",
+      "namePlaceholder": "Ingresa nombre del artículo",
+      "amount": "Cantidad",
+      "amountPlaceholder": "Ingresa cantidad",
+      "category": "Categoría",
+      "selectCategory": "Selecciona categoría",
+      "importance": "Importancia",
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    }
+  }
+}

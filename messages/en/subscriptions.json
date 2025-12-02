@@ -1,0 +1,163 @@
+{
+  "title": "Subscriptions",
+  "description": "Track and manage your recurring subscriptions",
+  "search": {
+    "placeholder": "Search subscriptions..."
+  },
+  "tabs": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "history": "Payment History"
+  },
+  "stats": {
+    "active": "Active",
+    "monthlyTotal": "Monthly Total",
+    "dueThisWeek": "Due This Week",
+    "paused": "Paused"
+  },
+  "categories": {
+    "streaming": "Streaming",
+    "software": "Software",
+    "gaming": "Gaming",
+    "music": "Music",
+    "cloud_storage": "Cloud Storage",
+    "news": "News",
+    "fitness": "Fitness",
+    "utilities": "Utilities",
+    "insurance": "Insurance",
+    "membership": "Membership",
+    "other": "Other"
+  },
+  "cycles": {
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "biannually": "Every 6 Months",
+    "yearly": "Yearly"
+  },
+  "status": {
+    "active": "Active",
+    "trial": "Trial",
+    "paused": "Paused",
+    "cancelled": "Cancelled"
+  },
+  "paymentStatus": {
+    "paid": "Paid",
+    "pending": "Pending",
+    "failed": "Failed",
+    "refunded": "Refunded"
+  },
+  "actions": {
+    "add": "Add Subscription",
+    "edit": "Edit",
+    "delete": "Delete",
+    "pause": "Pause",
+    "resume": "Resume",
+    "recordPayment": "Record Payment",
+    "viewDetails": "View Details"
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "e.g., Netflix, Spotify",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "category": "Category",
+    "amount": "Amount",
+    "amountARS": "Amount in ARS",
+    "amountUSD": "Amount in USD",
+    "amountHint": "Enter at least one currency amount",
+    "currency": "Currency",
+    "billingCycle": "Billing Cycle",
+    "billingDay": "Billing Day",
+    "nextBillingDate": "Next Billing Date",
+    "status": "Status",
+    "autoRenew": "Auto Renew",
+    "autoRenewDescription": "Automatically renew this subscription",
+    "enableReminder": "Enable Reminder",
+    "reminderDescription": "Get notified before billing date",
+    "reminderDaysBefore": "Remind Days Before",
+    "providerName": "Provider Name",
+    "providerNamePlaceholder": "e.g., Netflix Inc.",
+    "providerWebsite": "Provider Website",
+    "accountEmail": "Account Email",
+    "accountEmailPlaceholder": "Email used for this subscription",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes",
+    "paymentDate": "Payment Date",
+    "paymentMethod": "Payment Method",
+    "paymentMethodPlaceholder": "e.g., Credit Card, PayPal",
+    "paymentStatus": "Payment Status",
+    "transactionId": "Transaction ID",
+    "transactionIdPlaceholder": "Optional transaction reference"
+  },
+  "dialogs": {
+    "add": {
+      "title": "Add Subscription"
+    },
+    "edit": {
+      "title": "Edit Subscription"
+    },
+    "delete": {
+      "title": "Delete Subscription?",
+      "description": "Are you sure you want to delete \"{name}\"? This will also delete all payment history."
+    },
+    "recordPayment": {
+      "title": "Record Payment",
+      "for": "For subscription"
+    }
+  },
+  "details": {
+    "billingInfo": "Billing Information",
+    "billingDay": "Day {day} of the month",
+    "nextBilling": "Next billing",
+    "daysUntil": "{days} days until billing",
+    "overdue": "Overdue by {days} days",
+    "providerInfo": "Provider Information",
+    "autoRenewOn": "Auto-renew enabled",
+    "autoRenewOff": "Auto-renew disabled",
+    "reminderOn": "Reminder {days} days before",
+    "reminderOff": "Reminders disabled",
+    "paymentHistory": "Payment History",
+    "totalSpent": "Total spent",
+    "noPayments": "No payments recorded yet"
+  },
+  "empty": {
+    "active": {
+      "title": "No Active Subscriptions",
+      "description": "Add your first subscription to start tracking"
+    },
+    "inactive": {
+      "title": "No Inactive Subscriptions",
+      "description": "Paused or cancelled subscriptions will appear here"
+    },
+    "history": {
+      "title": "No Payment History",
+      "description": "Payment records will appear here"
+    }
+  },
+  "filter": {
+    "category": "Category",
+    "allCategories": "All Categories"
+  },
+  "perMonth": "/month",
+  "perYear": "/year",
+  "nextBilling": "Next billing",
+  "dueSoon": "Due soon",
+  "overdue": "Overdue",
+  "validation": {
+    "nameRequired": "Subscription name is required",
+    "amountRequired": "Amount is required and must be greater than 0"
+  },
+  "messages": {
+    "added": "Subscription added successfully",
+    "updated": "Subscription updated successfully",
+    "deleted": "Subscription deleted successfully",
+    "paused": "Subscription paused",
+    "resumed": "Subscription resumed",
+    "paymentRecorded": "Payment recorded successfully",
+    "addError": "Error adding subscription",
+    "updateError": "Error updating subscription",
+    "deleteError": "Error deleting subscription",
+    "paymentError": "Error recording payment"
+  }
+}

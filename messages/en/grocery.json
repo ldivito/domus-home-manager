@@ -1,0 +1,110 @@
+{
+  "title": "Grocery List",
+  "subtitle": "Shared shopping list for the family",
+  "addItem": "Add Item",
+  "categories": "Categories",
+  "noItems": "No items yet",
+  "noItemsDescription": "Start by adding your first grocery item",
+  "addFirstItem": "Add First Item",
+  "itemsTotal": "{count} items total",
+  "bought": "Bought",
+  "view": "View",
+  "sortBy": "Sort by",
+  "viewModes": {
+    "list": "List",
+    "categories": "Categories"
+  },
+  "sortOptions": {
+    "importance": "Importance",
+    "category": "Category",
+    "name": "Name",
+    "created": "Date Added"
+  },
+  "importance": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "listView": "Shopping List",
+  "categoryView": "Categories View",
+  "addItemDialog": {
+    "title": "Add New Item",
+    "description": "Add a new item to your grocery list",
+    "itemName": "Item Name",
+    "itemNamePlaceholder": "e.g., Milk, Apples",
+    "category": "Category",
+    "categoryPlaceholder": "Select a category",
+    "amount": "Amount",
+    "amountPlaceholder": "e.g., 2 liters, 1 kg, 6 pieces",
+    "importanceLabel": "Importance",
+    "newCategory": "Add New Category",
+    "newCategoryPlaceholder": "New category name",
+    "cancel": "Cancel",
+    "addItem": "Add Item",
+    "adding": "Adding..."
+  },
+  "manageCategoriesDialog": {
+    "title": "Manage Categories",
+    "description": "Add, edit, or remove grocery categories",
+    "addNewCategory": "Add New Category",
+    "categoryName": "Category Name",
+    "categoryNamePlaceholder": "e.g., Fresh Herbs",
+    "color": "Color",
+    "selectedColor": "Selected color",
+    "addCategory": "Add Category",
+    "adding": "Adding...",
+    "existingCategories": "Existing Categories",
+    "defaultCategory": "Default",
+    "cannotDeleteDefault": "Cannot delete default categories",
+    "confirmDelete": "Are you sure you want to delete this category?",
+    "save": "Save",
+    "cancel": "Cancel",
+    "done": "Done"
+  },
+  "defaultCategories": {
+    "produce": "Produce",
+    "dairy": "Dairy",
+    "meatFish": "Meat & Fish",
+    "bakery": "Bakery",
+    "pantry": "Pantry",
+    "frozen": "Frozen",
+    "beverages": "Beverages",
+    "snacks": "Snacks",
+    "healthBeauty": "Health & Beauty",
+    "household": "Household"
+  },
+  "savedItems": {
+    "title": "Saved Items",
+    "subtitle": "Previously added items that you can quickly re-add",
+    "backToList": "Back to List",
+    "savedItemsButton": "Saved Items",
+    "currentListButton": "Current List",
+    "noSavedItems": "No saved items yet",
+    "noSavedItemsDescription": "Items you add will be saved here for quick re-adding later",
+    "addToList": "Add to List",
+    "usedTimes": "Used {count} times",
+    "lastUsed": "Last used: {date}",
+    "never": "Never",
+    "manage": "Manage Saved Items",
+    "manageSaved": "Manage Saved",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "importance": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Enter item name",
+      "amount": "Amount",
+      "amountPlaceholder": "Enter amount",
+      "category": "Category",
+      "selectCategory": "Select category",
+      "selectImportance": "Select importance",
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  }
+}

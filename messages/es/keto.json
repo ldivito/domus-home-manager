@@ -1,0 +1,73 @@
+{
+  "title": "Seguidor Keto",
+  "subtitle": "Rastrea tu progreso de dieta cetogénica y mantente motivado",
+  "stats": {
+    "daysOnKeto": "Días en Keto",
+    "successfulDays": "Días Exitosos",
+    "fastingDays": "Días de Ayuno",
+    "currentStreak": "Racha Actual",
+    "days": "días",
+    "settings": "Configuración"
+  },
+  "calendar": {
+    "title": "Progreso Mensual",
+    "clickToToggle": "Haz clic para alternar: Éxito → Ayuno → Trampa → Limpiar",
+    "success": "Éxito Keto",
+    "fasting": "Día de Ayuno",
+    "cheat": "Día Trampa",
+    "noData": "Sin Datos"
+  },
+  "settings": {
+    "title": "Configuración Keto",
+    "startDate": "Fecha de Inicio",
+    "startDateLabel": "¿Cuándo comenzaste tu dieta keto?",
+    "save": "Guardar Configuración",
+    "cancel": "Cancelar"
+  },
+  "messages": {
+    "dayUpdated": "¡Estado del día actualizado!",
+    "settingsUpdated": "¡Configuración actualizada con éxito!",
+    "error": "Algo salió mal. Por favor inténtalo de nuevo."
+  },
+  "progress": {
+    "weeklySuccess": "Éxito Semanal",
+    "monthlySuccess": "Éxito Mensual",
+    "successRate": "Tasa de Éxito",
+    "fastingRate": "Tasa de Ayuno",
+    "thisWeek": "Esta Semana",
+    "thisMonth": "Este Mes",
+    "cheatDays": "Días Trampa",
+    "insights": "Análisis de Progreso",
+    "insightsSubtitle": "Resumen de tu viaje keto y motivación",
+    "keepGoing": "¡Sigue Adelante!",
+    "streakMessage": "¡Increíble! Llevas una racha de {streak} días. ¡Cada día cuenta para tus metas!",
+    "journeyMessage": "Todo viaje tiene sus altibajos. ¡Hoy es una nueva oportunidad para tener éxito!",
+    "welcomeMessage": "¡Bienvenido a tu viaje keto! Comienza marcando tu progreso de hoy.",
+    "weekCompleted": "¡Semana {week} completada!",
+    "dayStreak": "¡Días de Racha!"
+  },
+  "months": {
+    "january": "Enero",
+    "february": "Febrero",
+    "march": "Marzo",
+    "april": "Abril",
+    "may": "Mayo",
+    "june": "Junio",
+    "july": "Julio",
+    "august": "Agosto",
+    "september": "Septiembre",
+    "october": "Octubre",
+    "november": "Noviembre",
+    "december": "Diciembre"
+  },
+  "days": {
+    "sun": "Dom",
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mié",
+    "thu": "Jue",
+    "fri": "Vie",
+    "sat": "Sáb"
+  },
+  "loading": "Cargando..."
+}

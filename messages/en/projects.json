@@ -6,6 +6,22 @@
   "noProjects": "No projects yet",
   "addFirstProject": "Create your first home improvement project",
   "dragHere": "Drag projects here",
+  "toolbar": {
+    "searchPlaceholder": "Search projects...",
+    "priority": "Priority",
+    "status": "Status",
+    "assignee": "Assignee",
+    "sortBy": "Sort by",
+    "allPriorities": "All priorities",
+    "allStatuses": "All statuses",
+    "allUsers": "All users",
+    "sortPriority": "Priority",
+    "sortName": "Name",
+    "sortDate": "Date",
+    "sortCost": "Cost",
+    "clearFilters": "Clear filters",
+    "showingResults": "Showing {count} of {total} projects"
+  },
   "status": {
     "todo": "To Do",
     "inProgress": "In Progress",

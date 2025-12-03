@@ -43,14 +43,6 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     setIsAuth(authenticated)
   }
 
-  const handleClick = async () => {
-    if (!isAuth) {
-      router.push('/auth')
-      return
-    }
-    await handleSync(false)
-  }
-
   const handleSync = async (forceFullSync: boolean = false) => {
     setIsSyncing(true)
     setError(null)
@@ -115,6 +107,35 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     return t('notSynced')
   }
 
+  // When not authenticated, show a simple login button (no dropdown)
+  if (!isAuth) {
+    if (compact) {
+      return (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.push('/auth')}
+          title={tAuth('signIn')}
+        >
+          <LogIn className="h-4 w-4" />
+        </Button>
+      )
+    }
+
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.push('/auth')}
+        className="gap-2"
+      >
+        <LogIn className="h-4 w-4" />
+        <span className="text-xs">{tAuth('signIn')}</span>
+      </Button>
+    )
+  }
+
+  // When authenticated, show the sync dropdown
   if (compact) {
     return (
       <DropdownMenu>
@@ -129,7 +150,7 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleClick} disabled={isSyncing}>
+          <DropdownMenuItem onClick={() => handleSync(false)} disabled={isSyncing}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('syncNow') || 'Sync Now'}
           </DropdownMenuItem>
@@ -162,7 +183,7 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleClick} disabled={isSyncing}>
+        <DropdownMenuItem onClick={() => handleSync(false)} disabled={isSyncing}>
           <RefreshCw className="h-4 w-4 mr-2" />
           {t('syncNow') || 'Sync Now'}
         </DropdownMenuItem>

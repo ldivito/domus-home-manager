@@ -167,7 +167,8 @@ export function ParticipantsTab({ campaign, participants, contributions, users }
 
     try {
       await db.savingsParticipants.update(selectedParticipant.id!, {
-        sharePercentage: pct
+        sharePercentage: pct,
+        updatedAt: new Date()
       })
 
       toast.success(t('messages.participantUpdated'))

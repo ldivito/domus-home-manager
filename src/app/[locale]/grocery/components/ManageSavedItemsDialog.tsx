@@ -89,7 +89,8 @@ export function ManageSavedItemsDialog({ open, onOpenChange, categories }: Manag
         name: editName.trim(),
         amount: editAmount.trim(),
         category: editCategory,
-        importance: editImportance
+        importance: editImportance,
+        updatedAt: new Date()
       })
       setEditingItem(null)
     } catch (error) {

@@ -58,7 +58,8 @@ export default function HomePage() {
           await db.chores.update(chore.id, {
             isCompleted: false,
             completedAt: undefined,
-            lastCompletedBy: undefined
+            lastCompletedBy: undefined,
+            updatedAt: new Date()
           })
         }
       }
@@ -114,7 +115,8 @@ export default function HomePage() {
         lastCompletedBy: completedByUserId,
         completedAt: now,
         nextDue,
-        isCompleted: true
+        isCompleted: true,
+        updatedAt: now
       })
       
     } catch (error) {

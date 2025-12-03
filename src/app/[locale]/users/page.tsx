@@ -88,7 +88,7 @@ export default function UsersPage() {
 
   const handleUpdateUser = async (userId: string, userData: Partial<UserType>) => {
     try {
-      await db.users.update(userId, userData)
+      await db.users.update(userId, { ...userData, updatedAt: new Date() })
       await loadUsers()
       toast.success(t('messages.userUpdated'))
     } catch (error) {

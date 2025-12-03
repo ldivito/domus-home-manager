@@ -67,7 +67,8 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
     try {
       await db.groceryCategories.update(editingCategory.id!, {
         name: editName.trim(),
-        color: editColor
+        color: editColor,
+        updatedAt: new Date()
       })
       
       setEditingCategory(null)

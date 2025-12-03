@@ -226,7 +226,8 @@ export function MilestonesTab({ campaign, milestones }: MilestonesTabProps) {
           targetAmount: amount,
           targetDate: new Date(targetDate),
           isReached: campaign.currentAmount >= amount,
-          reachedAt: campaign.currentAmount >= amount ? new Date() : undefined
+          reachedAt: campaign.currentAmount >= amount ? new Date() : undefined,
+          updatedAt: new Date()
         })
         toast.success(t('messages.milestoneUpdated'))
       } else {

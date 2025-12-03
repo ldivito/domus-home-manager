@@ -64,7 +64,8 @@ export function ManageTaskCategoriesDialog({ open, onOpenChange, categories }: M
     try {
       await db.taskCategories.update(editingCategory.id!, {
         name: editName.trim(),
-        color: editColor
+        color: editColor,
+        updatedAt: new Date()
       })
       setEditingCategory(null)
       setEditName('')

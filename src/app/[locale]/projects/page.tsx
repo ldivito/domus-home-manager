@@ -132,7 +132,7 @@ export default function ProjectsPage() {
     e.preventDefault()
     if (draggedProject && draggedProject.status !== newStatus) {
       try {
-        await db.homeImprovements.update(draggedProject.id!, { status: newStatus })
+        await db.homeImprovements.update(draggedProject.id!, { status: newStatus, updatedAt: new Date() })
       } catch (error) {
         console.error('Error updating project status:', error)
       }

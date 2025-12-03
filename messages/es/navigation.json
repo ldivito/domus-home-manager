@@ -18,5 +18,7 @@
   "settings": "Configuración",
   "theme": "Tema",
   "language": "Idioma",
-  "sync": "Sincronizar"
+  "sync": "Sincronizar",
+  "menu": "Menú",
+  "account": "Cuenta"
 }

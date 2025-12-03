@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "../globals.css";
 import Navigation from "@/components/Navigation";
+import MobileNavigation from "@/components/MobileNavigation";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
@@ -49,10 +50,17 @@ export default async function LocaleLayout({
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
             <div className="flex h-screen bg-background">
-              <Navigation />
-              <main className="flex-1 overflow-auto">
+              {/* Sidebar navigation - hidden on mobile */}
+              <div className="hidden md:block">
+                <Navigation />
+              </div>
+              <main className="flex-1 overflow-auto pb-20 md:pb-0">
                 {children}
               </main>
+              {/* Mobile bottom navigation - visible only on mobile */}
+              <div className="md:hidden">
+                <MobileNavigation />
+              </div>
             </div>
             <Toaster />
           </NextIntlClientProvider>

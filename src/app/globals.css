@@ -165,3 +165,12 @@ dialog[data-dexie-cloud] {
   visibility: hidden !important;
   opacity: 0 !important;
 }
+
+/* Safe area for mobile devices (notch, home indicator) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}

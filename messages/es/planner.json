@@ -16,6 +16,15 @@
       "thu": "Jue",
       "fri": "Vie",
       "sat": "Sáb"
+    },
+    "full": {
+      "sun": "Domingo",
+      "mon": "Lunes",
+      "tue": "Martes",
+      "wed": "Miércoles",
+      "thu": "Jueves",
+      "fri": "Viernes",
+      "sat": "Sábado"
     }
   },
   "addEvent": "Agregar Evento",

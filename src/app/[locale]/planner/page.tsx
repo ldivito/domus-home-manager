@@ -246,36 +246,66 @@ export default function PlannerPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-bold">{t('title')}</h1>
-            <p className="text-xl text-muted-foreground">{t('subtitle')}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={goPrev} className="h-12 px-4">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button variant="outline" onClick={goToday} className="h-12 px-4">{t('today')}</Button>
-            <Button variant="outline" onClick={goNext} className="h-12 px-4">
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-            <div className="border rounded-lg p-1 ml-2">
-              <Button variant={view==='day'? 'default':'ghost'} onClick={() => setView('day')} className="h-10">{t('views.day')}</Button>
-              <Button variant={view==='week'? 'default':'ghost'} onClick={() => setView('week')} className="h-10">{t('views.week')}</Button>
-              <Button variant={view==='month'? 'default':'ghost'} onClick={() => setView('month')} className="h-10">{t('views.month')}</Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold truncate">{t('title')}</h1>
+              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground">{t('subtitle')}</p>
             </div>
-            <Button onClick={() => setShowAdd(true)} className="h-12 px-6">
+            {/* Desktop add button */}
+            <Button onClick={() => setShowAdd(true)} className="hidden sm:flex h-11 px-4 lg:px-6 shrink-0">
               <Plus className="mr-2 h-5 w-5" />
               {t('addEvent')}
             </Button>
           </div>
+
+          {/* Navigation controls */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Date navigation */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={goPrev} className="h-10 sm:h-11 px-3 sm:px-4">
+                <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+              <Button variant="outline" onClick={goToday} className="h-10 sm:h-11 px-3 sm:px-4 flex-1 sm:flex-none min-w-[80px]">
+                {t('today')}
+              </Button>
+              <Button variant="outline" onClick={goNext} className="h-10 sm:h-11 px-3 sm:px-4">
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+            </div>
+
+            {/* View switcher */}
+            <div className="border rounded-lg p-1 flex sm:ml-auto">
+              <Button
+                variant={view==='day'? 'default':'ghost'}
+                onClick={() => setView('day')}
+                className="h-9 sm:h-10 flex-1 sm:flex-none text-sm sm:text-base px-3 sm:px-4"
+              >
+                {t('views.day')}
+              </Button>
+              <Button
+                variant={view==='week'? 'default':'ghost'}
+                onClick={() => setView('week')}
+                className="h-9 sm:h-10 flex-1 sm:flex-none text-sm sm:text-base px-3 sm:px-4"
+              >
+                {t('views.week')}
+              </Button>
+              <Button
+                variant={view==='month'? 'default':'ghost'}
+                onClick={() => setView('month')}
+                className="h-9 sm:h-10 flex-1 sm:flex-none text-sm sm:text-base px-3 sm:px-4"
+              >
+                {t('views.month')}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Calendar */}
-        <Card className="p-4">
+        <Card className="p-2 sm:p-4">
           {view === 'day' && (
             <DayView
               date={cursorDate}
@@ -346,6 +376,15 @@ export default function PlannerPage() {
           onDelete={async (evt) => { await deleteWithSync(db.calendarEvents, 'calendarEvents', evt.id!); setDetailsOpen(false) }}
         />
         <EditEventDialog open={editOpen} onOpenChange={setEditOpen} users={users} event={selectedEvent} />
+
+        {/* Mobile floating action button */}
+        <Button
+          onClick={() => setShowAdd(true)}
+          className="fixed bottom-6 right-6 sm:hidden h-14 w-14 rounded-full shadow-lg z-50"
+          size="icon"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
       </div>
     </div>
   )

@@ -167,25 +167,26 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
-            <p className="text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              {t('import.button')}
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+            <Button variant="outline" size="sm" className="sm:size-default" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('import.button')}</span>
             </Button>
-            <Button variant="outline" onClick={() => setCategoriesDialogOpen(true)}>
-              <Settings className="mr-2 h-4 w-4" />
-              {t('manageCategories')}
+            <Button variant="outline" size="sm" className="sm:size-default" onClick={() => setCategoriesDialogOpen(true)}>
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('manageCategories')}</span>
             </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('addTask')}
+            <Button size="sm" className="sm:size-default flex-1 sm:flex-initial" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="sm:hidden">{t('addTask')}</span>
+              <span className="hidden sm:inline">{t('addTask')}</span>
             </Button>
           </div>
         </div>
@@ -444,7 +445,7 @@ export default function TasksPage() {
         </div>
 
         {/* Compact Task List */}
-        <div className="space-y-1">
+        <div className="space-y-2 sm:space-y-1">
           {paginatedTasks.length === 0 ? (
             <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
               <CardContent className="flex items-center justify-center h-24 text-gray-500 dark:text-gray-400">
@@ -474,86 +475,145 @@ export default function TasksPage() {
               return (
                 <div
                   key={task.id}
-                  className={`group flex items-center gap-2 py-1.5 px-3 rounded-md border-l-3 transition-all ${
+                  className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 py-3 sm:py-1.5 px-3 rounded-lg sm:rounded-md border-l-3 transition-all ${
                     priorityBorderColors[task.priority as keyof typeof priorityBorderColors]
                   } ${
                     task.isCompleted
                       ? 'bg-gray-50/50 dark:bg-gray-800/30 opacity-50'
                       : isBlocked
                         ? 'bg-orange-50/30 dark:bg-orange-900/5 border-l-3 border-y border-r border-orange-100/50 dark:border-orange-900/20'
-                        : 'bg-transparent hover:bg-gray-50/50 dark:hover:bg-gray-800/30 border-l-3 border-y border-r border-transparent hover:border-gray-100 dark:hover:border-gray-800'
+                        : 'bg-white/50 dark:bg-gray-800/50 sm:bg-transparent hover:bg-gray-50/50 dark:hover:bg-gray-800/30 border-l-3 border-y border-r border-gray-100 dark:border-gray-800 sm:border-transparent sm:hover:border-gray-100 dark:sm:hover:border-gray-800'
                   }`}
                 >
-                  {/* Checkbox / Status */}
-                  <button
-                    onClick={() => !task.isCompleted && !isBlocked && handleMarkComplete(task.id!)}
-                    disabled={task.isCompleted || isBlocked}
-                    className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
-                      task.isCompleted
-                        ? 'bg-green-500 border-green-500 text-white'
-                        : isBlocked
-                          ? 'border-orange-400 bg-orange-100 dark:bg-orange-900/30 cursor-not-allowed'
-                          : 'border-gray-300 dark:border-gray-500 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20'
-                    }`}
-                    title={task.isCompleted ? t('status.completed') : isBlocked ? t('completeBlockerFirst') : t('markComplete')}
-                  >
-                    {task.isCompleted && <CheckCircle className="h-2 w-2" />}
-                    {isBlocked && !task.isCompleted && <AlertTriangle className="h-2 w-2 text-orange-500" />}
-                  </button>
+                  {/* Top row: Checkbox, Title, Actions */}
+                  <div className="flex items-center gap-2 sm:gap-2 flex-1 min-w-0">
+                    {/* Checkbox / Status */}
+                    <button
+                      onClick={() => !task.isCompleted && !isBlocked && handleMarkComplete(task.id!)}
+                      disabled={task.isCompleted || isBlocked}
+                      className={`flex-shrink-0 w-5 h-5 sm:w-3.5 sm:h-3.5 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
+                        task.isCompleted
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : isBlocked
+                            ? 'border-orange-400 bg-orange-100 dark:bg-orange-900/30 cursor-not-allowed'
+                            : 'border-gray-300 dark:border-gray-500 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 active:bg-purple-100 dark:active:bg-purple-900/40'
+                      }`}
+                      title={task.isCompleted ? t('status.completed') : isBlocked ? t('completeBlockerFirst') : t('markComplete')}
+                    >
+                      {task.isCompleted && <CheckCircle className="h-3 w-3 sm:h-2 sm:w-2" />}
+                      {isBlocked && !task.isCompleted && <AlertTriangle className="h-3 w-3 sm:h-2 sm:w-2 text-orange-500" />}
+                    </button>
 
-                  {/* Main Content */}
-                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                    <span className={`font-medium text-sm truncate ${
-                      task.isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
-                    }`}>
-                      {task.title}
-                    </span>
-
-                    {/* Inline badges */}
-                    <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
-                      {/* Priority badge */}
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                        task.priority === 'high'
-                          ? 'bg-red-100/70 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                          : task.priority === 'medium'
-                            ? 'bg-yellow-100/70 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            : 'bg-green-100/70 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                    {/* Main Content */}
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                      <span className={`font-medium text-sm truncate ${
+                        task.isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
                       }`}>
-                        {t(`priority.${task.priority}`)}
+                        {task.title}
                       </span>
-                      {category && (
-                        <span
-                          className="text-[9px] px-1.5 py-0.5 rounded font-medium"
-                          style={{ backgroundColor: `${category.color}15`, color: category.color }}
-                        >
-                          {translateCategoryName(category.name)}
-                        </span>
-                      )}
-                      {isBlocked && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-orange-100/70 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-                          {t('blocked')}
-                        </span>
-                      )}
-                    </div>
 
-                    {/* Actions - after badges */}
-                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <button
-                        className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700"
-                        onClick={() => handleEditTask(task)}
-                      >
-                        <Edit3 className="h-3 w-3" />
-                      </button>
-                      <button
-                        className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
-                        onClick={() => handleDeleteTask(task.id!)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                      {/* Inline badges - desktop only */}
+                      <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+                        {/* Priority badge */}
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                          task.priority === 'high'
+                            ? 'bg-red-100/70 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                            : task.priority === 'medium'
+                              ? 'bg-yellow-100/70 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : 'bg-green-100/70 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                        }`}>
+                          {t(`priority.${task.priority}`)}
+                        </span>
+                        {category && (
+                          <span
+                            className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                            style={{ backgroundColor: `${category.color}15`, color: category.color }}
+                          >
+                            {translateCategoryName(category.name)}
+                          </span>
+                        )}
+                        {isBlocked && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-orange-100/70 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                            {t('blocked')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Actions - desktop: show on hover, mobile: always visible */}
+                      <div className="flex items-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 ml-auto sm:ml-0">
+                        <button
+                          className="p-2 sm:p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600"
+                          onClick={() => handleEditTask(task)}
+                        >
+                          <Edit3 className="h-4 w-4 sm:h-3 sm:w-3" />
+                        </button>
+                        <button
+                          className="p-2 sm:p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50"
+                          onClick={() => handleDeleteTask(task.id!)}
+                        >
+                          <Trash2 className="h-4 w-4 sm:h-3 sm:w-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Meta info - compact inline */}
+                  {/* Bottom row: Mobile badges and meta info */}
+                  <div className="flex sm:hidden flex-wrap items-center gap-1.5 pl-7">
+                    {/* Priority badge */}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                      task.priority === 'high'
+                        ? 'bg-red-100/70 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                        : task.priority === 'medium'
+                          ? 'bg-yellow-100/70 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          : 'bg-green-100/70 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                    }`}>
+                      {t(`priority.${task.priority}`)}
+                    </span>
+                    {category && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                        style={{ backgroundColor: `${category.color}15`, color: category.color }}
+                      >
+                        {translateCategoryName(category.name)}
+                      </span>
+                    )}
+                    {isBlocked && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-orange-100/70 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                        {t('blocked')}
+                      </span>
+                    )}
+                    {assignedUser && (
+                      <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+                        <div
+                          className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-medium"
+                          style={{ backgroundColor: assignedUser.color }}
+                        >
+                          {assignedUser.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="max-w-[60px] truncate">{assignedUser.name}</span>
+                      </span>
+                    )}
+                    {task.dueDate && (
+                      <span className="flex items-center gap-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                    {estimatedTimeStr && (
+                      <span className="flex items-center gap-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                        <Clock className="h-3 w-3" />
+                        {estimatedTimeStr}
+                      </span>
+                    )}
+                    {projectName && (
+                      <span className="flex items-center gap-0.5 text-[10px] text-purple-500 dark:text-purple-400">
+                        <FolderKanban className="h-3 w-3" />
+                        <span className="max-w-[80px] truncate">{projectName}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Meta info - desktop only */}
                   <div className="hidden md:flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">
                     {assignedUser && (
                       <span className="flex items-center gap-1">

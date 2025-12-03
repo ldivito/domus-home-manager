@@ -229,54 +229,54 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3 sm:pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <DollarSign className="h-6 w-6" />
+              <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" />
                 {t('title')}
               </CardTitle>
-              <CardDescription className="mt-1">
+              <CardDescription className="mt-1 text-sm">
                 {t('subtitle')}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {/* Future Month Notice */}
           {isFutureMonth && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
                 {t('futureMonthNotice')}
               </p>
             </div>
           )}
 
           {/* Current Month Header */}
-          <div className="mb-6 p-4 bg-muted/50 rounded-lg">
-            <div className="flex justify-between items-start">
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">{t('currentMonth')}</p>
-                <p className="text-2xl font-bold">{monthNames[currentMonth - 1]} {currentYear}</p>
-                <p className="text-lg text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('currentMonth')}</p>
+                <p className="text-xl sm:text-2xl font-bold">{monthNames[currentMonth - 1]} {currentYear}</p>
+                <p className="text-sm sm:text-lg text-muted-foreground mt-1">
                   {t('totalHousehold')}: <span className="font-semibold text-foreground">$ {formatARS(totalHouseholdIncome)}</span>
                   {rate > 1 && (
-                    <span className="ml-2 text-sm text-muted-foreground/70">
+                    <span className="ml-1 sm:ml-2 text-xs sm:text-sm text-muted-foreground/70">
                       (USD {formatARS(totalHouseholdIncome / rate)})
                     </span>
                   )}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="flex flex-col items-start sm:items-end">
                 <Button
                   variant="outline"
                   onClick={handleOpenExchangeDialog}
-                  className="h-10"
+                  className="h-9 sm:h-10 w-full sm:w-auto text-sm"
                 >
-                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
                   {t('exchangeRate')}
                 </Button>
-                <div className="mt-2 text-sm text-muted-foreground">
+                <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground">
                   {rate > 1 ? (
                     <span>1 USD = $ {formatARS(rate)} ARS</span>
                   ) : (
@@ -288,13 +288,13 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
           </div>
 
           {residentUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <UserIcon className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t('noIncome')}</h3>
-              <p className="text-muted-foreground mb-4">{t('noIncomeDescription')}</p>
+            <div className="text-center py-8 sm:py-12">
+              <UserIcon className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground/50 mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium mb-2">{t('noIncome')}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{t('noIncomeDescription')}</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {residentUsers.map(user => {
                 const userIncomes = getIncomesForUser(user.id!)
                 const userTotalARS = getUserTotalInARS(user.id!)
@@ -310,57 +310,60 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                   >
                     {/* User Header */}
                     <div
-                      className={`flex items-center justify-between p-4 bg-card transition-colors ${userIncomes.length > 0 && !isFutureMonth ? 'cursor-pointer hover:bg-muted/30' : ''}`}
+                      className={`p-3 sm:p-4 bg-card transition-colors ${userIncomes.length > 0 && !isFutureMonth ? 'cursor-pointer hover:bg-muted/30' : ''}`}
                       onClick={userIncomes.length > 0 ? () => toggleUserExpanded(user.id!) : undefined}
                     >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
-                          style={{ backgroundColor: user.color }}
-                        >
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-medium text-lg">{user.name}</p>
-                          <div className="flex items-center gap-2">
-                            {userIncomes.length > 0 ? (
-                              <>
-                                <span className="text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        {/* User info */}
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold shrink-0"
+                            style={{ backgroundColor: user.color }}
+                          >
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-base sm:text-lg">{user.name}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {userIncomes.length > 0 ? (
+                                <span className="text-xs sm:text-sm text-muted-foreground">
                                   {t('entries', { count: userIncomes.length })} · {t('share')}: {percentage}%
                                 </span>
-                              </>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">{t('noIncomeSet')}</span>
-                            )}
+                              ) : (
+                                <span className="text-xs sm:text-sm text-muted-foreground">{t('noIncomeSet')}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-2xl font-bold">
-                            $ {formatARS(userTotalARS)}
-                          </p>
-                          {rate > 1 && userTotalARS > 0 && (
-                            <p className="text-sm text-muted-foreground/70">
-                              USD {formatARS(userTotalARS / rate)}
+
+                        {/* Amount and expand */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-13 sm:pl-0">
+                          <div className="text-left sm:text-right">
+                            <p className="text-xl sm:text-2xl font-bold">
+                              $ {formatARS(userTotalARS)}
                             </p>
-                          )}
-                          {userIncomes.length > 0 && (
-                            <Badge variant="secondary" className="mt-1">
-                              <Percent className="h-3 w-3 mr-1" />
-                              {percentage}%
-                            </Badge>
-                          )}
-                        </div>
-                        {userIncomes.length > 0 && (
-                          <div className="text-muted-foreground">
-                            {isExpanded ? (
-                              <ChevronUp className="h-5 w-5" />
-                            ) : (
-                              <ChevronDown className="h-5 w-5" />
+                            {rate > 1 && userTotalARS > 0 && (
+                              <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                USD {formatARS(userTotalARS / rate)}
+                              </p>
+                            )}
+                            {userIncomes.length > 0 && (
+                              <Badge variant="secondary" className="mt-1 text-xs">
+                                <Percent className="h-3 w-3 mr-1" />
+                                {percentage}%
+                              </Badge>
                             )}
                           </div>
-                        )}
+                          {userIncomes.length > 0 && (
+                            <div className="text-muted-foreground">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -374,59 +377,61 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                               return (
                                 <div
                                   key={income.id}
-                                  className="flex items-center justify-between p-4 hover:bg-muted/30"
+                                  className="p-3 sm:p-4 hover:bg-muted/30"
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                                    <div>
-                                      <p className="font-medium">{income.source}</p>
-                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Badge variant="outline" className="text-xs">
-                                          {income.currency}
-                                        </Badge>
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                      <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-sm sm:text-base truncate">{income.source}</p>
+                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                          <Badge variant="outline" className="text-xs">
+                                            {income.currency}
+                                          </Badge>
+                                          {income.currency === 'USD' && rate > 1 && (
+                                            <span>USD {formatARS(income.amount)}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-6 sm:pl-0">
+                                      <div className="text-left sm:text-right">
+                                        <p className="font-semibold text-base sm:text-lg">
+                                          $ {formatARS(incomeARS)}
+                                        </p>
                                         {income.currency === 'USD' && rate > 1 && (
-                                          <span>USD {formatARS(income.amount)}</span>
+                                          <p className="text-xs text-muted-foreground">
+                                            = USD {formatARS(income.amount)}
+                                          </p>
                                         )}
                                       </div>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                      <p className="font-semibold text-lg">
-                                        $ {formatARS(incomeARS)}
-                                      </p>
-                                      {income.currency === 'USD' && rate > 1 && (
-                                        <p className="text-xs text-muted-foreground">
-                                          = USD {formatARS(income.amount)}
-                                        </p>
+                                      {!isFutureMonth && (
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 sm:h-9 sm:w-9"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleOpenEditDialog(income)
+                                            }}
+                                          >
+                                            <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 sm:h-9 sm:w-9 text-destructive hover:text-destructive"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleOpenDeleteDialog(income)
+                                            }}
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                          </Button>
+                                        </div>
                                       )}
                                     </div>
-                                    {!isFutureMonth && (
-                                      <div className="flex items-center gap-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-9 w-9"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleOpenEditDialog(income)
-                                          }}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-9 w-9 text-destructive hover:text-destructive"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleOpenDeleteDialog(income)
-                                          }}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    )}
                                   </div>
                                 </div>
                               )
@@ -436,13 +441,13 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
 
                         {/* Add Income Button */}
                         {!isFutureMonth && (
-                          <div className="p-4 border-t">
+                          <div className="p-3 sm:p-4 border-t">
                             <Button
                               variant="outline"
-                              className="w-full h-12"
+                              className="w-full h-10 sm:h-12 text-sm"
                               onClick={() => handleOpenAddDialog(user.id!)}
                             >
-                              <Plus className="h-5 w-5 mr-2" />
+                              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                               {t('addIncome')}
                             </Button>
                           </div>
@@ -457,20 +462,20 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
 
           {/* Total Summary */}
           {currentIncomes.length > 0 && (
-            <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-              <div className="flex items-center justify-between">
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">{t('totalSummary')}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">{t('totalSummary')}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                     {currentIncomes.length} {t('totalEntries')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-primary">
+                  <p className="text-2xl sm:text-3xl font-bold text-primary">
                     $ {formatARS(totalHouseholdIncome)}
                   </p>
                   {rate > 1 && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       USD {formatARS(totalHouseholdIncome / rate)}
                     </p>
                   )}

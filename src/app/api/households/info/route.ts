@@ -17,6 +17,14 @@ export async function GET(request: Request) {
       )
     }
 
+    // Check if user has a household
+    if (!session.householdId) {
+      return NextResponse.json(
+        { error: 'No household', code: 'NO_HOUSEHOLD' },
+        { status: 404 }
+      )
+    }
+
     // Get household info
     const household = await db
       .prepare('SELECT id, name, description, ownerId, inviteCode, createdAt FROM households WHERE id = ?')

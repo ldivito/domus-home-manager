@@ -106,11 +106,14 @@
       "completed": "Completed",
       "inProgress": "In Progress",
       "title": "Quick Stats",
+      "overview": "Quick Overview",
       "chores": "Chores",
       "choresComplete": "Chores Complete",
       "urgentShopping": "Urgent Shopping",
       "todaysEvents": "Today's Events",
-      "activeReminders": "Active Reminders"
+      "activeReminders": "Active Reminders",
+      "overdue": "overdue",
+      "highPriority": "high priority"
     },
     "schedule": {
       "title": "Today's Schedule",

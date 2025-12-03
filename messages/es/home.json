@@ -106,11 +106,14 @@
       "completed": "Completado",
       "inProgress": "En Progreso",
       "title": "Estadísticas Rápidas",
+      "overview": "Resumen Rápido",
       "chores": "Tareas",
       "choresComplete": "Tareas Completadas",
       "urgentShopping": "Compras Urgentes",
       "todaysEvents": "Eventos de Hoy",
-      "activeReminders": "Recordatorios Activos"
+      "activeReminders": "Recordatorios Activos",
+      "overdue": "vencidos",
+      "highPriority": "alta prioridad"
     },
     "schedule": {
       "title": "Horario de Hoy",

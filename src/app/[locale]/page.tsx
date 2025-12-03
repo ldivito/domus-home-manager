@@ -462,8 +462,144 @@ export default function HomePage() {
       <div className="h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
         <div className="h-full max-h-[100vh] overflow-y-auto mx-auto p-2 flex flex-col gap-2">
           
-          {/* Enhanced Top Stats Bar - Tablet Optimized */}
-          <Card className="glass-card shadow-modern-lg border-border/30">
+          {/* Mobile Quick Stats - Compact Card */}
+          <Card className="glass-card shadow-modern-lg border-border/30 md:hidden">
+            <CardContent className="p-3">
+              {/* Primary Stats Row */}
+              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5">
+                <Link href="/chores" className="flex items-center gap-1.5">
+                  <CheckSquare className="h-3.5 w-3.5 text-blue-500" />
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{pendingChores.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.stats.chores')}</span>
+                </Link>
+                <Link href="/grocery" className="flex items-center gap-1.5">
+                  <ShoppingCart className="h-3.5 w-3.5 text-green-500" />
+                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">{groceryItems.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.grocery.title')}</span>
+                </Link>
+                <Link href="/tasks" className="flex items-center gap-1.5">
+                  <List className="h-3.5 w-3.5 text-yellow-500" />
+                  <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{pendingTasks.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.tasks.title')}</span>
+                </Link>
+                <Link href="/meals" className="flex items-center gap-1.5">
+                  <UtensilsCrossed className="h-3.5 w-3.5 text-orange-500" />
+                  <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">{todaysMeals.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.meals.title')}</span>
+                </Link>
+              </div>
+
+              {/* Secondary Stats Row */}
+              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 mt-2 pt-2 border-t border-border/30">
+                <Link href="/projects" className="flex items-center gap-1.5">
+                  <Hammer className="h-3.5 w-3.5 text-red-500" />
+                  <span className="text-sm font-semibold text-red-600 dark:text-red-400">{activeProjects.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.projects.title')}</span>
+                </Link>
+                <Link href="/reminders" className="flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{activeReminders.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.stats.activeReminders')}</span>
+                </Link>
+                <Link href="/finance" className="flex items-center gap-1.5">
+                  <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className={`text-sm font-semibold ${netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {netBalance >= 0 ? '+' : ''}{Math.round(netBalance / 1000)}k
+                  </span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.finance.balance')}</span>
+                </Link>
+                <Link href="/keto" className="flex items-center gap-1.5">
+                  <Flame className="h-3.5 w-3.5 text-orange-500" />
+                  <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">{ketoStreak}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.keto.streak')}</span>
+                </Link>
+              </div>
+
+              {/* Tertiary Stats Row */}
+              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 mt-2 pt-2 border-t border-border/30">
+                <Link href="/documents" className="flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{documents.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.documents.title')}</span>
+                </Link>
+                <Link href="/maintenance" className="flex items-center gap-1.5">
+                  <Wrench className="h-3.5 w-3.5 text-cyan-500" />
+                  <span className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">{maintenanceItems.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.maintenance.title')}</span>
+                </Link>
+                <Link href="/subscriptions" className="flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5 text-violet-500" />
+                  <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">{activeSubscriptions.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.subscriptions.title')}</span>
+                </Link>
+                <Link href="/pets" className="flex items-center gap-1.5">
+                  <PawPrint className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{pets.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.pets.title')}</span>
+                </Link>
+              </div>
+
+              {/* Savings & Users Row */}
+              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 mt-2 pt-2 border-t border-border/30">
+                <Link href="/savings" className="flex items-center gap-1.5">
+                  <PiggyBank className="h-3.5 w-3.5 text-purple-500" />
+                  <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">{activeSavingsCampaigns.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.savings.title')}</span>
+                </Link>
+                <Link href="/planner" className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-purple-500" />
+                  <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">{todaysEvents.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.stats.todaysEvents')}</span>
+                </Link>
+                <Link href="/users" className="flex items-center gap-1.5">
+                  <div className="flex -space-x-1">
+                    {users.slice(0, 2).map((user) => (
+                      <Avatar key={user.id} className={`h-4 w-4 ${user.color} border border-background`}>
+                        <AvatarFallback className="text-white text-[8px] font-bold">
+                          {user.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{users.length}</span>
+                  <span className="text-xs text-muted-foreground">{t('widgets.users.members')}</span>
+                </Link>
+              </div>
+
+              {/* Alerts Row */}
+              {(overdueChores.length > 0 || highPriorityTasks.length > 0 || overdueMaintenanceTasks.length > 0 || expiredDocuments.length > 0) && (
+                <div className="mt-2 pt-2 border-t border-red-200/50 dark:border-red-800/30 flex items-center flex-wrap gap-3">
+                  {overdueChores.length > 0 && (
+                    <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                      <AlertCircle className="h-3 w-3" />
+                      <span className="text-xs font-medium">{overdueChores.length} {t('widgets.stats.overdue')}</span>
+                    </div>
+                  )}
+                  {highPriorityTasks.length > 0 && (
+                    <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                      <AlertCircle className="h-3 w-3" />
+                      <span className="text-xs font-medium">{highPriorityTasks.length} {t('widgets.stats.highPriority')}</span>
+                    </div>
+                  )}
+                  {overdueMaintenanceTasks.length > 0 && (
+                    <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">
+                      <Wrench className="h-3 w-3" />
+                      <span className="text-xs font-medium">{overdueMaintenanceTasks.length} {t('widgets.maintenance.overdue')}</span>
+                    </div>
+                  )}
+                  {expiredDocuments.length > 0 && (
+                    <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                      <FileText className="h-3 w-3" />
+                      <span className="text-xs font-medium">{expiredDocuments.length} {t('widgets.documents.expired')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Desktop Top Stats Bar - Hidden on Mobile */}
+          <Card className="glass-card shadow-modern-lg border-border/30 hidden md:block">
             <CardContent className="">
               <div className="grid grid-cols-6 gap-2">
                 <div className="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/40 transition-all hover:shadow-md">
@@ -546,11 +682,11 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Main Content Grid - Enhanced for Tablet */}
-          <div className="flex-1 grid grid-cols-12 gap-2 min-h-0">
-            
+          {/* Main Content Grid - Enhanced for Mobile & Tablet */}
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 min-h-0">
+
             {/* Next Chores - Enhanced */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-4 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-4 flex flex-col">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -622,7 +758,7 @@ export default function HomePage() {
             </Card>
 
             {/* Shopping List - Enhanced */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-4 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-4 flex flex-col">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -680,7 +816,7 @@ export default function HomePage() {
             </Card>
 
             {/* Today's Schedule - Enhanced */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-4 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-2 lg:col-span-4 flex flex-col">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -831,7 +967,7 @@ export default function HomePage() {
             </Card>
 
             {/* Notifications & Reminders - Enhanced */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-2 lg:col-span-6 flex flex-col">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -920,7 +1056,7 @@ export default function HomePage() {
             </Card>
 
             {/* Finance Summary Card */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-3 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-3 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -973,7 +1109,7 @@ export default function HomePage() {
             </Card>
 
             {/* Keto Tracker Card */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-3 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-3 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -1047,7 +1183,7 @@ export default function HomePage() {
             </Card>
 
             {/* Documents Widget */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-6 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -1122,7 +1258,7 @@ export default function HomePage() {
             </Card>
 
             {/* Maintenance Widget */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-6 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -1197,7 +1333,7 @@ export default function HomePage() {
             </Card>
 
             {/* Subscriptions Widget */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-6 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -1261,7 +1397,7 @@ export default function HomePage() {
             </Card>
 
             {/* Pets Widget */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-1 lg:col-span-6 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">
@@ -1339,7 +1475,7 @@ export default function HomePage() {
             </Card>
 
             {/* Savings Widget */}
-            <Card className="glass-card shadow-modern-lg border-border/30 col-span-12 lg:col-span-6 flex flex-col">
+            <Card className="glass-card shadow-modern-lg border-border/30 col-span-1 sm:col-span-2 lg:col-span-6 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-3 text-xl font-semibold">

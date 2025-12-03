@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         email: string
         password: string
         name: string
-        householdId: string
+        householdId: string | null
       }>()
 
     if (!user) {
@@ -47,31 +47,38 @@ export async function POST(request: Request) {
       )
     }
 
-    // Get household member info
-    const member = await db
-      .prepare('SELECT role FROM household_members WHERE householdId = ? AND userId = ?')
-      .bind(user.householdId, user.id)
-      .first<{ role: string }>()
+    // Get household member info (only if user has a household)
+    let member: { role: string } | null = null
+    let household: { name: string; inviteCode: string } | null = null
 
-    // Get household info
-    const household = await db
-      .prepare('SELECT name, inviteCode FROM households WHERE id = ?')
-      .bind(user.householdId)
-      .first<{ name: string; inviteCode: string }>()
+    if (user.householdId) {
+      member = await db
+        .prepare('SELECT role FROM household_members WHERE householdId = ? AND userId = ?')
+        .bind(user.householdId, user.id)
+        .first<{ role: string }>()
 
-    // Create session token
+      household = await db
+        .prepare('SELECT name, inviteCode FROM households WHERE id = ?')
+        .bind(user.householdId)
+        .first<{ name: string; inviteCode: string }>()
+    }
+
+    // Create session token (conditionally include householdId)
     const token = await createToken({
       userId: user.id,
       email: user.email,
-      householdId: user.householdId
+      ...(user.householdId && { householdId: user.householdId })
     })
 
     // Store session in KV
-    await storeSession(
-      token,
-      { userId: user.id, email: user.email, householdId: user.householdId },
-      env
-    )
+    const sessionData: { userId: string; email: string; householdId?: string } = {
+      userId: user.id,
+      email: user.email
+    }
+    if (user.householdId) {
+      sessionData.householdId = user.householdId
+    }
+    await storeSession(token, sessionData, env)
 
     // Create response with session cookie
     const response = NextResponse.json({

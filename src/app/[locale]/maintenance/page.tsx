@@ -220,73 +220,73 @@ export default function MaintenancePage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Wrench className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+              <Wrench className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               {t('title')}
             </h1>
-            <p className="text-muted-foreground mt-1">{t('description')}</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('description')}</p>
           </div>
-          <Button onClick={() => setAddItemOpen(true)}>
+          <Button onClick={() => setAddItemOpen(true)} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             {t('actions.addItem')}
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-red-100 dark:bg-red-900 shrink-0">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{taskStats.overdue}</p>
-                  <p className="text-sm text-muted-foreground">{t('stats.overdue')}</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-2xl font-bold">{taskStats.overdue}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('stats.overdue')}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900">
-                  <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900 shrink-0">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{taskStats.dueThisWeek}</p>
-                  <p className="text-sm text-muted-foreground">{t('stats.dueThisWeek')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                  <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{taskStats.upcoming}</p>
-                  <p className="text-sm text-muted-foreground">{t('stats.upcoming')}</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-2xl font-bold">{taskStats.dueThisWeek}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('stats.dueThisWeek')}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-blue-100 dark:bg-blue-900 shrink-0">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{items.length}</p>
-                  <p className="text-sm text-muted-foreground">{t('stats.totalItems')}</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-2xl font-bold">{taskStats.upcoming}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('stats.upcoming')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-green-100 dark:bg-green-900 shrink-0">
+                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-2xl font-bold">{items.length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('stats.totalItems')}</p>
                 </div>
               </div>
             </CardContent>
@@ -295,26 +295,28 @@ export default function MaintenancePage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="items" className="flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
-            {t('tabs.items')}
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            {t('tabs.tasks')}
-            {taskStats.overdue > 0 && (
-              <Badge variant="destructive" className="ml-1 h-5 px-1.5">
-                {taskStats.overdue}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            {t('tabs.history')}
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-3 h-10 sm:h-12">
+            <TabsTrigger value="items" className="text-xs sm:text-sm py-2 px-3 sm:px-4 whitespace-nowrap">
+              <Wrench className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              {t('tabs.items')}
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs sm:text-sm py-2 px-3 sm:px-4 whitespace-nowrap">
+              <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              {t('tabs.tasks')}
+              {taskStats.overdue > 0 && (
+                <Badge variant="destructive" className="ml-1 sm:ml-1.5 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
+                  {taskStats.overdue}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm py-2 px-3 sm:px-4 whitespace-nowrap">
+              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              {t('tabs.history')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Items Tab */}
         <TabsContent value="items">
@@ -352,18 +354,18 @@ export default function MaintenancePage() {
           {/* Items Grid */}
           {filteredItems.length === 0 ? (
             <Card>
-              <CardContent className="p-12 text-center">
-                <Wrench className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">{t('empty.items.title')}</h3>
-                <p className="text-muted-foreground mb-4">{t('empty.items.description')}</p>
-                <Button onClick={() => setAddItemOpen(true)}>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <Wrench className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-medium mb-2">{t('empty.items.title')}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">{t('empty.items.description')}</p>
+                <Button onClick={() => setAddItemOpen(true)} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   {t('actions.addItem')}
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {filteredItems.map((item) => {
                 const itemTasks = tasks.filter(t => t.maintenanceItemId === item.id)
                 const overdueTasks = itemTasks.filter(t => isOverdue(t.nextDue))
@@ -380,17 +382,17 @@ export default function MaintenancePage() {
                       setItemDetailOpen(true)
                     }}
                   >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
+                    <CardHeader className="pb-2 p-3 sm:p-4 sm:pb-2">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg truncate">{item.name}</CardTitle>
-                          <CardDescription className="truncate">
+                          <CardTitle className="text-base sm:text-lg truncate">{item.name}</CardTitle>
+                          <CardDescription className="truncate text-xs sm:text-sm">
                             {item.location || item.brand || t('noLocation')}
                           </CardDescription>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -426,20 +428,20 @@ export default function MaintenancePage() {
                         </DropdownMenu>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge className={ITEM_TYPE_COLORS[item.type]}>
+                    <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                        <Badge className={`${ITEM_TYPE_COLORS[item.type]} text-xs`}>
                           {t(`itemTypes.${item.type}`)}
                         </Badge>
                         {overdueTasks.length > 0 && (
-                          <Badge variant="destructive" className="flex items-center gap-1">
+                          <Badge variant="destructive" className="flex items-center gap-1 text-xs">
                             <AlertTriangle className="h-3 w-3" />
                             {overdueTasks.length} {t('overdue')}
                           </Badge>
                         )}
                       </div>
                       {nextTask && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs sm:text-sm text-muted-foreground">
                           <span className="font-medium">{t('nextMaintenance')}:</span>{' '}
                           <span className={isOverdue(nextTask.nextDue) ? 'text-red-600 dark:text-red-400' : ''}>
                             {formatDate(nextTask.nextDue)}
@@ -447,7 +449,7 @@ export default function MaintenancePage() {
                         </div>
                       )}
                       {itemTasks.length === 0 && (
-                        <p className="text-sm text-muted-foreground italic">{t('noScheduledTasks')}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground italic">{t('noScheduledTasks')}</p>
                       )}
                     </CardContent>
                   </Card>
@@ -459,13 +461,13 @@ export default function MaintenancePage() {
 
         {/* Tasks Tab */}
         <TabsContent value="tasks">
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {upcomingTasks.length === 0 ? (
               <Card>
-                <CardContent className="p-12 text-center">
-                  <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">{t('empty.tasks.title')}</h3>
-                  <p className="text-muted-foreground">{t('empty.tasks.description')}</p>
+                <CardContent className="p-8 sm:p-12 text-center">
+                  <ClipboardList className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2">{t('empty.tasks.title')}</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">{t('empty.tasks.description')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -478,21 +480,21 @@ export default function MaintenancePage() {
                     key={task.id}
                     className={`${isTaskOverdue ? 'border-red-500 dark:border-red-400' : isTaskDueSoon ? 'border-yellow-500 dark:border-yellow-400' : ''}`}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium truncate">{task.name}</h3>
-                            <Badge className={PRIORITY_COLORS[task.priority]}>
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h3 className="font-medium text-sm sm:text-base truncate">{task.name}</h3>
+                            <Badge className={`${PRIORITY_COLORS[task.priority]} text-xs`}>
                               {t(`priorities.${task.priority}`)}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {getItemName(task.maintenanceItemId)}
                           </p>
-                          <div className="flex items-center gap-4 mt-2 text-sm">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                             <span className={`flex items-center gap-1 ${isTaskOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-muted-foreground'}`}>
-                              <Calendar className="h-3.5 w-3.5" />
+                              <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               {formatDate(task.nextDue)}
                               {isTaskOverdue && ` (${t('overdue')})`}
                             </span>
@@ -503,14 +505,16 @@ export default function MaintenancePage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleCompleteTask(task)}
+                            className="h-8 sm:h-9 text-xs sm:text-sm"
                           >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            {t('actions.complete')}
+                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                            <span className="hidden xs:inline">{t('actions.complete')}</span>
+                            <span className="xs:hidden">{t('actions.complete')}</span>
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -552,24 +556,24 @@ export default function MaintenancePage() {
         <TabsContent value="history">
           {logs.length === 0 ? (
             <Card>
-              <CardContent className="p-12 text-center">
-                <History className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">{t('empty.history.title')}</h3>
-                <p className="text-muted-foreground">{t('empty.history.description')}</p>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <History className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-medium mb-2">{t('empty.history.title')}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">{t('empty.history.description')}</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {logs.slice(0, 20).map((log) => (
                 <Card key={log.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium">{log.title}</h3>
-                        <p className="text-sm text-muted-foreground">{getItemName(log.maintenanceItemId)}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm sm:text-base">{log.title}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{getItemName(log.maintenanceItemId)}</p>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
+                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             {formatDate(log.completedDate)}
                           </span>
                           {log.actualCost && (
@@ -578,11 +582,11 @@ export default function MaintenancePage() {
                             </span>
                           )}
                           {log.serviceProvider && (
-                            <span>{log.serviceProvider}</span>
+                            <span className="truncate">{log.serviceProvider}</span>
                           )}
                         </div>
                       </div>
-                      <Badge variant={log.isExternalService ? 'secondary' : 'outline'}>
+                      <Badge variant={log.isExternalService ? 'secondary' : 'outline'} className="self-start text-xs shrink-0">
                         {log.isExternalService ? t('professional') : t('diy')}
                       </Badge>
                     </div>

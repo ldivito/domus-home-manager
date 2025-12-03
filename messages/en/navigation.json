@@ -18,5 +18,7 @@
   "settings": "Settings",
   "theme": "Theme",
   "language": "Language",
-  "sync": "Sync"
+  "sync": "Sync",
+  "menu": "Menu",
+  "account": "Account"
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar, Users, Copy, RefreshCw, UserMinus, Check } from "lucide-react"
+import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar, Users, Copy, RefreshCw, UserMinus, Check, LogIn, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -72,6 +72,11 @@ export default function SettingsPage() {
   const [isCreatingHousehold, setIsCreatingHousehold] = useState(false)
   const [newHouseholdName, setNewHouseholdName] = useState('')
   const [newHouseholdDescription, setNewHouseholdDescription] = useState('')
+  // Join household state
+  const [isJoiningHousehold, setIsJoiningHousehold] = useState(false)
+  const [joinInviteCode, setJoinInviteCode] = useState('')
+  const [joinHouseholdPreview, setJoinHouseholdPreview] = useState<{ id: string; name: string; description: string | null; memberCount: number } | null>(null)
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -421,27 +426,85 @@ export default function SettingsPage() {
 
       if (response.ok) {
         toast.success(th('householdCreated'))
-        setNewHouseholdName('')
-        setNewHouseholdDescription('')
-
-        // Trigger auth refresh event for Navigation component
-        window.dispatchEvent(new CustomEvent('auth-changed'))
-
-        // Reload household info to display the newly created household
-        await loadHouseholdInfo()
-
-        // Force a page refresh to ensure everything is updated
-        router.refresh()
+        // Force page reload to ensure new session cookie is applied
+        window.location.reload()
       } else {
         const data = await response.json()
         toast.error(data.error || 'Failed to create household')
+        setIsCreatingHousehold(false)
       }
     } catch (error) {
       console.error('Error creating household:', error)
       toast.error('Failed to create household')
-    } finally {
       setIsCreatingHousehold(false)
     }
+  }
+
+  const handleVerifyInviteCode = async () => {
+    if (!joinInviteCode.trim()) {
+      toast.error(th('inviteCodeRequired') || 'Invite code is required')
+      return
+    }
+
+    setIsVerifyingCode(true)
+    setJoinHouseholdPreview(null)
+
+    try {
+      const response = await fetch('/api/households/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode: joinInviteCode.trim() })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setJoinHouseholdPreview(data.household)
+      } else {
+        const data = await response.json()
+        toast.error(data.error || th('invalidInviteCode') || 'Invalid invite code')
+      }
+    } catch (error) {
+      console.error('Error verifying invite code:', error)
+      toast.error(th('invalidInviteCode') || 'Invalid invite code')
+    } finally {
+      setIsVerifyingCode(false)
+    }
+  }
+
+  const handleJoinHousehold = async () => {
+    if (!joinInviteCode.trim()) {
+      toast.error(th('inviteCodeRequired') || 'Invite code is required')
+      return
+    }
+
+    setIsJoiningHousehold(true)
+
+    try {
+      const response = await fetch('/api/households/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode: joinInviteCode.trim() })
+      })
+
+      if (response.ok) {
+        toast.success(th('householdJoined') || 'Successfully joined household!')
+        // Force page reload to ensure new session cookie is applied
+        window.location.reload()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to join household')
+        setIsJoiningHousehold(false)
+      }
+    } catch (error) {
+      console.error('Error joining household:', error)
+      toast.error('Failed to join household')
+      setIsJoiningHousehold(false)
+    }
+  }
+
+  const handleCancelJoin = () => {
+    setJoinInviteCode('')
+    setJoinHouseholdPreview(null)
   }
 
   if (!mounted) {
@@ -981,44 +1044,126 @@ export default function SettingsPage() {
                   <div className="text-center py-4">
                     <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">{th('noHousehold')}</h3>
-                    <p className="text-sm text-muted-foreground mb-6">{th('createHouseholdDescription') || 'Create a household to start managing your home with family members'}</p>
+                    <p className="text-sm text-muted-foreground mb-6">{th('noHouseholdDescription') || 'Create a new household or join an existing one with an invite code'}</p>
                   </div>
 
-                  {/* Create Household Form */}
-                  <div className="space-y-4 max-w-md mx-auto">
-                    <div className="space-y-2">
-                      <Label htmlFor="newHouseholdName">{th('householdName')}</Label>
-                      <Input
-                        id="newHouseholdName"
-                        value={newHouseholdName}
-                        onChange={(e) => setNewHouseholdName(e.target.value)}
-                        placeholder={th('householdNamePlaceholder')}
-                        disabled={isCreatingHousehold}
-                        className="h-11"
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                    {/* Create Household Section */}
+                    <div className="space-y-4 p-6 border border-border rounded-lg bg-muted/20">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Plus className="h-5 w-5 text-primary" />
+                        <h4 className="font-semibold text-foreground">{th('createNewHousehold') || 'Create New Household'}</h4>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="newHouseholdName">{th('householdName')}</Label>
+                        <Input
+                          id="newHouseholdName"
+                          value={newHouseholdName}
+                          onChange={(e) => setNewHouseholdName(e.target.value)}
+                          placeholder={th('householdNamePlaceholder')}
+                          disabled={isCreatingHousehold}
+                          className="h-11"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="newHouseholdDescription">{th('householdDescription')} {t('homeSettings.fields.optional') || '(Optional)'}</Label>
+                        <Textarea
+                          id="newHouseholdDescription"
+                          value={newHouseholdDescription}
+                          onChange={(e) => setNewHouseholdDescription(e.target.value)}
+                          placeholder={th('householdDescriptionPlaceholder')}
+                          disabled={isCreatingHousehold}
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleCreateHousehold}
+                        disabled={isCreatingHousehold || !newHouseholdName.trim()}
+                        className="w-full h-11 shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        {isCreatingHousehold && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                        <Plus className="mr-2 h-4 w-4" />
+                        {th('createHousehold') || 'Create Household'}
+                      </Button>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="newHouseholdDescription">{th('householdDescription')} {t('homeSettings.fields.optional') || '(Optional)'}</Label>
-                      <Textarea
-                        id="newHouseholdDescription"
-                        value={newHouseholdDescription}
-                        onChange={(e) => setNewHouseholdDescription(e.target.value)}
-                        placeholder={th('householdDescriptionPlaceholder')}
-                        disabled={isCreatingHousehold}
-                        rows={3}
-                        className="resize-none"
-                      />
-                    </div>
+                    {/* Join Household Section */}
+                    <div className="space-y-4 p-6 border border-border rounded-lg bg-muted/20">
+                      <div className="flex items-center gap-3 mb-4">
+                        <LogIn className="h-5 w-5 text-primary" />
+                        <h4 className="font-semibold text-foreground">{th('joinExistingHousehold') || 'Join Existing Household'}</h4>
+                      </div>
 
-                    <Button
-                      onClick={handleCreateHousehold}
-                      disabled={isCreatingHousehold || !newHouseholdName.trim()}
-                      className="w-full h-11 shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                      {isCreatingHousehold && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                      {th('createHousehold') || 'Create Household'}
-                    </Button>
+                      {!joinHouseholdPreview ? (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="joinInviteCode">{th('enterInviteCode') || 'Invite Code'}</Label>
+                            <Input
+                              id="joinInviteCode"
+                              value={joinInviteCode}
+                              onChange={(e) => setJoinInviteCode(e.target.value.toUpperCase())}
+                              placeholder={th('inviteCodePlaceholder') || 'Enter 8-character code'}
+                              disabled={isVerifyingCode}
+                              className="h-11 font-mono tracking-wider"
+                              maxLength={8}
+                            />
+                          </div>
+
+                          <p className="text-xs text-muted-foreground">
+                            {th('inviteCodeHelp') || 'Ask a household member to share their invite code with you'}
+                          </p>
+
+                          <Button
+                            onClick={handleVerifyInviteCode}
+                            disabled={isVerifyingCode || !joinInviteCode.trim()}
+                            variant="outline"
+                            className="w-full h-11"
+                          >
+                            {isVerifyingCode && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            {th('verifyCode') || 'Verify Code'}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Household Preview */}
+                          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
+                            <p className="text-sm text-muted-foreground">{th('joiningHousehold') || 'You are joining:'}</p>
+                            <p className="font-semibold text-foreground text-lg">{joinHouseholdPreview.name}</p>
+                            {joinHouseholdPreview.description && (
+                              <p className="text-sm text-muted-foreground">{joinHouseholdPreview.description}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {joinHouseholdPreview.memberCount} {joinHouseholdPreview.memberCount === 1 ? th('memberSingular') || 'member' : th('membersPlural') || 'members'}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleCancelJoin}
+                              variant="outline"
+                              className="flex-1 h-11"
+                              disabled={isJoiningHousehold}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              {t('homeSettings.cancel') || 'Cancel'}
+                            </Button>
+                            <Button
+                              onClick={handleJoinHousehold}
+                              disabled={isJoiningHousehold}
+                              className="flex-1 h-11"
+                            >
+                              {isJoiningHousehold && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                              <LogIn className="mr-2 h-4 w-4" />
+                              {th('joinHousehold') || 'Join'}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Settings, Check, X, CalendarDays, Clock } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Settings, Check, X, CalendarDays, Clock, User } from "lucide-react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { db, KetoSettings, KetoDay, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
@@ -329,16 +330,16 @@ export default function KetoPage() {
 
   const getDayIcon = (status?: 'success' | 'fasting' | 'cheat') => {
     if (status === 'success') {
-      return <Check className="h-4 w-4 text-green-600" />
+      return <Check className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
     } else if (status === 'fasting') {
       return (
         <div className="flex items-center justify-center gap-0.5">
-          <Check className="h-3 w-3 text-blue-600" />
-          <Clock className="h-3 w-3 text-blue-600" />
+          <Check className="h-2 w-2 md:h-3 md:w-3 text-blue-600" />
+          <Clock className="h-2 w-2 md:h-3 md:w-3 text-blue-600" />
         </div>
       )
     } else if (status === 'cheat') {
-      return <X className="h-4 w-4 text-red-600" />
+      return <X className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
     }
     return null
   }
@@ -349,7 +350,7 @@ export default function KetoPage() {
   }
 
   const getDayStyles = (day: DayStatus, isCurrentMonth: boolean) => {
-    let baseStyles = "aspect-square flex flex-col items-center justify-center p-2 rounded-lg border transition-all duration-200 hover:bg-muted/50 cursor-pointer text-center"
+    let baseStyles = "aspect-square flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-all duration-200 hover:bg-muted/50 cursor-pointer text-center"
 
     if (!isCurrentMonth) {
       baseStyles += " opacity-40"
@@ -376,10 +377,10 @@ export default function KetoPage() {
 
   if (!selectedUser) {
     return (
-      <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-center items-center h-96">
-            <div className="text-lg font-medium text-muted-foreground">{t('loading')}</div>
+            <div className="text-base md:text-lg font-medium text-muted-foreground">{t('loading')}</div>
           </div>
         </div>
       </div>
@@ -404,15 +405,15 @@ export default function KetoPage() {
     : sundayFirstDayNames
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+          <div className="space-y-1 md:space-y-2">
+            <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               {t('title')}
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl">
+            <p className="text-base md:text-xl text-muted-foreground max-w-2xl">
               {t('subtitle')}
             </p>
           </div>
@@ -420,94 +421,101 @@ export default function KetoPage() {
             variant="outline"
             size="lg"
             onClick={() => setIsSettingsModalOpen(true)}
-            className="h-12 px-6 shadow-modern hover:shadow-modern-lg transition-all duration-200"
+            className="h-11 md:h-12 px-4 md:px-6 shadow-modern hover:shadow-modern-lg transition-all duration-200 w-full md:w-auto"
           >
-            <Settings className="mr-2 h-5 w-5" />
+            <Settings className="mr-2 h-4 w-4 md:h-5 md:w-5" />
             {t('stats.settings')}
           </Button>
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-2 md:gap-6">
           <Card className="glass-card shadow-modern">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-2">{stats.daysOnKeto}</div>
-                <div className="text-sm font-medium text-muted-foreground">{t('stats.daysOnKeto')}</div>
+                <div className="text-xl md:text-3xl font-bold text-primary mb-1 md:mb-2">{stats.daysOnKeto}</div>
+                <div className="text-xs md:text-sm font-medium text-muted-foreground">{t('stats.daysOnKeto')}</div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card shadow-modern">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">{stats.successfulDays}</div>
-                <div className="text-sm font-medium text-muted-foreground">{t('stats.successfulDays')}</div>
+                <div className="text-xl md:text-3xl font-bold text-green-600 mb-1 md:mb-2">{stats.successfulDays}</div>
+                <div className="text-xs md:text-sm font-medium text-muted-foreground">{t('stats.successfulDays')}</div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card shadow-modern">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{stats.fastingDays}</div>
-                <div className="text-sm font-medium text-muted-foreground">{t('stats.fastingDays')}</div>
+                <div className="text-xl md:text-3xl font-bold text-blue-600 mb-1 md:mb-2">{stats.fastingDays}</div>
+                <div className="text-xs md:text-sm font-medium text-muted-foreground">{t('stats.fastingDays')}</div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Calendar and Progress Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
           {/* Calendar */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center justify-between">
-                <span>{t('calendar.title')}</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
-                  >
-                    ←
-                  </Button>
-                  <span className="text-lg font-medium min-w-[160px] text-center">
-                    {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentDate(new Date())}
-                    title="Jump to current month"
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
-                  >
-                    →
-                  </Button>
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <span>{t('calendar.title')}</span>
+                  <div className="flex items-center justify-between sm:justify-end gap-1 md:gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
+                      className="h-8 w-8 md:h-9 md:w-auto md:px-3 p-0"
+                    >
+                      <span className="md:hidden">←</span>
+                      <span className="hidden md:inline">←</span>
+                    </Button>
+                    <span className="text-sm md:text-lg font-medium min-w-[100px] md:min-w-[160px] text-center">
+                      {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentDate(new Date())}
+                      title="Jump to current month"
+                      className="h-8 w-8 md:h-9 md:w-auto md:px-3 p-0"
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
+                      className="h-8 w-8 md:h-9 md:w-auto md:px-3 p-0"
+                    >
+                      <span className="md:hidden">→</span>
+                      <span className="hidden md:inline">→</span>
+                    </Button>
+                  </div>
                 </div>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs md:text-sm">
                 {t('calendar.clickToToggle')}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
               {/* Day headers */}
-              <div className="grid grid-cols-7 gap-2 mb-4">
+              <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2 md:mb-4">
                 {dayNames.map((day) => (
-                  <div key={day} className="text-center text-sm font-semibold text-muted-foreground p-2">
+                  <div key={day} className="text-center text-xs md:text-sm font-semibold text-muted-foreground p-1 md:p-2">
                     {day}
                   </div>
                 ))}
               </div>
 
               {/* Calendar grid */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 md:gap-2">
                 {calendarDays.map((day, index) => {
                   const isCurrentMonth = day.date.getMonth() === currentDate.getMonth()
                   const todayHighlight = isToday(day.date)
@@ -517,7 +525,7 @@ export default function KetoPage() {
                       className={getDayStyles(day, isCurrentMonth)}
                       onClick={() => handleDayClick(day)}
                     >
-                      <div className={`text-sm mb-1 ${todayHighlight ? 'font-bold' : 'font-medium'}`}>
+                      <div className={`text-xs md:text-sm mb-0.5 md:mb-1 ${todayHighlight ? 'font-bold' : 'font-medium'}`}>
                         {day.date.getDate()}
                       </div>
                       {getDayIcon(day.status)}
@@ -527,25 +535,25 @@ export default function KetoPage() {
               </div>
 
               {/* Legend */}
-              <div className="flex justify-center gap-4 mt-6 pt-6 border-t flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-muted-foreground">{t('calendar.success')}</span>
+              <div className="grid grid-cols-2 md:flex md:justify-center gap-2 md:gap-4 mt-4 md:mt-6 pt-4 md:pt-6 border-t">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Check className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                  <span className="text-xs md:text-sm text-muted-foreground">{t('calendar.success')}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="flex items-center justify-center gap-0.5">
-                    <Check className="h-3 w-3 text-blue-600" />
-                    <Clock className="h-3 w-3 text-blue-600" />
+                    <Check className="h-2.5 w-2.5 md:h-3 md:w-3 text-blue-600" />
+                    <Clock className="h-2.5 w-2.5 md:h-3 md:w-3 text-blue-600" />
                   </div>
-                  <span className="text-sm text-muted-foreground">{t('calendar.fasting')}</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">{t('calendar.fasting')}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <X className="h-4 w-4 text-red-600" />
-                  <span className="text-sm text-muted-foreground">{t('calendar.cheat')}</span>
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <X className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
+                  <span className="text-xs md:text-sm text-muted-foreground">{t('calendar.cheat')}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border border-muted rounded"></div>
-                  <span className="text-sm text-muted-foreground">{t('calendar.noData')}</span>
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <div className="h-3 w-3 md:h-4 md:w-4 border border-muted rounded"></div>
+                  <span className="text-xs md:text-sm text-muted-foreground">{t('calendar.noData')}</span>
                 </div>
               </div>
             </CardContent>
@@ -553,19 +561,19 @@ export default function KetoPage() {
 
           {/* Progress Insights */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl">{t('progress.insights')}</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-2xl">{t('progress.insights')}</CardTitle>
+              <CardDescription className="text-xs md:text-sm">
                 {t('progress.insightsSubtitle')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-4 md:p-6 pt-0 md:pt-0 space-y-4 md:space-y-6">
               {/* Circular Progress Rates */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
                 {/* Weekly Success Rate */}
                 <div className="text-center">
-                  <div className="relative w-20 h-20 mx-auto mb-3">
-                    <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-2 md:mb-3">
+                    <svg className="w-16 h-16 md:w-20 md:h-20 transform -rotate-90" viewBox="0 0 36 36">
                       <path
                         d="M18 2.0845
                           a 15.9155 15.9155 0 0 1 0 31.831
@@ -587,16 +595,16 @@ export default function KetoPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-lg font-bold text-foreground">{stats.weeklySuccessRate}%</span>
+                      <span className="text-sm md:text-lg font-bold text-foreground">{stats.weeklySuccessRate}%</span>
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">{t('progress.weeklySuccess')}</p>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('progress.weeklySuccess')}</p>
                 </div>
 
                 {/* Monthly Success Rate */}
                 <div className="text-center">
-                  <div className="relative w-20 h-20 mx-auto mb-3">
-                    <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-2 md:mb-3">
+                    <svg className="w-16 h-16 md:w-20 md:h-20 transform -rotate-90" viewBox="0 0 36 36">
                       <path
                         d="M18 2.0845
                           a 15.9155 15.9155 0 0 1 0 31.831
@@ -618,17 +626,17 @@ export default function KetoPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-lg font-bold text-foreground">{stats.monthlySuccessRate}%</span>
+                      <span className="text-sm md:text-lg font-bold text-foreground">{stats.monthlySuccessRate}%</span>
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">{t('progress.monthlySuccess')}</p>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('progress.monthlySuccess')}</p>
                 </div>
               </div>
 
               {/* Weekly Progress */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-foreground">{t('progress.thisWeek')}</h4>
-                <div className="grid grid-cols-7 gap-2">
+              <div className="space-y-2 md:space-y-3">
+                <h4 className="text-sm md:text-base font-semibold text-foreground">{t('progress.thisWeek')}</h4>
+                <div className="grid grid-cols-7 gap-1 md:gap-2">
                   {Array.from({ length: 7 }, (_, i) => {
                     const date = new Date()
                     date.setDate(date.getDate() - date.getDay() + i) // Start from Sunday
@@ -641,11 +649,11 @@ export default function KetoPage() {
 
                     return (
                       <div key={i} className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">
+                        <div className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">
                           {['S', 'M', 'T', 'W', 'T', 'F', 'S'][i]}
                         </div>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                          isCurrentDay ? 'ring-2 ring-primary ring-offset-2' : ''
+                        <div className={`w-6 h-6 md:w-8 md:h-8 mx-auto rounded-full flex items-center justify-center text-[10px] md:text-xs font-medium ${
+                          isCurrentDay ? 'ring-2 ring-primary ring-offset-1 md:ring-offset-2' : ''
                         } ${
                           ketoDay?.status === 'success' ? 'bg-green-500 text-white' :
                           ketoDay?.status === 'fasting' ? 'bg-blue-500 text-white' :
@@ -664,11 +672,11 @@ export default function KetoPage() {
               </div>
 
               {/* Motivational Section */}
-              <div className="space-y-3 p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
-                <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <div className="space-y-2 md:space-y-3 p-3 md:p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                <h4 className="text-sm md:text-base font-semibold text-foreground flex items-center gap-2">
                   🎯 {t('progress.keepGoing')}
                 </h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">
                   {stats.currentStreak > 0
                     ? t('progress.streakMessage', { streak: stats.currentStreak })
                     : stats.daysOnKeto > 0
@@ -677,35 +685,35 @@ export default function KetoPage() {
                   }
                 </p>
                 {stats.daysOnKeto >= 7 && (
-                  <div className="text-sm">
+                  <div className="text-xs md:text-sm">
                     <span className="text-green-600 font-medium">{t('progress.weekCompleted', { week: Math.ceil(stats.daysOnKeto / 7) })}</span>
                   </div>
                 )}
               </div>
 
               {/* Enhanced Stats Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              <div className="grid grid-cols-2 gap-2 md:gap-4">
+                <div className="text-center p-2 md:p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <div className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
                     {stats.fastingDays}
                   </div>
-                  <div className="text-xs text-green-600/70 dark:text-green-400/70">{t('progress.fastingRate')}</div>
+                  <div className="text-[10px] md:text-xs text-green-600/70 dark:text-green-400/70">{t('progress.fastingRate')}</div>
                 </div>
-                <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                <div className="text-center p-2 md:p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                  <div className="text-xl md:text-2xl font-bold text-red-600 dark:text-red-400">
                     {stats.cheatDays}
                   </div>
-                  <div className="text-xs text-red-600/70 dark:text-red-400/70">{t('progress.cheatDays')}</div>
+                  <div className="text-[10px] md:text-xs text-red-600/70 dark:text-red-400/70">{t('progress.cheatDays')}</div>
                 </div>
               </div>
 
               {/* Current Streak Badge */}
               {stats.currentStreak > 0 && (
-                <div className="text-center p-4 bg-gradient-to-r from-orange-500/10 to-yellow-500/10 rounded-xl border border-orange-500/20">
-                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                <div className="text-center p-3 md:p-4 bg-gradient-to-r from-orange-500/10 to-yellow-500/10 rounded-xl border border-orange-500/20">
+                  <div className="text-2xl md:text-3xl font-bold text-orange-600 dark:text-orange-400 mb-0.5 md:mb-1">
                     {stats.currentStreak}
                   </div>
-                  <div className="text-sm font-medium text-orange-600/70 dark:text-orange-400/70">
+                  <div className="text-xs md:text-sm font-medium text-orange-600/70 dark:text-orange-400/70">
                     {t('progress.dayStreak')} 🔥
                   </div>
                 </div>

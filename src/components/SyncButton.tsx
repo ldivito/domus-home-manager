@@ -4,15 +4,8 @@ import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import { Button } from './ui/button'
-import { Cloud, RefreshCw, Check, AlertCircle, LogIn, ChevronDown } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu'
-import { performSync, isAuthenticated, getSyncStatus, resetSyncState } from '@/lib/sync'
+import { Cloud, RefreshCw, Check, AlertCircle, LogIn } from 'lucide-react'
+import { performSync, isAuthenticated, getSyncStatus } from '@/lib/sync'
 import { toast } from 'sonner'
 
 export default function SyncButton({ compact = false }: { compact?: boolean }) {
@@ -43,19 +36,16 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     setIsAuth(authenticated)
   }
 
-  const handleSync = async (forceFullSync: boolean = false) => {
+  const handleSync = async () => {
     setIsSyncing(true)
     setError(null)
 
     try {
-      const result = await performSync(forceFullSync)
+      const result = await performSync(false)
 
       if (result.success) {
         setLastSyncAt(new Date())
-        const message = forceFullSync
-          ? `Full sync complete! Pushed ${result.pushed}, pulled ${result.pulled}`
-          : `Synced! Pushed ${result.pushed}, pulled ${result.pulled}`
-        toast.success(message)
+        toast.success(t('syncComplete') || `Synced! Pushed ${result.pushed}, pulled ${result.pulled}`)
       } else {
         setError(result.error || 'Sync failed')
         toast.error(result.error || 'Sync failed')
@@ -67,20 +57,6 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     } finally {
       setIsSyncing(false)
     }
-  }
-
-  const handleForceFullSync = async () => {
-    if (!isAuth) {
-      router.push('/auth')
-      return
-    }
-    await handleSync(true)
-  }
-
-  const handleResetSyncState = () => {
-    resetSyncState()
-    setLastSyncAt(null)
-    toast.success(t('syncStateReset') || 'Sync state reset. Next sync will be a full sync.')
   }
 
   const getIcon = () => {
@@ -107,7 +83,7 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     return t('notSynced')
   }
 
-  // When not authenticated, show a simple login button (no dropdown)
+  // When not authenticated, show a simple login button
   if (!isAuth) {
     if (compact) {
       return (
@@ -135,68 +111,31 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
     )
   }
 
-  // When authenticated, show the sync dropdown
+  // When authenticated, show a simple sync button (click to sync)
   if (compact) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={isSyncing}
-            title={getStatusText()}
-          >
-            {getIcon()}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleSync(false)} disabled={isSyncing}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t('syncNow') || 'Sync Now'}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleForceFullSync} disabled={isSyncing}>
-            <Cloud className="h-4 w-4 mr-2" />
-            {t('forceFullSync') || 'Force Full Sync'}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleResetSyncState} disabled={isSyncing}>
-            <AlertCircle className="h-4 w-4 mr-2" />
-            {t('resetSyncState') || 'Reset Sync State'}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="icon"
+        disabled={isSyncing}
+        onClick={handleSync}
+        title={getStatusText()}
+      >
+        {getIcon()}
+      </Button>
     )
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={isSyncing}
-          className="gap-2"
-        >
-          {getIcon()}
-          <span className="text-xs">{getStatusText()}</span>
-          <ChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleSync(false)} disabled={isSyncing}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          {t('syncNow') || 'Sync Now'}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleForceFullSync} disabled={isSyncing}>
-          <Cloud className="h-4 w-4 mr-2" />
-          {t('forceFullSync') || 'Force Full Sync'}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleResetSyncState} disabled={isSyncing}>
-          <AlertCircle className="h-4 w-4 mr-2" />
-          {t('resetSyncState') || 'Reset Sync State'}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={isSyncing}
+      onClick={handleSync}
+      className="gap-2"
+    >
+      {getIcon()}
+      <span className="text-xs">{getStatusText()}</span>
+    </Button>
   )
 }

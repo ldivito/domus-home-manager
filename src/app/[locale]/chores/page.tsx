@@ -3,12 +3,13 @@
 import { useState, useEffect, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckSquare, Plus, Calendar, User, Clock, Repeat, Edit3, Undo, Trash2, Search, Filter, X } from "lucide-react"
+import { CheckSquare, Plus, Calendar, User, Clock, Repeat, Edit3, Undo, Trash2, Search, Filter, X, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AddChoreModal } from "@/components/AddChoreModal"
@@ -239,9 +240,18 @@ export default function ChoresPage() {
     })
   }, [chores, searchQuery, frequencyFilter, statusFilter, assigneeFilter])
 
-  // Separate pending and completed chores
-  const pendingChores = filteredChores.filter(c => !c.isCompleted)
+  // Helper to check if chore is due today or overdue
+  const isDueToday = (date: Date | string) => {
+    const d = date instanceof Date ? date : new Date(date)
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    return d <= today
+  }
+
+  // Separate chores into three categories
+  const dueTodayChores = filteredChores.filter(c => !c.isCompleted && isDueToday(c.nextDue))
   const completedChores = filteredChores.filter(c => c.isCompleted)
+  const upcomingChores = filteredChores.filter(c => !c.isCompleted && !isDueToday(c.nextDue))
 
   // Calculate daily progress (chores due today that are completed)
   const dailyProgress = useMemo(() => {
@@ -288,7 +298,7 @@ export default function ChoresPage() {
     )
   }
 
-  const ChoreCard = ({ chore }: { chore: Chore }) => {
+  const ChoreCard = ({ chore, isUpcoming = false }: { chore: Chore; isUpcoming?: boolean }) => {
     const assignedUser = getUserById(chore.assignedUserId)
     const completedByUser = getUserById(chore.lastCompletedBy)
     const overdue = !chore.isCompleted && isOverdue(chore.nextDue)
@@ -296,6 +306,7 @@ export default function ChoresPage() {
 
     return (
       <Card className={`group h-full flex flex-col transition-all hover:shadow-md ${
+        isUpcoming ? 'opacity-50 bg-gray-50/50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700' :
         isCompleted ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800' :
         overdue ? 'border-red-300 dark:border-red-700' : 'hover:border-purple-300 dark:hover:border-purple-600'
       }`}>
@@ -315,6 +326,26 @@ export default function ChoresPage() {
             <div className="flex items-center gap-1 flex-shrink-0">
               {overdue && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{t('overdue')}</Badge>}
               {isCompleted && <Badge className="text-[10px] px-1.5 py-0 bg-green-500">✓</Badge>}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleEditChore(chore)}>
+                    <Edit3 className="mr-2 h-4 w-4" />
+                    {t('editChore')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-600 dark:text-red-400"
+                    onClick={() => handleDeleteChore(chore)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {tCommon('delete')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -359,12 +390,12 @@ export default function ChoresPage() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-1.5 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800">
+          {/* Action button */}
+          <div className="mt-auto pt-2 border-t border-gray-100 dark:border-gray-800">
             {!isCompleted ? (
               <Button
                 size="sm"
-                className="flex-1 h-8 text-xs"
+                className="w-full h-8 text-xs"
                 onClick={() => handleCompleteChore(chore)}
               >
                 <CheckSquare className="mr-1 h-3 w-3" />
@@ -374,29 +405,13 @@ export default function ChoresPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 h-8 text-xs border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                className="w-full h-8 text-xs border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
                 onClick={() => handleUndoComplete(chore)}
               >
                 <Undo className="mr-1 h-3 w-3" />
                 {t('undoComplete')}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => handleEditChore(chore)}
-            >
-              <Edit3 className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-              onClick={() => handleDeleteChore(chore)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -618,15 +633,15 @@ export default function ChoresPage() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Pending Chores Section */}
-            {pendingChores.length > 0 && (
+            {/* Due Today Section */}
+            {dueTodayChores.length > 0 && (
               <div>
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  {t('sections.pending')} ({pendingChores.length})
+                  {t('sections.dueToday')} ({dueTodayChores.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {pendingChores.map((chore) => (
+                  {dueTodayChores.map((chore) => (
                     <ChoreCard key={chore.id} chore={chore} />
                   ))}
                 </div>
@@ -643,6 +658,21 @@ export default function ChoresPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {completedChores.map((chore) => (
                     <ChoreCard key={chore.id} chore={chore} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upcoming Chores Section (greyed out) */}
+            {upcomingChores.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {t('sections.upcoming')} ({upcomingChores.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {upcomingChores.map((chore) => (
+                    <ChoreCard key={chore.id} chore={chore} isUpcoming />
                   ))}
                 </div>
               </div>

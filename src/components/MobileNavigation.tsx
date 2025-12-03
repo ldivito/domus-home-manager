@@ -288,26 +288,26 @@ export default function MobileNavigation() {
             <span className="text-[10px] font-medium">{t('home')}</span>
           </Link>
 
-          {/* Grocery with Badge */}
+          {/* Notifications with Badge */}
           <Link
-            href="/grocery"
+            href="/reminders"
             className={cn(
               "flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-xl transition-all duration-200 relative",
               "active:scale-95",
-              pathname === '/grocery'
+              pathname === '/reminders'
                 ? "text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             <div className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              {groceryItemsCount > 0 && (
+              <Bell className="h-5 w-5" />
+              {activeRemindersCount > 0 && (
                 <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full px-1">
-                  {groceryItemsCount > 99 ? '99+' : groceryItemsCount}
+                  {activeRemindersCount > 99 ? '99+' : activeRemindersCount}
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-medium">{t('grocery')}</span>
+            <span className="text-[10px] font-medium">{t('reminders')}</span>
           </Link>
 
           {/* Menu Button - Center, Prominent (Toggle) */}

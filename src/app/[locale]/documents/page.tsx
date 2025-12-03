@@ -139,34 +139,34 @@ export default function DocumentsPage() {
   const expiredCount = documents.filter(d => isExpired(d.expirationDate)).length
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('title')}</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 md:mb-2">{t('title')}</h1>
+            <p className="text-base md:text-xl text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
           </div>
-          <Button size="lg" className="h-14 px-8 text-lg" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-6 w-6" />
+          <Button size="lg" className="h-12 md:h-14 px-4 md:px-8 text-base md:text-lg w-full sm:w-auto" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="mr-2 h-5 w-5 md:h-6 md:w-6" />
             {t('actions.upload')}
           </Button>
         </div>
 
         {/* Stats */}
         {(expiringCount > 0 || expiredCount > 0) && (
-          <div className="mb-6 flex gap-4">
+          <div className="mb-4 md:mb-6 flex flex-wrap gap-2 md:gap-4">
             {expiredCount > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium text-red-800 dark:text-red-200">
+              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-red-600 dark:text-red-400" />
+                <span className="text-xs md:text-sm font-medium text-red-800 dark:text-red-200">
                   {expiredCount} {t('status.expired')}
                 </span>
               </div>
             )}
             {expiringCount > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <Calendar className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                <Calendar className="h-4 w-4 md:h-5 md:w-5 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-xs md:text-sm font-medium text-yellow-800 dark:text-yellow-200">
                   {expiringCount} {t('status.expiringSoon')}
                 </span>
               </div>
@@ -175,21 +175,21 @@ export default function DocumentsPage() {
         )}
 
         {/* Search and Filters */}
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="mb-4 md:mb-6 space-y-3 md:space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('searchPlaceholder')}
-                className="pl-10"
+                className="pl-10 h-10 md:h-10"
               />
             </div>
             <div className="flex gap-2">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
-                  <Filter className="mr-2 h-4 w-4" />
+                <SelectTrigger className="flex-1 sm:w-48 h-10">
+                  <Filter className="mr-2 h-4 w-4 shrink-0" />
                   <SelectValue placeholder={t('filters.category')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -209,10 +209,11 @@ export default function DocumentsPage() {
                 </SelectContent>
               </Select>
 
-              <div className="flex border rounded-md">
+              <div className="flex border rounded-md shrink-0">
                 <Button
                   variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                   size="icon"
+                  className="h-10 w-10"
                   onClick={() => setViewMode('grid')}
                 >
                   <Grid className="h-4 w-4" />
@@ -220,6 +221,7 @@ export default function DocumentsPage() {
                 <Button
                   variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                   size="icon"
+                  className="h-10 w-10"
                   onClick={() => setViewMode('list')}
                 >
                   <List className="h-4 w-4" />
@@ -251,7 +253,7 @@ export default function DocumentsPage() {
             </CardContent>
           </Card>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filteredDocuments.map((document) => (
               <Card
                 key={document.id}
@@ -264,37 +266,37 @@ export default function DocumentsPage() {
                 }`}
                 onClick={() => handlePreviewDocument(document)}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
+                <CardHeader className="p-4 md:p-6 pb-2 md:pb-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">{document.name}</CardTitle>
+                      <CardTitle className="text-base md:text-lg truncate">{document.name}</CardTitle>
                       {document.description && (
-                        <CardDescription className="mt-1 line-clamp-2">{document.description}</CardDescription>
+                        <CardDescription className="mt-1 line-clamp-2 text-sm">{document.description}</CardDescription>
                       )}
                     </div>
-                    <Badge className={CATEGORY_COLORS[document.category]}>
+                    <Badge className={`${CATEGORY_COLORS[document.category]} text-xs shrink-0`}>
                       {t(`categories.${document.category}`)}
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                      <FileText className="mr-2 h-4 w-4" />
+                <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+                  <div className="space-y-2 md:space-y-3">
+                    <div className="flex items-center text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                      <FileText className="mr-2 h-4 w-4 shrink-0" />
                       <span className="truncate">{document.fileName}</span>
-                      <span className="ml-auto">{formatFileSize(document.fileSize)}</span>
+                      <span className="ml-auto shrink-0">{formatFileSize(document.fileSize)}</span>
                     </div>
 
                     {document.expirationDate && (
-                      <div className={`flex items-center text-sm ${
+                      <div className={`flex items-center text-xs md:text-sm ${
                         isExpired(document.expirationDate)
                           ? 'text-red-600 dark:text-red-400'
                           : isExpiringSoon(document.expirationDate)
                             ? 'text-yellow-600 dark:text-yellow-400'
                             : 'text-gray-500 dark:text-gray-400'
                       }`}>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>
+                        <Calendar className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">
                           {isExpired(document.expirationDate)
                             ? t('status.expired')
                             : t('form.expires')}: {new Date(document.expirationDate).toLocaleDateString()}
@@ -304,7 +306,7 @@ export default function DocumentsPage() {
 
                     {document.tags && document.tags.length > 0 && (
                       <div className="flex items-center gap-1 flex-wrap">
-                        <Tag className="h-3 w-3 text-gray-400" />
+                        <Tag className="h-3 w-3 text-gray-400 shrink-0" />
                         {document.tags.slice(0, 3).map((tag, idx) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             {tag}
@@ -317,17 +319,17 @@ export default function DocumentsPage() {
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-2 mt-4 pt-3 border-t" onClick={e => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" onClick={() => handlePreviewDocument(document)}>
+                  <div className="flex justify-end gap-1 md:gap-2 mt-3 md:mt-4 pt-3 border-t" onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handlePreviewDocument(document)}>
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(document)}>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handleDownloadDocument(document)}>
                       <Download className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditDocument(document)}>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handleEditDocument(document)}>
                       <Edit3 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteDocument(document.id!)}>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handleDeleteDocument(document.id!)}>
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
@@ -349,47 +351,49 @@ export default function DocumentsPage() {
                 }`}
                 onClick={() => handlePreviewDocument(document)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <FileText className="h-6 w-6 text-primary" />
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <FileText className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-medium text-sm md:text-base truncate">{document.name}</h3>
+                          <Badge className={`${CATEGORY_COLORS[document.category]} text-xs shrink-0`}>
+                            {t(`categories.${document.category}`)}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                          <span className="truncate max-w-[150px] md:max-w-none">{document.fileName}</span>
+                          <span className="shrink-0">{formatFileSize(document.fileSize)}</span>
+                          {document.expirationDate && (
+                            <span className={`shrink-0 ${
+                              isExpired(document.expirationDate)
+                                ? 'text-red-600 dark:text-red-400'
+                                : isExpiringSoon(document.expirationDate)
+                                  ? 'text-yellow-600 dark:text-yellow-400'
+                                  : ''
+                            }`}>
+                              {isExpired(document.expirationDate) ? t('status.expired') : t('form.expires')}: {new Date(document.expirationDate).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium truncate">{document.name}</h3>
-                        <Badge className={CATEGORY_COLORS[document.category]}>
-                          {t(`categories.${document.category}`)}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        <span>{document.fileName}</span>
-                        <span>{formatFileSize(document.fileSize)}</span>
-                        {document.expirationDate && (
-                          <span className={
-                            isExpired(document.expirationDate)
-                              ? 'text-red-600 dark:text-red-400'
-                              : isExpiringSoon(document.expirationDate)
-                                ? 'text-yellow-600 dark:text-yellow-400'
-                                : ''
-                          }>
-                            {isExpired(document.expirationDate) ? t('status.expired') : t('form.expires')}: {new Date(document.expirationDate).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" onClick={() => handlePreviewDocument(document)}>
+                    <div className="flex gap-1 md:gap-2 justify-end sm:justify-start shrink-0" onClick={e => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handlePreviewDocument(document)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(document)}>
+                      <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handleDownloadDocument(document)}>
                         <Download className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEditDocument(document)}>
+                      <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handleEditDocument(document)}>
                         <Edit3 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteDocument(document.id!)}>
+                      <Button variant="ghost" size="sm" className="h-9 w-9 md:h-8 md:w-8 p-0" onClick={() => handleDeleteDocument(document.id!)}>
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>

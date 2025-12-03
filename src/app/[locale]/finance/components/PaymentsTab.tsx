@@ -287,69 +287,71 @@ export function PaymentsTab({
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3 sm:pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Calendar className="h-6 w-6" />
+              <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                 {t('title')}
               </CardTitle>
-              <CardDescription className="mt-1">
+              <CardDescription className="mt-1 text-sm">
                 {t('subtitle')}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {/* Future Month Notice */}
           {isFutureMonth && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
                 {t('futureMonthNotice')}
               </p>
             </div>
           )}
 
           {/* Status Summary */}
-          <div className="flex items-center gap-2 mb-6 p-4 bg-muted/50 rounded-lg flex-wrap">
-            <Button
-              variant={filter === 'all' ? 'default' : 'ghost'}
-              onClick={() => setFilter('all')}
-              className="h-10"
-            >
-              {t('filter.all')} ({currentMonthPayments.length})
-            </Button>
-            <Button
-              variant={filter === 'pending' ? 'default' : 'ghost'}
-              onClick={() => setFilter('pending')}
-              className="h-10"
-            >
-              {t('filter.pending')} ({pendingCount})
-            </Button>
-            <Button
-              variant={filter === 'overdue' ? 'default' : 'ghost'}
-              onClick={() => setFilter('overdue')}
-              className="h-10"
-            >
-              {t('filter.overdue')} ({overdueCount})
-            </Button>
-            <Button
-              variant={filter === 'paid' ? 'default' : 'ghost'}
-              onClick={() => setFilter('paid')}
-              className="h-10"
-            >
-              {t('filter.paid')} ({paidCount})
-            </Button>
+          <div className="mb-4 sm:mb-6 p-2 sm:p-4 bg-muted/50 rounded-lg overflow-x-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-max sm:min-w-0 sm:flex-wrap">
+              <Button
+                variant={filter === 'all' ? 'default' : 'ghost'}
+                onClick={() => setFilter('all')}
+                className="h-8 sm:h-10 text-xs sm:text-sm px-2 sm:px-4"
+              >
+                {t('filter.all')} ({currentMonthPayments.length})
+              </Button>
+              <Button
+                variant={filter === 'pending' ? 'default' : 'ghost'}
+                onClick={() => setFilter('pending')}
+                className="h-8 sm:h-10 text-xs sm:text-sm px-2 sm:px-4"
+              >
+                {t('filter.pending')} ({pendingCount})
+              </Button>
+              <Button
+                variant={filter === 'overdue' ? 'default' : 'ghost'}
+                onClick={() => setFilter('overdue')}
+                className="h-8 sm:h-10 text-xs sm:text-sm px-2 sm:px-4"
+              >
+                {t('filter.overdue')} ({overdueCount})
+              </Button>
+              <Button
+                variant={filter === 'paid' ? 'default' : 'ghost'}
+                onClick={() => setFilter('paid')}
+                className="h-8 sm:h-10 text-xs sm:text-sm px-2 sm:px-4"
+              >
+                {t('filter.paid')} ({paidCount})
+              </Button>
+            </div>
           </div>
 
           {sortedPayments.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t('noPayments')}</h3>
-              <p className="text-muted-foreground">{t('noPaymentsDescription')}</p>
+            <div className="text-center py-8 sm:py-12">
+              <Calendar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground/50 mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium mb-2">{t('noPayments')}</h3>
+              <p className="text-sm text-muted-foreground">{t('noPaymentsDescription')}</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {sortedPayments.map(payment => {
                 const expense = getExpense(payment.recurringExpenseId)
                 const amountARS = expense ? getExpenseAmountARS(expense) : payment.amount
@@ -357,84 +359,87 @@ export function PaymentsTab({
                 return (
                   <div
                     key={payment.id}
-                    className={`p-4 border rounded-lg ${payment.status === 'overdue' ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                    className={`p-3 sm:p-4 border rounded-lg ${payment.status === 'overdue' ? 'border-destructive/50 bg-destructive/5' : ''}`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-lg">{getExpenseName(payment.recurringExpenseId)}</p>
+                    {/* Header: Name, amount, status */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
+                      <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-base sm:text-lg truncate">{getExpenseName(payment.recurringExpenseId)}</p>
                             {!expense && (
-                              <Badge variant="outline" className="text-xs text-amber-600 border-amber-600">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs text-amber-600 border-amber-600 shrink-0">
                                 {t('expenseDeleted')}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
                             <span>{t('dueDate', { date: format(new Date(payment.dueDate), 'MMM d, yyyy') })}</span>
                             {expense?.currency === 'USD' && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-[10px] sm:text-xs">
                                 USD {formatARS(expense.amount)}
                               </Badge>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-2xl font-bold">$ {formatARS(amountARS)}</p>
+                      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xl sm:text-2xl font-bold">$ {formatARS(amountARS)}</p>
                           {rate > 1 && (
-                            <p className="text-sm text-muted-foreground/70">
+                            <p className="text-xs sm:text-sm text-muted-foreground/70">
                               USD {formatARS(amountARS / rate)}
                             </p>
                           )}
                         </div>
-                        {getStatusBadge(payment.status)}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {payment.status === 'paid' && (
-                              <DropdownMenuItem onClick={() => handleUnmarkPaid(payment)}>
-                                <Undo2 className="h-4 w-4 mr-2" />
-                                {t('unmarkPaid')}
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          {getStatusBadge(payment.status)}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                                <MoreHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {payment.status === 'paid' && (
+                                <DropdownMenuItem onClick={() => handleUnmarkPaid(payment)}>
+                                  <Undo2 className="h-4 w-4 mr-2" />
+                                  {t('unmarkPaid')}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => handleDeletePayment(payment.id!)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t('delete')}
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => handleDeletePayment(payment.id!)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t('delete')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
 
                     {/* Split breakdown */}
                     {totalIncomeARS > 0 && (
-                      <div className="mb-3 p-3 bg-muted/30 rounded-lg">
-                        <p className="text-sm font-medium mb-2">{t('split')}:</p>
-                        <div className="flex flex-wrap gap-2">
+                      <div className="mb-3 p-2 sm:p-3 bg-muted/30 rounded-lg">
+                        <p className="text-xs sm:text-sm font-medium mb-2">{t('split')}:</p>
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {residents.map(user => {
                             const percentage = getUserPercentage(user.id!)
                             const share = (amountARS * percentage) / 100
                             return (
                               <div
                                 key={user.id}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full"
+                                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-background rounded-full"
                               >
                                 <div
-                                  className="w-3 h-3 rounded-full"
+                                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0"
                                   style={{ backgroundColor: user.color }}
                                 />
-                                <span className="text-sm">{user.name}</span>
-                                <span className="text-sm font-medium">$ {formatARS(share)}</span>
-                                <span className="text-xs text-muted-foreground">({percentage.toFixed(0)}%)</span>
+                                <span className="text-xs sm:text-sm">{user.name}</span>
+                                <span className="text-xs sm:text-sm font-medium">$ {formatARS(share)}</span>
+                                <span className="text-[10px] sm:text-xs text-muted-foreground">({percentage.toFixed(0)}%)</span>
                               </div>
                             )
                           })}
@@ -444,9 +449,9 @@ export function PaymentsTab({
 
                     {/* Paid info or Mark as Paid button */}
                     {payment.status === 'paid' ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Check className="h-4 w-4 text-green-500" />
-                        {t('paidBy', { name: getUserName(payment.paidByUserId!) })}
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                        <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 shrink-0" />
+                        <span>{t('paidBy', { name: getUserName(payment.paidByUserId!) })}</span>
                         {payment.paidDate && (
                           <span>• {t('paidOn', { date: format(new Date(payment.paidDate), 'MMM d') })}</span>
                         )}
@@ -455,7 +460,7 @@ export function PaymentsTab({
                       <Button
                         onClick={() => handleMarkPaid(payment)}
                         variant={payment.status === 'overdue' ? 'destructive' : 'default'}
-                        className="w-full h-12"
+                        className="w-full h-10 sm:h-12 text-sm"
                         disabled={isFutureMonth}
                       >
                         <Check className="h-4 w-4 mr-2" />

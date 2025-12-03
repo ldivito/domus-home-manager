@@ -293,36 +293,36 @@ export function AnalysisTab({
   const formatTooltipValue = (value: number) => `$ ${formatARS(value)}`
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
             {t('title')}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm">
             {t('subtitle')}
           </CardDescription>
         </CardHeader>
       </Card>
 
       {/* Row 1: Income and Expenses per month */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 1. Income per Month */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
               {t('charts.incomePerMonth')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
               <BarChart data={incomePerMonthData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
                 <Tooltip formatter={formatTooltipValue} />
                 <Bar dataKey="value" fill={CHART_COLORS.income} radius={[4, 4, 0, 0]} name={t('charts.income')} />
               </BarChart>
@@ -332,18 +332,18 @@ export function AnalysisTab({
 
         {/* 2. Expenses per Month */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-red-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
               {t('charts.expensesPerMonth')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
               <BarChart data={expensesPerMonthData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
                 <Tooltip formatter={formatTooltipValue} />
                 <Bar dataKey="value" fill={CHART_COLORS.expense} radius={[4, 4, 0, 0]} name={t('charts.expenses')} />
               </BarChart>
@@ -353,23 +353,23 @@ export function AnalysisTab({
       </div>
 
       {/* Row 2: Service and Member progressions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 3. Service/Expense Progression */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-purple-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
               {t('charts.serviceProgression')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
               <LineChart data={expenseProgressionData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
                 <Tooltip formatter={formatTooltipValue} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
                 {activeExpenseNames.map((name, index) => (
                   <Line
                     key={name}
@@ -377,7 +377,7 @@ export function AnalysisTab({
                     dataKey={name}
                     stroke={COLORS[index % COLORS.length]}
                     strokeWidth={2}
-                    dot={{ r: 3 }}
+                    dot={{ r: 2 }}
                   />
                 ))}
               </LineChart>
@@ -387,20 +387,20 @@ export function AnalysisTab({
 
         {/* 4. Member Income Progression */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               {t('charts.memberIncomeProgression')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
               <LineChart data={memberIncomeProgressionData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
                 <Tooltip formatter={formatTooltipValue} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
                 {residentUserNames.map((name, index) => {
                   const user = users.find(u => u.name === name)
                   return (
@@ -410,7 +410,7 @@ export function AnalysisTab({
                       dataKey={name}
                       stroke={user?.color || COLORS[index % COLORS.length]}
                       strokeWidth={2}
-                      dot={{ r: 3 }}
+                      dot={{ r: 2 }}
                     />
                   )
                 })}
@@ -421,23 +421,23 @@ export function AnalysisTab({
       </div>
 
       {/* Row 3: Income vs Expenses and Savings Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 5. Income vs Expenses Comparison */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-indigo-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-500" />
               {t('charts.incomeVsExpenses')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
               <BarChart data={incomeVsExpensesData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
                 <Tooltip formatter={formatTooltipValue} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
                 <Bar dataKey="income" fill={CHART_COLORS.income} name={t('charts.income')} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expenses" fill={CHART_COLORS.expense} name={t('charts.expenses')} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -447,20 +447,20 @@ export function AnalysisTab({
 
         {/* 8. Net Savings Trend */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-emerald-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
               {t('charts.savingsTrend')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
               <AreaChart data={savingsTrendData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
                 <Tooltip formatter={formatTooltipValue} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
                 <Area
                   type="monotone"
                   dataKey="savings"
@@ -484,24 +484,24 @@ export function AnalysisTab({
       </div>
 
       {/* Row 4: Pie Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* 6. Expense Categories Breakdown */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <PieChartIcon className="h-5 w-5 text-orange-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
               {t('charts.expenseCategories')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={200} className="sm:!h-[250px]">
               <PieChart>
                 <Pie
                   data={expenseCategoryData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
+                  innerRadius={35}
+                  outerRadius={60}
                   paddingAngle={2}
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
@@ -519,21 +519,21 @@ export function AnalysisTab({
 
         {/* 7. Income Share by Member */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
               {t('charts.incomeShare')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={200} className="sm:!h-[250px]">
               <PieChart>
                 <Pie
                   data={incomeShareData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
+                  innerRadius={35}
+                  outerRadius={60}
                   paddingAngle={2}
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
@@ -550,23 +550,23 @@ export function AnalysisTab({
         </Card>
 
         {/* 9. Payment Status Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-cyan-500" />
+        <Card className="sm:col-span-2 lg:col-span-1">
+          <CardHeader className="pb-2 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-500" />
               {t('charts.paymentStatus')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={200} className="sm:!h-[250px]">
               {paymentStatusData.length > 0 ? (
                 <PieChart>
                   <Pie
                     data={paymentStatusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    innerRadius={35}
+                    outerRadius={60}
                     paddingAngle={2}
                     dataKey="value"
                     label={({ name, value }) => `${name}: ${value}`}
@@ -579,7 +579,7 @@ export function AnalysisTab({
                   <Tooltip />
                 </PieChart>
               ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground">
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
                   {t('charts.noPaymentData')}
                 </div>
               )}
@@ -590,25 +590,25 @@ export function AnalysisTab({
 
       {/* Row 5: Exchange Rate Trend */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <ArrowRightLeft className="h-5 w-5 text-amber-500" />
+        <CardHeader className="pb-2 px-4 sm:px-6">
+          <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+            <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
             {t('charts.exchangeRateTrend')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
+        <CardContent className="px-2 sm:px-6">
+          <ResponsiveContainer width="100%" height={200} className="sm:!h-[250px]">
             <LineChart data={exchangeRateTrendData}>
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} width={40} />
               <Tooltip formatter={(value) => [`$${formatARS(value as number)}`, 'USD/ARS']} />
               <Line
                 type="monotone"
                 dataKey="rate"
                 stroke="#F59E0B"
                 strokeWidth={2}
-                dot={{ r: 4, fill: '#F59E0B' }}
+                dot={{ r: 3, fill: '#F59E0B' }}
                 connectNulls
                 name="USD/ARS"
               />

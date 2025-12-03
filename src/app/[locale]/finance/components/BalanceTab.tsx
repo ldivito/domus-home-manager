@@ -239,73 +239,73 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
+          <CardContent className="p-4 sm:pt-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
                   {t('totalIncome')}
                 </p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300">
                   $ {formatARS(totalIncomeARS)}
                 </p>
                 {rate > 1 && (
-                  <p className="text-sm text-blue-600/70 dark:text-blue-400/70">
+                  <p className="text-xs sm:text-sm text-blue-600/70 dark:text-blue-400/70">
                     USD {formatARS(totalIncomeARS / rate)}
                   </p>
                 )}
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full">
-                <Wallet className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full shrink-0 ml-2">
+                <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 border-purple-200 dark:border-purple-800">
-          <CardContent className="pt-6">
+          <CardContent className="p-4 sm:pt-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-purple-600 dark:text-purple-400 truncate">
                   {t('totalPaidExpenses')}
                 </p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                <p className="text-lg sm:text-2xl font-bold text-purple-700 dark:text-purple-300">
                   $ {formatARS(totalExpensesPaidARS)}
                 </p>
                 {rate > 1 && (
-                  <p className="text-sm text-purple-600/70 dark:text-purple-400/70">
+                  <p className="text-xs sm:text-sm text-purple-600/70 dark:text-purple-400/70">
                     USD {formatARS(totalExpensesPaidARS / rate)}
                   </p>
                 )}
               </div>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full">
-                <Receipt className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full shrink-0 ml-2">
+                <Receipt className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border-emerald-200 dark:border-emerald-800">
-          <CardContent className="pt-6">
+          <CardContent className="p-4 sm:pt-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-emerald-600 dark:text-emerald-400 truncate">
                   {t('remaining')}
                 </p>
-                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                <p className="text-lg sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300">
                   $ {formatARS(totalIncomeARS - totalExpensesPaidARS)}
                 </p>
                 {rate > 1 && (
-                  <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70">
+                  <p className="text-xs sm:text-sm text-emerald-600/70 dark:text-emerald-400/70">
                     USD {formatARS((totalIncomeARS - totalExpensesPaidARS) / rate)}
                   </p>
                 )}
               </div>
-              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-full">
-                <PiggyBank className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="p-2 sm:p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-full shrink-0 ml-2">
+                <PiggyBank className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>
@@ -314,32 +314,32 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
 
       {/* Balance Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Scale className="h-6 w-6" />
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+            <Scale className="h-5 w-5 sm:h-6 sm:w-6" />
             {t('title')}
           </CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription className="mt-1 text-sm">
             {t('subtitle')}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {paidPayments.length === 0 ? (
-            <div className="text-center py-12">
-              <Scale className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t('noPaymentsYet')}</h3>
-              <p className="text-muted-foreground">{t('noPaymentsDescription')}</p>
+            <div className="text-center py-8 sm:py-12">
+              <Scale className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground/50 mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium mb-2">{t('noPaymentsYet')}</h3>
+              <p className="text-sm text-muted-foreground">{t('noPaymentsDescription')}</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Individual Balances */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">{t('summary')}</h3>
+                <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('summary')}</h3>
                 <div className="space-y-3">
                   {userBalances.map(balance => (
                     <div
                       key={balance.userId}
-                      className={`p-4 border rounded-xl transition-all ${
+                      className={`p-3 sm:p-4 border rounded-xl transition-all ${
                         balance.netBalance > 0.01
                           ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
                           : balance.netBalance < -0.01
@@ -347,72 +347,79 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                             : 'bg-card border-border'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                      {/* Mobile: Stacked layout, Desktop: Side by side */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        {/* User info */}
+                        <div className="flex items-center gap-3 sm:gap-4">
                           <div
-                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0"
                             style={{ backgroundColor: balance.userColor }}
                           >
                             {balance.userName.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-lg">{balance.userName}</p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-base sm:text-lg">{balance.userName}</p>
                               <Badge variant="secondary" className="text-xs">
                                 {balance.incomePercentage.toFixed(0)}%
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                            {/* Payment details - hidden on mobile, shown on desktop */}
+                            <div className="hidden sm:flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
                               <span className="flex items-center gap-1">
                                 <span className="text-muted-foreground/70">{t('shouldPay')}:</span>
                                 <span className="font-medium">$ {formatARS(balance.totalOwed)}</span>
-                                {rate > 1 && (
-                                  <span className="text-muted-foreground/50 text-xs">(USD {formatARS(balance.totalOwed / rate)})</span>
-                                )}
                               </span>
                               <span className="text-muted-foreground/50">•</span>
                               <span className="flex items-center gap-1">
                                 <span className="text-muted-foreground/70">{t('actuallyPaid')}:</span>
                                 <span className="font-medium">$ {formatARS(balance.totalPaid)}</span>
-                                {rate > 1 && (
-                                  <span className="text-muted-foreground/50 text-xs">(USD {formatARS(balance.totalPaid / rate)})</span>
-                                )}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-2xl font-bold ${
-                            balance.netBalance > 0.01
-                              ? 'text-green-600 dark:text-green-400'
-                              : balance.netBalance < -0.01
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-muted-foreground'
-                          }`}>
-                            {balance.netBalance >= 0 ? '+' : '-'}$ {formatARS(Math.abs(balance.netBalance))}
-                          </p>
-                          {rate > 1 && (
-                            <p className="text-sm text-muted-foreground/70">
-                              USD {formatARS(Math.abs(balance.netBalance) / rate)}
+
+                        {/* Balance amount and status */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-13 sm:pl-0">
+                          {/* Mobile: Show payment summary */}
+                          <div className="sm:hidden text-xs text-muted-foreground">
+                            <div>{t('shouldPay')}: ${formatARS(balance.totalOwed)}</div>
+                            <div>{t('actuallyPaid')}: ${formatARS(balance.totalPaid)}</div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <p className={`text-xl sm:text-2xl font-bold ${
+                              balance.netBalance > 0.01
+                                ? 'text-green-600 dark:text-green-400'
+                                : balance.netBalance < -0.01
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-muted-foreground'
+                            }`}>
+                              {balance.netBalance >= 0 ? '+' : '-'}$ {formatARS(Math.abs(balance.netBalance))}
                             </p>
-                          )}
-                          <div className="flex items-center justify-end gap-1.5 mt-1">
-                            {balance.netBalance > 0.01 ? (
-                              <>
-                                <TrendingUp className="h-4 w-4 text-green-500" />
-                                <span className="text-sm font-medium text-green-600 dark:text-green-400">{t('toReceive')}</span>
-                              </>
-                            ) : balance.netBalance < -0.01 ? (
-                              <>
-                                <TrendingDown className="h-4 w-4 text-red-500" />
-                                <span className="text-sm font-medium text-red-600 dark:text-red-400">{t('toPay')}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Check className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium text-muted-foreground">{t('settled')}</span>
-                              </>
+                            {rate > 1 && (
+                              <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                USD {formatARS(Math.abs(balance.netBalance) / rate)}
+                              </p>
                             )}
+                            <div className="flex items-center justify-end gap-1 sm:gap-1.5 mt-1">
+                              {balance.netBalance > 0.01 ? (
+                                <>
+                                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
+                                  <span className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">{t('toReceive')}</span>
+                                </>
+                              ) : balance.netBalance < -0.01 ? (
+                                <>
+                                  <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
+                                  <span className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400">{t('toPay')}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">{t('settled')}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -423,22 +430,22 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
 
               {/* Settlement Suggestions */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">{t('settlement')}</h3>
+                <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('settlement')}</h3>
                 {isAllSettled ? (
-                  <div className="text-center py-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-200 dark:border-green-800">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                      <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                  <div className="text-center py-6 sm:py-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-200 dark:border-green-800">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <Check className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
                     </div>
-                    <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                    <p className="text-base sm:text-lg font-semibold text-green-700 dark:text-green-300">
                       {t('noSettlement')}
                     </p>
-                    <p className="text-sm text-green-600/70 dark:text-green-400/70 mt-1">
+                    <p className="text-xs sm:text-sm text-green-600/70 dark:text-green-400/70 mt-1 px-4">
                       {t('allBalanced')}
                     </p>
                   </div>
                 ) : settlements.length === 0 ? (
-                  <div className="text-center py-8 bg-muted/50 rounded-xl">
-                    <p className="text-muted-foreground">{t('noSettlementsNeeded')}</p>
+                  <div className="text-center py-6 sm:py-8 bg-muted/50 rounded-xl">
+                    <p className="text-sm text-muted-foreground">{t('noSettlementsNeeded')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -449,49 +456,57 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                       return (
                         <div
                           key={index}
-                          className={`p-4 border rounded-xl transition-all ${
+                          className={`p-3 sm:p-4 border rounded-xl transition-all ${
                             isPaid
                               ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800'
                               : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800'
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
-                                style={{ backgroundColor: settlement.fromColor }}
-                              >
-                                {settlement.fromName.charAt(0).toUpperCase()}
+                          {/* Mobile: Stacked layout */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                            {/* From -> To users */}
+                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-start">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
+                                  style={{ backgroundColor: settlement.fromColor }}
+                                >
+                                  {settlement.fromName.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="text-left">
+                                  <span className="font-semibold text-sm sm:text-base">{settlement.fromName}</span>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground">{t('pays')}</p>
+                                </div>
                               </div>
-                              <div>
-                                <span className="font-semibold">{settlement.fromName}</span>
-                                <p className="text-xs text-muted-foreground">{t('pays')}</p>
-                              </div>
-                              <ArrowRight className={`h-5 w-5 mx-2 ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
-                              <div
-                                className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md"
-                                style={{ backgroundColor: settlement.toColor }}
-                              >
-                                {settlement.toName.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <span className="font-semibold">{settlement.toName}</span>
-                                <p className="text-xs text-muted-foreground">{t('receives')}</p>
+                              <ArrowRight className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
+                                  style={{ backgroundColor: settlement.toColor }}
+                                >
+                                  {settlement.toName.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="text-left">
+                                  <span className="font-semibold text-sm sm:text-base">{settlement.toName}</span>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground">{t('receives')}</p>
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right flex items-center gap-3">
-                              <div>
-                                <p className={`text-2xl font-bold ${isPaid ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+
+                            {/* Amount */}
+                            <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-3">
+                              <div className="text-center sm:text-right">
+                                <p className={`text-xl sm:text-2xl font-bold ${isPaid ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                                   $ {formatARS(settlement.amount)}
                                 </p>
                                 {rate > 1 && (
-                                  <p className="text-sm text-muted-foreground/70">
+                                  <p className="text-xs sm:text-sm text-muted-foreground/70">
                                     USD {formatARS(settlement.amount / rate)}
                                   </p>
                                 )}
                               </div>
                               {isPaid && (
-                                <Badge className="bg-green-500">
+                                <Badge className="bg-green-500 text-xs">
                                   <Check className="h-3 w-3 mr-1" />
                                   {t('paid')}
                                 </Badge>
@@ -501,9 +516,9 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
 
                           {/* Action buttons */}
                           {isPaid ? (
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Check className="h-4 w-4 text-green-500" />
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 shrink-0" />
                                 {settlementPayment?.paidDate && (
                                   <span>{t('paidOn', { date: format(new Date(settlementPayment.paidDate), 'MMM d, yyyy') })}</span>
                                 )}
@@ -515,16 +530,16 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleUnmarkSettlement(settlementPayment!)}
-                                className="text-muted-foreground hover:text-foreground"
+                                className="text-muted-foreground hover:text-foreground h-8 text-xs sm:text-sm"
                               >
-                                <Undo2 className="h-4 w-4 mr-1" />
+                                <Undo2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                                 {t('unmarkPaid')}
                               </Button>
                             </div>
                           ) : (
                             <Button
                               onClick={() => handleMarkSettlementPaid(settlement)}
-                              className="w-full h-11"
+                              className="w-full h-10 sm:h-11 text-sm"
                             >
                               <Check className="h-4 w-4 mr-2" />
                               {t('markSettled')}

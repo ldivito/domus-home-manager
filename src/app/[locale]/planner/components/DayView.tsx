@@ -18,15 +18,15 @@ export function DayView({ date, items, usersById, onView, onEdit }: DayViewProps
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">
+      <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+        <CardTitle className="text-lg sm:text-2xl">
           {date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="px-3 sm:px-6">
+        <div className="space-y-2 sm:space-y-3">
           {sorted.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">No events</div>
+            <div className="text-center text-muted-foreground py-6 sm:py-8 text-sm sm:text-base">No events</div>
           )}
           {sorted.map((item, idx) => (
             <EventPill

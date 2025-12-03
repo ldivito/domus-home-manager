@@ -199,38 +199,38 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
   return (
     <>
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Receipt className="h-6 w-6" />
+              <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                <Receipt className="h-5 w-5 sm:h-6 sm:w-6" />
                 {t('title')}
               </CardTitle>
-              <CardDescription className="mt-1">
+              <CardDescription className="mt-1 text-sm">
                 {t('subtitle')}
               </CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog()} className="h-12 px-6">
-              <Plus className="h-5 w-5 mr-2" />
+            <Button onClick={() => handleOpenDialog()} className="h-10 sm:h-12 px-4 sm:px-6 w-full sm:w-auto">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               {t('addExpense')}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {/* Monthly Total Summary */}
           {activeExpenses.length > 0 && (
-            <div className="mb-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">{t('totalMonthly')}</p>
-              <p className="text-2xl font-bold">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('totalMonthly')}</p>
+              <p className="text-lg sm:text-2xl font-bold">
                 $ {formatARS(totalActiveARS)}
                 {rate > 1 && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground/70">
+                  <span className="ml-2 text-xs sm:text-sm font-normal text-muted-foreground/70">
                     (USD {formatARS(totalActiveARS / rate)})
                   </span>
                 )}
               </p>
               {rate > 1 && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   1 USD = $ {formatARS(rate)} ARS
                 </p>
               )}
@@ -238,90 +238,99 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
           )}
 
           {expenses.length === 0 ? (
-            <div className="text-center py-12">
-              <Receipt className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t('noExpenses')}</h3>
-              <p className="text-muted-foreground mb-4">{t('noExpensesDescription')}</p>
-              <Button onClick={() => handleOpenDialog()}>
+            <div className="text-center py-8 sm:py-12">
+              <Receipt className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground/50 mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium mb-2">{t('noExpenses')}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{t('noExpensesDescription')}</p>
+              <Button onClick={() => handleOpenDialog()} className="h-10 sm:h-11">
                 <Plus className="h-4 w-4 mr-2" />
                 {t('addExpense')}
               </Button>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Active Expenses */}
               {activeExpenses.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                    <Badge variant="default" className="bg-green-500">{t('active')}</Badge>
+                  <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 flex items-center gap-2">
+                    <Badge variant="default" className="bg-green-500 text-xs">{t('active')}</Badge>
                     <span>{activeExpenses.length} expenses</span>
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {activeExpenses.map(expense => {
                       const IconComponent = getCategoryIcon(expense.category)
                       const amountInARS = getAmountInARS(expense)
                       return (
                         <div
                           key={expense.id}
-                          className="flex items-center justify-between p-4 bg-card border rounded-lg"
+                          className="p-3 sm:p-4 bg-card border rounded-lg"
                         >
-                          <div className="flex items-center gap-4">
-                            <div
-                              className="p-3 rounded-full"
-                              style={{ backgroundColor: `${getCategoryColor(expense.category)}20` }}
-                            >
-                              <IconComponent
-                                className="h-5 w-5"
-                                style={{ color: getCategoryColor(expense.category) }}
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-lg">{expense.name}</p>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{getCategoryName(expense.category)}</span>
-                                <span>•</span>
-                                <span>{t(`frequency.${expense.frequency}`)}</span>
-                                <span>•</span>
-                                <span>{t('dueOn', { day: expense.dueDay })}</span>
-                                {expense.currency === 'USD' && (
-                                  <>
-                                    <span>•</span>
+                          {/* Mobile: Stacked layout */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            {/* Expense info */}
+                            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                              <div
+                                className="p-2 sm:p-3 rounded-full shrink-0"
+                                style={{ backgroundColor: `${getCategoryColor(expense.category)}20` }}
+                              >
+                                <IconComponent
+                                  className="h-4 w-4 sm:h-5 sm:w-5"
+                                  style={{ color: getCategoryColor(expense.category) }}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-base sm:text-lg truncate">{expense.name}</p>
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                                  <span>{getCategoryName(expense.category)}</span>
+                                  <span className="hidden sm:inline">•</span>
+                                  <span className="hidden sm:inline">{t(`frequency.${expense.frequency}`)}</span>
+                                  <span className="hidden sm:inline">•</span>
+                                  <span className="hidden sm:inline">{t('dueOn', { day: expense.dueDay })}</span>
+                                  {expense.currency === 'USD' && (
                                     <Badge variant="secondary" className="text-xs">
                                       USD {formatARS(expense.amount)}
                                     </Badge>
-                                  </>
-                                )}
+                                  )}
+                                </div>
+                                {/* Mobile-only: Show frequency and due date */}
+                                <div className="sm:hidden text-xs text-muted-foreground mt-1">
+                                  {t(`frequency.${expense.frequency}`)} • {t('dueOn', { day: expense.dueDay })}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="text-2xl font-bold">$ {formatARS(amountInARS)}</p>
-                              {rate > 1 && (
-                                <p className="text-sm text-muted-foreground/70">
-                                  USD {formatARS(amountInARS / rate)}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={expense.isActive}
-                                onCheckedChange={() => handleToggleActive(expense)}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenDialog(expense)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(expense.id!)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+
+                            {/* Amount and actions */}
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-11 sm:pl-0">
+                              <div className="text-left sm:text-right">
+                                <p className="text-xl sm:text-2xl font-bold">$ {formatARS(amountInARS)}</p>
+                                {rate > 1 && (
+                                  <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                    USD {formatARS(amountInARS / rate)}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                <Switch
+                                  checked={expense.isActive}
+                                  onCheckedChange={() => handleToggleActive(expense)}
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 sm:h-9 sm:w-9"
+                                  onClick={() => handleOpenDialog(expense)}
+                                >
+                                  <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 sm:h-9 sm:w-9"
+                                  onClick={() => handleDelete(expense.id!)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -334,55 +343,52 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
               {/* Inactive Expenses */}
               {inactiveExpenses.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                    <Badge variant="secondary">{t('inactive')}</Badge>
+                  <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">{t('inactive')}</Badge>
                     <span>{inactiveExpenses.length} expenses</span>
                   </h3>
-                  <div className="space-y-3 opacity-60">
+                  <div className="space-y-2 sm:space-y-3 opacity-60">
                     {inactiveExpenses.map(expense => {
                       const IconComponent = getCategoryIcon(expense.category)
                       const amountInARS = getAmountInARS(expense)
                       return (
                         <div
                           key={expense.id}
-                          className="flex items-center justify-between p-4 bg-card border rounded-lg"
+                          className="p-3 sm:p-4 bg-card border rounded-lg"
                         >
-                          <div className="flex items-center gap-4">
-                            <div
-                              className="p-3 rounded-full bg-muted"
-                            >
-                              <IconComponent className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-lg">{expense.name}</p>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{getCategoryName(expense.category)}</span>
-                                {expense.currency === 'USD' && (
-                                  <>
-                                    <span>•</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                              <div className="p-2 sm:p-3 rounded-full bg-muted shrink-0">
+                                <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-base sm:text-lg truncate">{expense.name}</p>
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                                  <span>{getCategoryName(expense.category)}</span>
+                                  {expense.currency === 'USD' && (
                                     <Badge variant="secondary" className="text-xs">
                                       USD {formatARS(expense.amount)}
                                     </Badge>
-                                  </>
-                                )}
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="text-xl font-semibold text-muted-foreground">
-                                $ {formatARS(amountInARS)}
-                              </p>
-                              {rate > 1 && (
-                                <p className="text-sm text-muted-foreground/70">
-                                  USD {formatARS(amountInARS / rate)}
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-11 sm:pl-0">
+                              <div className="text-left sm:text-right">
+                                <p className="text-lg sm:text-xl font-semibold text-muted-foreground">
+                                  $ {formatARS(amountInARS)}
                                 </p>
-                              )}
+                                {rate > 1 && (
+                                  <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                    USD {formatARS(amountInARS / rate)}
+                                  </p>
+                                )}
+                              </div>
+                              <Switch
+                                checked={expense.isActive}
+                                onCheckedChange={() => handleToggleActive(expense)}
+                              />
                             </div>
-                            <Switch
-                              checked={expense.isActive}
-                              onCheckedChange={() => handleToggleActive(expense)}
-                            />
                           </div>
                         </div>
                       )

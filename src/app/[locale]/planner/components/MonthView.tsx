@@ -75,55 +75,109 @@ export function MonthView({ month, itemsByDate, usersById, startOfWeek = 'sunday
     ? [...sundayFirstDayNames.slice(1), sundayFirstDayNames[0]] // Move Sunday to the end
     : sundayFirstDayNames
 
+  const today = new Date()
+
   return (
     <div className="space-y-2">
-      {/* Day names header - only show on larger screens where we have 7 columns */}
-      <div className="hidden sm:grid sm:grid-cols-7 gap-2">
-        {dayNames.map((dayName, idx) => (
-          <div key={idx} className="text-center text-sm font-semibold text-muted-foreground p-2">
-            {dayName}
+      {/* Mobile: Horizontally scrollable calendar */}
+      <div className="sm:hidden -mx-2 px-2 overflow-x-auto scrollbar-thin">
+        <div style={{ minWidth: '500px' }}>
+          {/* Day names header */}
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {dayNames.map((dayName, idx) => (
+              <div key={idx} className="text-center text-[10px] font-medium text-muted-foreground py-1">
+                {dayName}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      
-      {/* Calendar grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
-        {cells.map((day, idx) => {
-        const isCurrentMonth = day.getMonth() === currentMonth
-        const key = formatKey(day)
-        const list = (itemsByDate[key] || []).slice(0, 3)
-        const dayOfWeekIndex = idx % 7 // Get the day of week index (0-6)
-        return (
-          <Card key={`${key}-${idx}`} className={!isCurrentMonth ? 'opacity-60' : ''}>
-            <CardContent className="pt-2 pb-3">
-              <div className="flex justify-between items-center mb-1">
-                <div className="text-xs text-muted-foreground">
-                  {dayNames[dayOfWeekIndex]}
+
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((day, idx) => {
+              const isCurrentMonth = day.getMonth() === currentMonth
+              const isToday = today.toDateString() === day.toDateString()
+              const key = formatKey(day)
+              const list = (itemsByDate[key] || []).slice(0, 2)
+              return (
+                <div
+                  key={`${key}-${idx}`}
+                  className={`
+                    min-h-[70px] p-1 rounded-md border bg-card/80
+                    ${!isCurrentMonth ? 'opacity-40' : ''}
+                    ${isToday ? 'ring-2 ring-primary ring-inset' : ''}
+                  `}
+                >
+                  <div className="text-xs font-medium text-right mb-0.5">{day.getDate()}</div>
+                  <div className="space-y-0.5">
+                    {list.map((item, itemIdx) => (
+                      <EventPill
+                        key={`${item.source}-${item.event.id ?? itemIdx}`}
+                        event={item.event}
+                        source={item.source}
+                        typeLabel={item.typeLabel}
+                        usersById={usersById}
+                        compact
+                        onView={(payload)=>onView?.(payload)}
+                        onEdit={(payload)=>onEdit?.(payload)}
+                        hideEdit={item.hideEdit}
+                      />
+                    ))}
+                    {(itemsByDate[key]?.length || 0) > 2 && (
+                      <div className="text-[8px] text-muted-foreground text-center">+{(itemsByDate[key]!.length - 2)}</div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-sm font-semibold">{day.getDate()}</div>
-              </div>
-              <div className="space-y-1">
-                {list.map((item, idx) => (
-                  <EventPill
-                    key={`${item.source}-${item.event.id ?? idx}`}
-                    event={item.event}
-                    source={item.source}
-                    typeLabel={item.typeLabel}
-                    usersById={usersById}
-                    compact
-                    onView={(payload)=>onView?.(payload)}
-                    onEdit={(payload)=>onEdit?.(payload)}
-                    hideEdit={item.hideEdit}
-                  />
-                ))}
-                {(itemsByDate[key]?.length || 0) > 3 && (
-                  <div className="text-[10px] text-muted-foreground">+{(itemsByDate[key]!.length - 3)} {t('more')}</div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })}
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: Standard grid view */}
+      <div className="hidden sm:block space-y-2">
+        {/* Day names header */}
+        <div className="grid grid-cols-7 gap-2">
+          {dayNames.map((dayName, idx) => (
+            <div key={idx} className="text-center text-sm font-semibold text-muted-foreground p-2">
+              {dayName}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-2">
+          {cells.map((day, idx) => {
+            const isCurrentMonth = day.getMonth() === currentMonth
+            const isToday = today.toDateString() === day.toDateString()
+            const key = formatKey(day)
+            const list = (itemsByDate[key] || []).slice(0, 3)
+            return (
+              <Card key={`${key}-${idx}`} className={`${!isCurrentMonth ? 'opacity-60' : ''} ${isToday ? 'ring-2 ring-primary' : ''}`}>
+                <CardContent className="pt-2 pb-3">
+                  <div className="text-sm font-semibold text-right mb-1">{day.getDate()}</div>
+                  <div className="space-y-1">
+                    {list.map((item, itemIdx) => (
+                      <EventPill
+                        key={`${item.source}-${item.event.id ?? itemIdx}`}
+                        event={item.event}
+                        source={item.source}
+                        typeLabel={item.typeLabel}
+                        usersById={usersById}
+                        compact
+                        onView={(payload)=>onView?.(payload)}
+                        onEdit={(payload)=>onEdit?.(payload)}
+                        hideEdit={item.hideEdit}
+                      />
+                    ))}
+                    {(itemsByDate[key]?.length || 0) > 3 && (
+                      <div className="text-[10px] text-muted-foreground">+{(itemsByDate[key]!.length - 3)} {t('more')}</div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

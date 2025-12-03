@@ -128,7 +128,8 @@ export default function ChoresPage() {
         lastCompletedBy: completedByUserId,
         completedAt: now,
         nextDue,
-        isCompleted: true
+        isCompleted: true,
+        updatedAt: now
       })
 
       await loadData()
@@ -145,7 +146,8 @@ export default function ChoresPage() {
       await db.chores.update(chore.id, {
         isCompleted: false,
         completedAt: undefined,
-        lastCompletedBy: undefined
+        lastCompletedBy: undefined,
+        updatedAt: new Date()
       })
 
       await loadData()
@@ -156,7 +158,7 @@ export default function ChoresPage() {
 
   const handleEditChoreSubmit = async (choreId: string, choreData: Partial<Chore>) => {
     try {
-      await db.chores.update(choreId, choreData)
+      await db.chores.update(choreId, { ...choreData, updatedAt: new Date() })
       await loadData()
     } catch (error) {
       console.error('Error editing chore:', error)

@@ -59,6 +59,7 @@ export function EditEventDialog({ open, onOpenChange, users, event }: EditEventD
         time: time || undefined,
         type,
         userIds: selectedUserIds.length ? selectedUserIds : undefined,
+        updatedAt: new Date()
       })
       onOpenChange(false)
     } finally {

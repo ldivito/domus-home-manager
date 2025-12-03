@@ -84,7 +84,8 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
           amount: amount.trim(),
           importance,
           timesUsed: existingItem.timesUsed + 1,
-          lastUsed: new Date()
+          lastUsed: new Date(),
+          updatedAt: new Date()
         })
       } else {
         // Create new saved item

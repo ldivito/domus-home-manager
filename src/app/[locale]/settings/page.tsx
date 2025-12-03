@@ -131,6 +131,7 @@ export default function SettingsPage() {
       const settingsToSave: HomeSettings = {
         ...settings,
         lastUpdated: now,
+        updatedAt: now,
         createdAt: homeSettings.createdAt || now
       } as HomeSettings
 

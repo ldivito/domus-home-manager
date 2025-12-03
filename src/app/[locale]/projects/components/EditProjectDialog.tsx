@@ -64,6 +64,7 @@ export function EditProjectDialog({ open, onOpenChange, project, users }: EditPr
         estimatedCost: estimatedCost ? parseFloat(estimatedCost) : undefined,
         priority,
         status,
+        updatedAt: new Date()
       })
 
       onOpenChange(false)

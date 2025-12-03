@@ -119,6 +119,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
         linkedProjectId: linkedProjectId && linkedProjectId !== 'none' ? linkedProjectId : undefined,
         estimatedTime: hasEstimatedTime ? { hours, minutes } : undefined,
         blockedByTaskId: blockedByTaskId && blockedByTaskId !== 'none' ? blockedByTaskId : undefined,
+        updatedAt: new Date()
       })
 
       onOpenChange(false)

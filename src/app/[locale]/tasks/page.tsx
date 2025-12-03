@@ -83,7 +83,7 @@ export default function TasksPage() {
 
   const handleMarkComplete = async (taskId: string) => {
     try {
-      await db.tasks.update(taskId, { isCompleted: true })
+      await db.tasks.update(taskId, { isCompleted: true, updatedAt: new Date() })
     } catch (error) {
       console.error('Error marking task as complete:', error)
     }

@@ -166,7 +166,8 @@ export default function MealsPage() {
         if (savedItem.id) {
           await db.savedGroceryItems.update(savedItem.id, {
             timesUsed: savedItem.timesUsed + 1,
-            lastUsed: new Date()
+            lastUsed: new Date(),
+            updatedAt: new Date()
           })
         }
       }

@@ -63,7 +63,8 @@ export default function GroceryPage() {
       // Update usage count in saved items
       await db.savedGroceryItems.update(savedItem.id!, {
         timesUsed: savedItem.timesUsed + 1,
-        lastUsed: new Date()
+        lastUsed: new Date(),
+        updatedAt: new Date()
       })
     } catch (error) {
       console.error('Error adding saved item:', error)

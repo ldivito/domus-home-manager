@@ -1,4 +1,4 @@
-import { db, getDatabase } from './db'
+import { db, getDatabase, DeletionLog } from './db'
 import { checkMigrationNeeded, performMigration } from './migration'
 
 export interface SyncStatus {
@@ -156,9 +156,7 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
           id: (record as {id?: string}).id || '',
           data: record,
           updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
-          deletedAt: (record as {deletedAt?: Date}).deletedAt
-            ? new Date((record as {deletedAt?: Date}).deletedAt!)
-            : null
+          deletedAt: null
         })
       }
     } catch (error) {
@@ -166,7 +164,37 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
     }
   }
 
+  // Collect deletions from deletion log
+  try {
+    const deletions: DeletionLog[] = since
+      ? await db.deletionLog.where('deletedAt').above(since).toArray()
+      : await db.deletionLog.toArray()
+
+    for (const deletion of deletions) {
+      changes.push({
+        table: deletion.tableName,
+        id: deletion.recordId,
+        data: { id: deletion.recordId, householdId: deletion.householdId },
+        updatedAt: new Date(deletion.deletedAt),
+        deletedAt: new Date(deletion.deletedAt)
+      })
+    }
+  } catch (error) {
+    console.error('Error collecting deletions:', error)
+  }
+
   return changes
+}
+
+/**
+ * Clear deletion log after successful sync
+ */
+async function clearDeletionLog(before: Date): Promise<void> {
+  try {
+    await db.deletionLog.where('deletedAt').belowOrEqual(before).delete()
+  } catch (error) {
+    console.error('Error clearing deletion log:', error)
+  }
 }
 
 /**
@@ -288,6 +316,7 @@ export async function performSync(forceFullSync: boolean = false): Promise<SyncR
     const localChanges = await collectLocalChanges(lastSync)
 
     // 2. Push local changes to server
+    const syncStartTime = new Date()
     if (localChanges.length > 0) {
       const pushResult = await pushChanges(localChanges)
       if (!pushResult.success) {
@@ -295,6 +324,9 @@ export async function performSync(forceFullSync: boolean = false): Promise<SyncR
         return result
       }
       result.pushed = pushResult.count
+
+      // Clear deletion log for successfully pushed deletions
+      await clearDeletionLog(syncStartTime)
     }
 
     // 3. Pull remote changes from server

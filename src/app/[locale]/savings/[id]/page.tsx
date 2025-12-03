@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useRouter, Link } from '@/i18n/navigation'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/lib/db'
+import { db, deleteWithSync, bulkDeleteWithSync } from '@/lib/db'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -105,11 +105,16 @@ export default function SavingsDetailPage() {
     if (!campaign) return
 
     try {
-      // Delete all related data
-      await db.savingsContributions.where('campaignId').equals(campaignId).delete()
-      await db.savingsParticipants.where('campaignId').equals(campaignId).delete()
-      await db.savingsMilestones.where('campaignId').equals(campaignId).delete()
-      await db.savingsCampaigns.delete(campaignId)
+      // Get all related record IDs for sync-aware deletion
+      const contributionIds = (await db.savingsContributions.where('campaignId').equals(campaignId).toArray()).map(c => c.id!)
+      const participantIds = (await db.savingsParticipants.where('campaignId').equals(campaignId).toArray()).map(p => p.id!)
+      const milestoneIds = (await db.savingsMilestones.where('campaignId').equals(campaignId).toArray()).map(m => m.id!)
+
+      // Delete all related data with sync tracking
+      await bulkDeleteWithSync(db.savingsContributions, 'savingsContributions', contributionIds)
+      await bulkDeleteWithSync(db.savingsParticipants, 'savingsParticipants', participantIds)
+      await bulkDeleteWithSync(db.savingsMilestones, 'savingsMilestones', milestoneIds)
+      await deleteWithSync(db.savingsCampaigns, 'savingsCampaigns', campaignId)
 
       toast.success(t('messages.campaignDeleted'))
       router.push('/savings')

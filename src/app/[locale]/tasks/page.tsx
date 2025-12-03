@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db, Task, HomeImprovement, TaskCategory } from '@/lib/db'
+import { db, Task, HomeImprovement, TaskCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddTaskDialog } from './components/AddTaskDialog'
 import { EditTaskDialog } from './components/EditTaskDialog'
@@ -91,7 +91,7 @@ export default function TasksPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      await db.tasks.delete(taskId)
+      await deleteWithSync(db.tasks, 'tasks', taskId)
     } catch (error) {
       console.error('Error deleting task:', error)
     }

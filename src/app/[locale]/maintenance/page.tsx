@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, MaintenanceItem, MaintenanceTask, MaintenanceItemType, MaintenanceLog, User } from '@/lib/db'
+import { db, MaintenanceItem, MaintenanceTask, MaintenanceItemType, MaintenanceLog, User, deleteWithSync, bulkDeleteWithSync } from '@/lib/db'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -184,10 +184,14 @@ export default function MaintenancePage() {
   const handleDeleteItem = async () => {
     if (!selectedItem?.id) return
     try {
-      // Delete associated tasks and logs
-      await db.maintenanceTasks.where('maintenanceItemId').equals(selectedItem.id).delete()
-      await db.maintenanceLogs.where('maintenanceItemId').equals(selectedItem.id).delete()
-      await db.maintenanceItems.delete(selectedItem.id)
+      // Get IDs of associated records for sync tracking
+      const relatedTasks = await db.maintenanceTasks.where('maintenanceItemId').equals(selectedItem.id).toArray()
+      const relatedLogs = await db.maintenanceLogs.where('maintenanceItemId').equals(selectedItem.id).toArray()
+
+      // Delete associated tasks and logs with sync tracking
+      await bulkDeleteWithSync(db.maintenanceTasks, 'maintenanceTasks', relatedTasks.map(t => t.id!))
+      await bulkDeleteWithSync(db.maintenanceLogs, 'maintenanceLogs', relatedLogs.map(l => l.id!))
+      await deleteWithSync(db.maintenanceItems, 'maintenanceItems', selectedItem.id)
       toast.success(t('messages.itemDeleted'))
       setDeleteItemOpen(false)
       setSelectedItem(null)
@@ -200,7 +204,7 @@ export default function MaintenancePage() {
   const handleDeleteTask = async () => {
     if (!selectedTask?.id) return
     try {
-      await db.maintenanceTasks.delete(selectedTask.id)
+      await deleteWithSync(db.maintenanceTasks, 'maintenanceTasks', selectedTask.id)
       toast.success(t('messages.taskDeleted'))
       setDeleteTaskOpen(false)
       setSelectedTask(null)

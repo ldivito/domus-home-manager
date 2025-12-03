@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Edit3, Trash2, X, ShoppingCart, Plus } from "lucide-react"
-import { db, Meal, SavedGroceryItem, MealIngredient } from '@/lib/db'
+import { db, Meal, SavedGroceryItem, MealIngredient, deleteWithSync } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from "sonner"
@@ -171,7 +171,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
   const handleDelete = async () => {
     if (!meal) return
     try {
-      await db.meals.delete(meal.id!)
+      await deleteWithSync(db.meals, 'meals', meal.id!)
       onMealDeleted?.()
       onOpenChange(false)
     } catch (error) {

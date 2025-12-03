@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, Pet, PetType, User } from '@/lib/db'
+import { db, Pet, PetType, User, deleteWithSync, bulkDeleteWithSync } from '@/lib/db'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -175,14 +175,25 @@ export default function PetsPage() {
   const handleDelete = async () => {
     if (!selectedPet?.id) return
     try {
-      // Delete associated records
-      await db.petFeedingSchedules.where('petId').equals(selectedPet.id).delete()
-      await db.petFeedingLogs.where('petId').equals(selectedPet.id).delete()
-      await db.petMedications.where('petId').equals(selectedPet.id).delete()
-      await db.petMedicationLogs.where('petId').equals(selectedPet.id).delete()
-      await db.petVetVisits.where('petId').equals(selectedPet.id).delete()
-      await db.petVaccinations.where('petId').equals(selectedPet.id).delete()
-      await db.pets.delete(selectedPet.id)
+      // Get IDs of all associated records for sync tracking
+      const feedingSchedules = await db.petFeedingSchedules.where('petId').equals(selectedPet.id).toArray()
+      const feedingLogs = await db.petFeedingLogs.where('petId').equals(selectedPet.id).toArray()
+      const medications = await db.petMedications.where('petId').equals(selectedPet.id).toArray()
+      const medicationLogs = await db.petMedicationLogs.where('petId').equals(selectedPet.id).toArray()
+      const vetVisits = await db.petVetVisits.where('petId').equals(selectedPet.id).toArray()
+      const vaccinations = await db.petVaccinations.where('petId').equals(selectedPet.id).toArray()
+
+      // Delete associated records with sync tracking
+      await bulkDeleteWithSync(db.petFeedingSchedules, 'petFeedingSchedules', feedingSchedules.map(r => r.id!))
+      await bulkDeleteWithSync(db.petFeedingLogs, 'petFeedingLogs', feedingLogs.map(r => r.id!))
+      await bulkDeleteWithSync(db.petMedications, 'petMedications', medications.map(r => r.id!))
+      await bulkDeleteWithSync(db.petMedicationLogs, 'petMedicationLogs', medicationLogs.map(r => r.id!))
+      await bulkDeleteWithSync(db.petVetVisits, 'petVetVisits', vetVisits.map(r => r.id!))
+      await bulkDeleteWithSync(db.petVaccinations, 'petVaccinations', vaccinations.map(r => r.id!))
+
+      // Delete the pet itself
+      await deleteWithSync(db.pets, 'pets', selectedPet.id)
+
       toast.success(t('messages.deleted'))
       setDeleteDialogOpen(false)
       setSelectedPet(null)

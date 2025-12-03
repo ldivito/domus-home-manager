@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { SavingsCampaign, SavingsContribution, SavingsParticipant, User, db } from '@/lib/db'
+import { SavingsCampaign, SavingsContribution, SavingsParticipant, User, db, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -167,7 +167,7 @@ export function ContributionsTab({ campaign, contributions, participants, users 
     if (!selectedContribution) return
 
     try {
-      await db.savingsContributions.delete(selectedContribution.id!)
+      await deleteWithSync(db.savingsContributions, 'savingsContributions', selectedContribution.id!)
       await updateCampaignAmount()
       toast.success(t('messages.contributionDeleted'))
       setShowDeleteDialog(false)

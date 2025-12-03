@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { db, MaintenanceTask, MaintenanceItem, MaintenanceFrequency } from '@/lib/db'
+import { db, MaintenanceTask, MaintenanceItem, MaintenanceFrequency, deleteWithSync } from '@/lib/db'
 import { toast } from 'sonner'
 
 interface LogMaintenanceDialogProps {
@@ -120,7 +120,7 @@ export function LogMaintenanceDialog({ open, onOpenChange, task, items }: LogMai
         })
       } else {
         // For one-time tasks, just mark as completed
-        await db.maintenanceTasks.delete(task.id)
+        await deleteWithSync(db.maintenanceTasks, 'maintenanceTasks', task.id)
       }
 
       toast.success(t('messages.maintenanceLogged'))

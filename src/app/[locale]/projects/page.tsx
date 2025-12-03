@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Label } from "@/components/ui/label"
-import { db, HomeImprovement } from '@/lib/db'
+import { db, HomeImprovement, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddProjectDialog } from './components/AddProjectDialog'
 import { EditProjectDialog } from './components/EditProjectDialog'
@@ -67,7 +67,7 @@ export default function ProjectsPage() {
 
   const handleDeleteProject = async (projectId: string) => {
     try {
-      await db.homeImprovements.delete(projectId)
+      await deleteWithSync(db.homeImprovements, 'homeImprovements', projectId)
     } catch (error) {
       console.error('Error deleting project:', error)
     }

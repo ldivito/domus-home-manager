@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AddChoreModal } from "@/components/AddChoreModal"
 import { EditChoreModal } from "@/components/EditChoreModal"
 import { CompleteChoreModal } from "@/components/CompleteChoreModal"
-import { db, Chore, User as UserType } from "@/lib/db"
+import { db, Chore, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 
 type FrequencyFilter = 'all' | 'daily' | 'weekly' | 'monthly' | 'custom'
@@ -87,7 +87,7 @@ export default function ChoresPage() {
   const handleDeleteChore = async (chore: Chore) => {
     if (!chore.id) return
     try {
-      await db.chores.delete(chore.id)
+      await deleteWithSync(db.chores, 'chores', chore.id)
       await loadData()
     } catch (error) {
       console.error('Error deleting chore:', error)

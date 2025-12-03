@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db, CalendarEvent, User as UserType, Task, Meal, Chore } from "@/lib/db"
+import { db, CalendarEvent, User as UserType, Task, Meal, Chore, deleteWithSync } from "@/lib/db"
 import { useCalendarSettings } from "@/hooks/useCalendarSettings"
 import { AddEventDialog } from "./components/AddEventDialog"
 import { DayView } from "./components/DayView"
@@ -343,7 +343,7 @@ export default function PlannerPage() {
           event={selectedEvent}
           usersById={usersById}
           onEdit={(evt) => { setSelectedEvent(evt); setEditOpen(true) }}
-          onDelete={async (evt) => { await db.calendarEvents.delete(evt.id!); setDetailsOpen(false) }}
+          onDelete={async (evt) => { await deleteWithSync(db.calendarEvents, 'calendarEvents', evt.id!); setDetailsOpen(false) }}
         />
         <EditEventDialog open={editOpen} onOpenChange={setEditOpen} users={users} event={selectedEvent} />
       </div>

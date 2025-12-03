@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Plus, Edit3, X, Search } from "lucide-react"
-import { db, SavedMeal, MealCategory, MealIngredient } from '@/lib/db'
+import { db, SavedMeal, MealCategory, MealIngredient, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 interface TemplateData {
@@ -85,7 +85,7 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
 
   const handleDelete = async (mealId: string) => {
     try {
-      await db.savedMeals.delete(mealId)
+      await deleteWithSync(db.savedMeals, 'savedMeals', mealId)
     } catch (error) {
       console.error('Error deleting saved meal:', error)
     }

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db, Document, DocumentCategory } from '@/lib/db'
+import { db, Document, DocumentCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddDocumentDialog } from './components/AddDocumentDialog'
 import { EditDocumentDialog } from './components/EditDocumentDialog'
@@ -54,7 +54,7 @@ export default function DocumentsPage() {
 
   const handleDeleteDocument = async (documentId: string) => {
     try {
-      await db.documents.delete(documentId)
+      await deleteWithSync(db.documents, 'documents', documentId)
       toast.success(t('messages.deleted'))
     } catch (error) {
       console.error('Error deleting document:', error)

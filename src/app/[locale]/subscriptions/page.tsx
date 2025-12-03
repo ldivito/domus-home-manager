@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, Subscription, SubscriptionCategory, SubscriptionStatus } from '@/lib/db'
+import { db, Subscription, SubscriptionCategory, SubscriptionStatus, deleteWithSync, bulkDeleteWithSync } from '@/lib/db'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -229,9 +229,11 @@ export default function SubscriptionsPage() {
   const handleDelete = async () => {
     if (!selectedSubscription?.id) return
     try {
-      // Delete associated payments
-      await db.subscriptionPayments.where('subscriptionId').equals(selectedSubscription.id).delete()
-      await db.subscriptions.delete(selectedSubscription.id)
+      // Get IDs of associated payments for sync tracking
+      const relatedPayments = await db.subscriptionPayments.where('subscriptionId').equals(selectedSubscription.id).toArray()
+      // Delete associated payments with sync tracking
+      await bulkDeleteWithSync(db.subscriptionPayments, 'subscriptionPayments', relatedPayments.map(p => p.id!))
+      await deleteWithSync(db.subscriptions, 'subscriptions', selectedSubscription.id)
       toast.success(t('messages.deleted'))
       setDeleteDialogOpen(false)
       setSelectedSubscription(null)

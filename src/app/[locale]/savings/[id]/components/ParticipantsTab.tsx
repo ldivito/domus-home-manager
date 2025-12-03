@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { SavingsCampaign, SavingsParticipant, SavingsContribution, User, db } from '@/lib/db'
+import { SavingsCampaign, SavingsParticipant, SavingsContribution, User, db, deleteWithSync, bulkDeleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -187,13 +187,14 @@ export function ParticipantsTab({ campaign, participants, contributions, users }
 
     try {
       // Delete participant's contributions first
-      await db.savingsContributions
+      const contributionIds = (await db.savingsContributions
         .where('participantId')
         .equals(selectedParticipant.id!)
-        .delete()
+        .toArray()).map(c => c.id!)
+      await bulkDeleteWithSync(db.savingsContributions, 'savingsContributions', contributionIds)
 
       // Then delete participant
-      await db.savingsParticipants.delete(selectedParticipant.id!)
+      await deleteWithSync(db.savingsParticipants, 'savingsParticipants', selectedParticipant.id!)
 
       // Update campaign amount
       const remainingContributions = await db.savingsContributions

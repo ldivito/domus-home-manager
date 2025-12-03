@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2, Edit2, Palette } from "lucide-react"
-import { db, GroceryCategory } from '@/lib/db'
+import { db, GroceryCategory, deleteWithSync } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 
 interface ManageCategoriesDialogProps {
@@ -115,7 +115,7 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
     }
 
     try {
-      await db.groceryCategories.delete(categoryId)
+      await deleteWithSync(db.groceryCategories, 'groceryCategories', categoryId)
     } catch (error) {
       console.error('Error deleting category:', error)
     }

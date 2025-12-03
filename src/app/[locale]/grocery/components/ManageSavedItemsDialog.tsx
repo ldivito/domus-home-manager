@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Edit3, X } from "lucide-react"
-import { db, SavedGroceryItem, GroceryCategory } from '@/lib/db'
+import { db, SavedGroceryItem, GroceryCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 interface ManageSavedItemsDialogProps {
@@ -107,7 +107,7 @@ export function ManageSavedItemsDialog({ open, onOpenChange, categories }: Manag
 
   const handleDelete = async (itemId: string) => {
     try {
-      await db.savedGroceryItems.delete(itemId)
+      await deleteWithSync(db.savedGroceryItems, 'savedGroceryItems', itemId)
     } catch (error) {
       console.error('Error deleting saved item:', error)
     }

@@ -47,23 +47,23 @@ export default function MobileNavigation() {
 
   // Live queries for badge counts
   const pendingTasksCount = useLiveQuery(
-    () => db.tasks.filter(task => task.status !== 'completed').count(),
+    () => db.tasks.filter(task => !task.isCompleted).count(),
     [],
     0
   )
 
   const groceryItemsCount = useLiveQuery(
-    () => db.groceryItems.filter(item => !item.purchased).count(),
+    () => db.groceryItems.count(),
     [],
     0
   )
 
   const pendingChoresCount = useLiveQuery(
     () => db.chores.filter(chore => {
-      if (!chore.nextDueDate) return false
+      if (!chore.nextDue) return false
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const dueDate = new Date(chore.nextDueDate)
+      const dueDate = new Date(chore.nextDue)
       dueDate.setHours(0, 0, 0, 0)
       return dueDate <= today
     }).count(),
@@ -72,7 +72,7 @@ export default function MobileNavigation() {
   )
 
   const activeRemindersCount = useLiveQuery(
-    () => db.reminders.filter(reminder => !reminder.completed).count(),
+    () => db.reminders.filter(reminder => !reminder.isCompleted).count(),
     [],
     0
   )

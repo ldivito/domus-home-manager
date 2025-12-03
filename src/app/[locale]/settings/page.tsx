@@ -512,29 +512,29 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 lg:space-y-8">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+        <div className="space-y-1 md:space-y-2">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             {t('title')}
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-base md:text-lg lg:text-xl text-muted-foreground">
             {t('subtitle')}
           </p>
         </div>
         
-        <div className="space-y-8">
+        <div className="space-y-4 md:space-y-6 lg:space-y-8">
           {/* Home Information */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center">
-                    <Home className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl md:text-2xl flex items-center">
+                    <Home className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                     {t('homeSettings.title')}
                   </CardTitle>
-                  <CardDescription>{t('homeSettings.description')}</CardDescription>
+                  <CardDescription className="text-sm">{t('homeSettings.description')}</CardDescription>
                 </div>
                 <Button
                   variant={isEditingHome ? "default" : "outline"}
@@ -545,7 +545,7 @@ export default function SettingsPage() {
                       setIsEditingHome(true)
                     }
                   }}
-                  className="shrink-0"
+                  className="shrink-0 w-full sm:w-auto"
                 >
                   {isEditingHome ? (
                     <>
@@ -561,15 +561,15 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-6 md:space-y-8">
               {/* Basic Home Information */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <Home className="h-5 w-5 text-primary" />
-                  <Label className="text-lg font-semibold">{t('homeSettings.sections.basicInfo')}</Label>
+              <div className="space-y-4 md:space-y-6">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <Home className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  <Label className="text-base md:text-lg font-semibold">{t('homeSettings.sections.basicInfo')}</Label>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-8">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pl-0 md:pl-8">
                   <div className="space-y-2">
                     <Label htmlFor="homeName">{t('homeSettings.fields.homeName')}</Label>
                     {isEditingHome ? (
@@ -645,14 +645,14 @@ export default function SettingsPage() {
               </div>
 
               {/* Address */}
-              <div className="border-t border-border pt-6">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <Label className="text-lg font-semibold">{t('homeSettings.sections.address')}</Label>
+              <div className="border-t border-border pt-4 md:pt-6">
+                <div className="space-y-4 md:space-y-6">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <MapPin className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    <Label className="text-base md:text-lg font-semibold">{t('homeSettings.sections.address')}</Label>
                   </div>
-                  
-                  <div className="grid grid-cols-1 gap-4 pl-8">
+
+                  <div className="grid grid-cols-1 gap-4 pl-0 md:pl-8">
                     <div className="space-y-2">
                       <Label htmlFor="street">{t('homeSettings.fields.street')}</Label>
                       {isEditingHome ? (
@@ -670,7 +670,7 @@ export default function SettingsPage() {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="city">{t('homeSettings.fields.city')}</Label>
                         {isEditingHome ? (
@@ -727,14 +727,14 @@ export default function SettingsPage() {
               </div>
 
               {/* Emergency Contact */}
-              <div className="border-t border-border pt-6">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-primary" />
-                    <Label className="text-lg font-semibold">{t('homeSettings.sections.emergency')}</Label>
+              <div className="border-t border-border pt-4 md:pt-6">
+                <div className="space-y-4 md:space-y-6">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Phone className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    <Label className="text-base md:text-lg font-semibold">{t('homeSettings.sections.emergency')}</Label>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-8">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pl-0 md:pl-8">
                     <div className="space-y-2">
                       <Label htmlFor="emergencyName">{t('homeSettings.fields.emergencyName')}</Label>
                       {isEditingHome ? (
@@ -791,14 +791,14 @@ export default function SettingsPage() {
               </div>
 
               {/* Notes */}
-              <div className="border-t border-border pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Edit3 className="h-5 w-5 text-primary" />
-                    <Label className="text-lg font-semibold">{t('homeSettings.sections.notes')}</Label>
+              <div className="border-t border-border pt-4 md:pt-6">
+                <div className="space-y-3 md:space-y-4">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Edit3 className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    <Label className="text-base md:text-lg font-semibold">{t('homeSettings.sections.notes')}</Label>
                   </div>
-                  
-                  <div className="pl-8">
+
+                  <div className="pl-0 md:pl-8">
                     {isEditingHome ? (
                       <Textarea
                         value={homeSettings.notes || ''}
@@ -818,14 +818,15 @@ export default function SettingsPage() {
               
               {/* Cancel Button in Edit Mode */}
               {isEditingHome && (
-                <div className="border-t border-border pt-6">
-                  <div className="flex justify-end gap-4">
-                    <Button 
+                <div className="border-t border-border pt-4 md:pt-6">
+                  <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4">
+                    <Button
                       variant="outline"
                       onClick={() => {
                         setIsEditingHome(false)
                         loadHomeSettings() // Reset to saved values
                       }}
+                      className="w-full sm:w-auto"
                     >
                       <X className="h-4 w-4 mr-2" />
                       {t('homeSettings.cancel')}
@@ -838,14 +839,14 @@ export default function SettingsPage() {
 
           {/* Household Management */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center">
-                    <Users className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl md:text-2xl flex items-center">
+                    <Users className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                     {th('title')}
                   </CardTitle>
-                  <CardDescription>{th('description')}</CardDescription>
+                  <CardDescription className="text-sm">{th('description')}</CardDescription>
                 </div>
                 {householdInfo && (householdInfo.isOwner || householdMembers.find(m => m.userId === householdInfo.ownerId)?.permissions?.canManageSettings) && (
                   <Button
@@ -857,7 +858,7 @@ export default function SettingsPage() {
                         setIsEditingHousehold(true)
                       }
                     }}
-                    className="shrink-0"
+                    className="shrink-0 w-full sm:w-auto"
                   >
                     {isEditingHousehold ? (
                       <>
@@ -874,21 +875,21 @@ export default function SettingsPage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-6 md:space-y-8">
               {isLoadingHousehold ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 md:py-8 text-muted-foreground">
                   {th('loading')}...
                 </div>
               ) : householdInfo ? (
                 <>
                   {/* Household Information */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3">
-                      <Home className="h-5 w-5 text-primary" />
-                      <Label className="text-lg font-semibold">{th('householdInfo')}</Label>
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <Home className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      <Label className="text-base md:text-lg font-semibold">{th('householdInfo')}</Label>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 pl-8">
+                    <div className="grid grid-cols-1 gap-4 md:gap-6 pl-0 md:pl-8">
                       <div className="space-y-2">
                         <Label htmlFor="householdName">{th('householdName')}</Label>
                         {isEditingHousehold ? (
@@ -922,25 +923,25 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Invite Code Section */}
-                  <div className="border-t border-border pt-6">
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3">
-                        <Copy className="h-5 w-5 text-primary" />
-                        <Label className="text-lg font-semibold">{th('inviteCode')}</Label>
+                  <div className="border-t border-border pt-4 md:pt-6">
+                    <div className="space-y-4 md:space-y-6">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <Copy className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                        <Label className="text-base md:text-lg font-semibold">{th('inviteCode')}</Label>
                       </div>
 
-                      <div className="pl-8 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 max-w-md">
+                      <div className="pl-0 md:pl-8 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="flex-1 w-full sm:max-w-md">
                             <div className="flex items-center gap-2">
-                              <code className="flex-1 px-4 py-3 bg-muted rounded-lg font-mono text-lg tracking-wider border border-border">
+                              <code className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-muted rounded-lg font-mono text-base md:text-lg tracking-wider border border-border text-center sm:text-left">
                                 {householdInfo.inviteCode}
                               </code>
                               <Button
                                 variant="outline"
                                 size="icon"
                                 onClick={handleCopyInviteCode}
-                                className="h-11 w-11"
+                                className="h-10 w-10 md:h-11 md:w-11 shrink-0"
                               >
                                 {copiedCode ? (
                                   <Check className="h-4 w-4 text-green-500" />
@@ -959,7 +960,7 @@ export default function SettingsPage() {
                           <Button
                             variant="outline"
                             onClick={handleRegenerateInviteCode}
-                            className="gap-2"
+                            className="gap-2 w-full sm:w-auto"
                           >
                             <RefreshCw className="h-4 w-4" />
                             {th('regenerateCode')}
@@ -970,14 +971,14 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Members List */}
-                  <div className="border-t border-border pt-6">
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-primary" />
-                        <Label className="text-lg font-semibold">{th('members')} ({householdMembers.length})</Label>
+                  <div className="border-t border-border pt-4 md:pt-6">
+                    <div className="space-y-4 md:space-y-6">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                        <Label className="text-base md:text-lg font-semibold">{th('members')} ({householdMembers.length})</Label>
                       </div>
 
-                      <div className="pl-8 space-y-3">
+                      <div className="pl-0 md:pl-8 space-y-3">
                         {householdMembers.map((member) => {
                           const currentUserMember = householdMembers.find(m => m.userId === householdInfo.ownerId)
                           const canRemove = currentUserMember && (
@@ -988,16 +989,16 @@ export default function SettingsPage() {
                           return (
                             <div
                               key={member.id}
-                              className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+                              className="flex items-start sm:items-center justify-between p-3 md:p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors gap-3"
                             >
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-foreground">{member.name}</p>
-                                  <Badge variant={member.role === 'owner' ? 'default' : member.role === 'admin' ? 'secondary' : 'outline'}>
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  <p className="font-medium text-foreground text-sm md:text-base">{member.name}</p>
+                                  <Badge variant={member.role === 'owner' ? 'default' : member.role === 'admin' ? 'secondary' : 'outline'} className="text-xs">
                                     {th(member.role)}
                                   </Badge>
                                 </div>
-                                <p className="text-sm text-muted-foreground truncate">{member.email}</p>
+                                <p className="text-xs md:text-sm text-muted-foreground truncate">{member.email}</p>
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {th('joinedOn')} {new Date(member.joinedAt).toLocaleDateString(locale)}
                                 </p>
@@ -1008,7 +1009,7 @@ export default function SettingsPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleRemoveMember(member.userId)}
-                                  className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 >
                                   <UserMinus className="h-4 w-4" />
                                 </Button>
@@ -1022,8 +1023,8 @@ export default function SettingsPage() {
 
                   {/* Cancel Button in Edit Mode */}
                   {isEditingHousehold && (
-                    <div className="border-t border-border pt-6">
-                      <div className="flex justify-end gap-4">
+                    <div className="border-t border-border pt-4 md:pt-6">
+                      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4">
                         <Button
                           variant="outline"
                           onClick={() => {
@@ -1031,6 +1032,7 @@ export default function SettingsPage() {
                             setEditedHouseholdName(householdInfo.name)
                             setEditedHouseholdDescription(householdInfo.description || '')
                           }}
+                          className="w-full sm:w-auto"
                         >
                           <X className="h-4 w-4 mr-2" />
                           {t('homeSettings.cancel')}
@@ -1040,35 +1042,35 @@ export default function SettingsPage() {
                   )}
                 </>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   <div className="text-center py-4">
-                    <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">{th('noHousehold')}</h3>
-                    <p className="text-sm text-muted-foreground mb-6">{th('noHouseholdDescription') || 'Create a new household or join an existing one with an invite code'}</p>
+                    <Users className="h-12 w-12 md:h-16 md:w-16 mx-auto text-muted-foreground mb-3 md:mb-4" />
+                    <h3 className="text-base md:text-lg font-semibold text-foreground mb-2">{th('noHousehold')}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6 px-2">{th('noHouseholdDescription') || 'Create a new household or join an existing one with an invite code'}</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
                     {/* Create Household Section */}
-                    <div className="space-y-4 p-6 border border-border rounded-lg bg-muted/20">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Plus className="h-5 w-5 text-primary" />
-                        <h4 className="font-semibold text-foreground">{th('createNewHousehold') || 'Create New Household'}</h4>
+                    <div className="space-y-4 p-4 md:p-6 border border-border rounded-lg bg-muted/20">
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
+                        <Plus className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                        <h4 className="font-semibold text-foreground text-sm md:text-base">{th('createNewHousehold') || 'Create New Household'}</h4>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="newHouseholdName">{th('householdName')}</Label>
+                        <Label htmlFor="newHouseholdName" className="text-sm">{th('householdName')}</Label>
                         <Input
                           id="newHouseholdName"
                           value={newHouseholdName}
                           onChange={(e) => setNewHouseholdName(e.target.value)}
                           placeholder={th('householdNamePlaceholder')}
                           disabled={isCreatingHousehold}
-                          className="h-11"
+                          className="h-10 md:h-11"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="newHouseholdDescription">{th('householdDescription')} {t('homeSettings.fields.optional') || '(Optional)'}</Label>
+                        <Label htmlFor="newHouseholdDescription" className="text-sm">{th('householdDescription')} {t('homeSettings.fields.optional') || '(Optional)'}</Label>
                         <Textarea
                           id="newHouseholdDescription"
                           value={newHouseholdDescription}
@@ -1083,7 +1085,7 @@ export default function SettingsPage() {
                       <Button
                         onClick={handleCreateHousehold}
                         disabled={isCreatingHousehold || !newHouseholdName.trim()}
-                        className="w-full h-11 shadow-md hover:shadow-lg transition-all duration-200"
+                        className="w-full h-10 md:h-11 shadow-md hover:shadow-lg transition-all duration-200"
                       >
                         {isCreatingHousehold && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                         <Plus className="mr-2 h-4 w-4" />
@@ -1092,23 +1094,23 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Join Household Section */}
-                    <div className="space-y-4 p-6 border border-border rounded-lg bg-muted/20">
-                      <div className="flex items-center gap-3 mb-4">
-                        <LogIn className="h-5 w-5 text-primary" />
-                        <h4 className="font-semibold text-foreground">{th('joinExistingHousehold') || 'Join Existing Household'}</h4>
+                    <div className="space-y-4 p-4 md:p-6 border border-border rounded-lg bg-muted/20">
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
+                        <LogIn className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                        <h4 className="font-semibold text-foreground text-sm md:text-base">{th('joinExistingHousehold') || 'Join Existing Household'}</h4>
                       </div>
 
                       {!joinHouseholdPreview ? (
                         <>
                           <div className="space-y-2">
-                            <Label htmlFor="joinInviteCode">{th('enterInviteCode') || 'Invite Code'}</Label>
+                            <Label htmlFor="joinInviteCode" className="text-sm">{th('enterInviteCode') || 'Invite Code'}</Label>
                             <Input
                               id="joinInviteCode"
                               value={joinInviteCode}
                               onChange={(e) => setJoinInviteCode(e.target.value.toUpperCase())}
                               placeholder={th('inviteCodePlaceholder') || 'Enter 8-character code'}
                               disabled={isVerifyingCode}
-                              className="h-11 font-mono tracking-wider"
+                              className="h-10 md:h-11 font-mono tracking-wider"
                               maxLength={8}
                             />
                           </div>
@@ -1121,7 +1123,7 @@ export default function SettingsPage() {
                             onClick={handleVerifyInviteCode}
                             disabled={isVerifyingCode || !joinInviteCode.trim()}
                             variant="outline"
-                            className="w-full h-11"
+                            className="w-full h-10 md:h-11"
                           >
                             {isVerifyingCode && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                             {th('verifyCode') || 'Verify Code'}
@@ -1130,22 +1132,22 @@ export default function SettingsPage() {
                       ) : (
                         <>
                           {/* Household Preview */}
-                          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
-                            <p className="text-sm text-muted-foreground">{th('joiningHousehold') || 'You are joining:'}</p>
-                            <p className="font-semibold text-foreground text-lg">{joinHouseholdPreview.name}</p>
+                          <div className="p-3 md:p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
+                            <p className="text-xs md:text-sm text-muted-foreground">{th('joiningHousehold') || 'You are joining:'}</p>
+                            <p className="font-semibold text-foreground text-base md:text-lg">{joinHouseholdPreview.name}</p>
                             {joinHouseholdPreview.description && (
-                              <p className="text-sm text-muted-foreground">{joinHouseholdPreview.description}</p>
+                              <p className="text-xs md:text-sm text-muted-foreground">{joinHouseholdPreview.description}</p>
                             )}
                             <p className="text-xs text-muted-foreground">
                               {joinHouseholdPreview.memberCount} {joinHouseholdPreview.memberCount === 1 ? th('memberSingular') || 'member' : th('membersPlural') || 'members'}
                             </p>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <Button
                               onClick={handleCancelJoin}
                               variant="outline"
-                              className="flex-1 h-11"
+                              className="flex-1 h-10 md:h-11"
                               disabled={isJoiningHousehold}
                             >
                               <X className="mr-2 h-4 w-4" />
@@ -1154,7 +1156,7 @@ export default function SettingsPage() {
                             <Button
                               onClick={handleJoinHousehold}
                               disabled={isJoiningHousehold}
-                              className="flex-1 h-11"
+                              className="flex-1 h-10 md:h-11"
                             >
                               {isJoiningHousehold && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                               <LogIn className="mr-2 h-4 w-4" />
@@ -1172,22 +1174,22 @@ export default function SettingsPage() {
 
           {/* Language & Appearance */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center">
-                <Globe className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <Globe className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                 {t('languageAppearance.title')}
               </CardTitle>
-              <CardDescription>{t('languageAppearance.description')}</CardDescription>
+              <CardDescription className="text-sm">{t('languageAppearance.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-6 md:space-y-8">
               {/* Language Selector */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Languages className="h-5 w-5 text-primary" />
-                  <Label className="text-base font-medium">{t('languageAppearance.language')}</Label>
+              <div className="space-y-3 md:space-y-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <Languages className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  <Label className="text-sm md:text-base font-medium">{t('languageAppearance.language')}</Label>
                 </div>
                 <Select value={locale} onValueChange={handleLanguageChange}>
-                  <SelectTrigger className="max-w-xs">
+                  <SelectTrigger className="w-full sm:max-w-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1200,13 +1202,13 @@ export default function SettingsPage() {
               <div className="border-t border-border"></div>
 
               {/* Theme Selector */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Palette className="h-5 w-5 text-primary" />
-                  <Label className="text-base font-medium">{t('languageAppearance.theme')}</Label>
+              <div className="space-y-3 md:space-y-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <Palette className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  <Label className="text-sm md:text-base font-medium">{t('languageAppearance.theme')}</Label>
                 </div>
                 <Select value={theme} onValueChange={setTheme}>
-                  <SelectTrigger className="max-w-xs">
+                  <SelectTrigger className="w-full sm:max-w-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1236,23 +1238,23 @@ export default function SettingsPage() {
 
           {/* Calendar Settings */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center">
-                <Calendar className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <Calendar className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                 {t('calendar.title')}
               </CardTitle>
-              <CardDescription>{t('calendar.description')}</CardDescription>
+              <CardDescription className="text-sm">{t('calendar.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <Label className="text-base font-medium">{t('calendar.startOfWeek')}</Label>
+            <CardContent className="space-y-4 md:space-y-6">
+              <div className="space-y-3 md:space-y-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <Calendar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  <Label className="text-sm md:text-base font-medium">{t('calendar.startOfWeek')}</Label>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">{t('calendar.startOfWeekDescription')}</p>
-                  <Select 
-                    value={homeSettings.preferences?.startOfWeek || 'sunday'} 
+                  <p className="text-xs md:text-sm text-muted-foreground">{t('calendar.startOfWeekDescription')}</p>
+                  <Select
+                    value={homeSettings.preferences?.startOfWeek || 'sunday'}
                     onValueChange={(value: 'sunday' | 'monday') => {
                       setHomeSettings({
                         ...homeSettings,
@@ -1270,7 +1272,7 @@ export default function SettingsPage() {
                       })
                     }}
                   >
-                    <SelectTrigger className="max-w-xs">
+                    <SelectTrigger className="w-full sm:max-w-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1295,44 +1297,47 @@ export default function SettingsPage() {
           
           {/* Notification Preferences */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center">
-                <Bell className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <Bell className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                 {t('notifications.title')}
               </CardTitle>
-              <CardDescription>{t('notifications.description')}</CardDescription>
+              <CardDescription className="text-sm">{t('notifications.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label className="text-base font-medium">{t('notifications.choreReminders')}</Label>
-                  <p className="text-sm text-muted-foreground">{t('notifications.choreRemindersDesc')}</p>
+            <CardContent className="space-y-4 md:space-y-6">
+              <div className="flex items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5 md:space-y-1 flex-1">
+                  <Label className="text-sm md:text-base font-medium">{t('notifications.choreReminders')}</Label>
+                  <p className="text-xs md:text-sm text-muted-foreground">{t('notifications.choreRemindersDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={notifications.choreReminders}
                   onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, choreReminders: checked })}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label className="text-base font-medium">{t('notifications.taskReminders')}</Label>
-                  <p className="text-sm text-muted-foreground">{t('notifications.taskRemindersDesc')}</p>
-                </div>
-                <Switch 
-                  checked={notifications.taskReminders}
-                  onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, taskReminders: checked })}
+                  className="shrink-0"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label className="text-base font-medium">{t('notifications.dailySummary')}</Label>
-                  <p className="text-sm text-muted-foreground">{t('notifications.dailySummaryDesc')}</p>
+              <div className="flex items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5 md:space-y-1 flex-1">
+                  <Label className="text-sm md:text-base font-medium">{t('notifications.taskReminders')}</Label>
+                  <p className="text-xs md:text-sm text-muted-foreground">{t('notifications.taskRemindersDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
+                  checked={notifications.taskReminders}
+                  onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, taskReminders: checked })}
+                  className="shrink-0"
+                />
+              </div>
+
+              <div className="flex items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5 md:space-y-1 flex-1">
+                  <Label className="text-sm md:text-base font-medium">{t('notifications.dailySummary')}</Label>
+                  <p className="text-xs md:text-sm text-muted-foreground">{t('notifications.dailySummaryDesc')}</p>
+                </div>
+                <Switch
                   checked={notifications.dailySummary}
                   onCheckedChange={(checked) => saveNotificationSettings({ ...notifications, dailySummary: checked })}
+                  className="shrink-0"
                 />
               </div>
             </CardContent>
@@ -1340,64 +1345,64 @@ export default function SettingsPage() {
           
           {/* Data Management */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center">
-                <Database className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <Database className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                 {t('dataManagement.title')}
               </CardTitle>
-              <CardDescription>{t('dataManagement.description')}</CardDescription>
+              <CardDescription className="text-sm">{t('dataManagement.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 md:space-y-6">
               {/* Database Stats */}
-              <div className="bg-muted/50 border border-border rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <HardDrive className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex items-center justify-between w-full">
-                    <span>{t('dataManagement.totalRecords')}: <strong>{dbStats.totalRecords}</strong></span>
-                    <Badge variant="secondary">{t('dataManagement.localStorage')}</Badge>
+              <div className="bg-muted/50 border border-border rounded-lg p-3 md:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <HardDrive className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                    <span className="text-sm md:text-base">{t('dataManagement.totalRecords')}: <strong>{dbStats.totalRecords}</strong></span>
+                    <Badge variant="secondary" className="text-xs">{t('dataManagement.localStorage')}</Badge>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className="h-14 text-base shadow-modern hover:shadow-modern-lg transition-all duration-200"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 md:h-14 text-sm md:text-base shadow-modern hover:shadow-modern-lg transition-all duration-200"
                   onClick={exportData}
                 >
-                  <Download className="mr-2 h-5 w-5" />
+                  <Download className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                   {t('dataManagement.exportData')}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className="h-14 text-base shadow-modern hover:shadow-modern-lg transition-all duration-200"
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 md:h-14 text-sm md:text-base shadow-modern hover:shadow-modern-lg transition-all duration-200"
                   onClick={importData}
                 >
-                  <Upload className="mr-2 h-5 w-5" />
+                  <Upload className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                   {t('dataManagement.importData')}
                 </Button>
               </div>
-              
+
               <div className="border-t border-border"></div>
-              
+
               {/* Danger Zone */}
-              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 space-y-4">
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 md:p-6 space-y-3 md:space-y-4">
                 <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-destructive" />
-                  <h4 className="font-semibold text-destructive">{t('dataManagement.dangerZone')}</h4>
+                  <Shield className="h-4 w-4 md:h-5 md:w-5 text-destructive" />
+                  <h4 className="font-semibold text-destructive text-sm md:text-base">{t('dataManagement.dangerZone')}</h4>
                 </div>
-                <p className="text-sm text-destructive/80">
+                <p className="text-xs md:text-sm text-destructive/80">
                   {t('dataManagement.resetWarning')}
                 </p>
-                <Button 
-                  variant="destructive" 
-                  size="lg" 
-                  className="h-12 text-base"
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  className="h-10 md:h-12 text-sm md:text-base w-full sm:w-auto"
                   onClick={resetAllData}
                 >
-                  <Trash2 className="mr-2 h-5 w-5" />
+                  <Trash2 className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                   {t('dataManagement.resetAllData')}
                 </Button>
               </div>
@@ -1406,41 +1411,41 @@ export default function SettingsPage() {
           
           {/* About */}
           <Card className="glass-card shadow-modern">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center">
-                <Info className="mr-3 h-6 w-6 text-primary" />
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <Info className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-primary" />
                 {t('about.title')}
               </CardTitle>
-              <CardDescription>{t('about.description')}</CardDescription>
+              <CardDescription className="text-sm">{t('about.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
+            <CardContent className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-8">
+                <div className="space-y-4 md:space-y-6">
                   <div>
-                    <h4 className="font-semibold text-foreground mb-2">{t('about.version')}</h4>
-                    <p className="text-muted-foreground">1.0.0</p>
+                    <h4 className="font-semibold text-foreground text-sm md:text-base mb-1 md:mb-2">{t('about.version')}</h4>
+                    <p className="text-muted-foreground text-sm">1.0.0</p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-2">{t('about.platform')}</h4>
-                    <p className="text-muted-foreground">{t('about.webApp')}</p>
+                    <h4 className="font-semibold text-foreground text-sm md:text-base mb-1 md:mb-2">{t('about.platform')}</h4>
+                    <p className="text-muted-foreground text-sm">{t('about.webApp')}</p>
                   </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   <div>
-                    <h4 className="font-semibold text-foreground mb-2">{t('about.storage')}</h4>
-                    <p className="text-muted-foreground">{t('about.indexedDB')}</p>
+                    <h4 className="font-semibold text-foreground text-sm md:text-base mb-1 md:mb-2">{t('about.storage')}</h4>
+                    <p className="text-muted-foreground text-sm">{t('about.indexedDB')}</p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-2">{t('about.lastUpdated')}</h4>
-                    <p className="text-muted-foreground">{new Date().toLocaleDateString(locale)}</p>
+                    <h4 className="font-semibold text-foreground text-sm md:text-base mb-1 md:mb-2">{t('about.lastUpdated')}</h4>
+                    <p className="text-muted-foreground text-sm">{new Date().toLocaleDateString(locale)}</p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="border-t border-border"></div>
-              
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
+
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 md:p-4">
+                <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
                   {t('about.description')}
                 </p>
               </div>

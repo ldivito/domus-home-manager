@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { db, RecurringExpense, ExpenseCategory, MonthlyExchangeRate } from '@/lib/db'
+import { db, RecurringExpense, ExpenseCategory, MonthlyExchangeRate, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -161,7 +161,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
 
   const handleDelete = async (expenseId: string) => {
     try {
-      await db.recurringExpenses.delete(expenseId)
+      await deleteWithSync(db.recurringExpenses, 'recurringExpenses', expenseId)
       toast.success(tMessages('expenseDeleted'))
     } catch (error) {
       console.error('Error deleting expense:', error)

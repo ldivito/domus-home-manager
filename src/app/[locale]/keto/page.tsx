@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Settings, Check, X, CalendarDays, Clock } from "lucide-react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db, KetoSettings, KetoDay } from "@/lib/db"
+import { db, KetoSettings, KetoDay, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 import { toast } from "sonner"
 import { useCalendarSettings } from "@/hooks/useCalendarSettings"
@@ -284,7 +284,7 @@ export default function KetoPage() {
             updatedAt: new Date()
           })
         } else if (existingDay.status === 'cheat') {
-          await db.ketoDays.delete(existingDay.id!)
+          await deleteWithSync(db.ketoDays, 'ketoDays', existingDay.id!)
         }
       }
 

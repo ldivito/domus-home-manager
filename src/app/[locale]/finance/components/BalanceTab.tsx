@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, User, ExpensePayment, MonthlyIncome, MonthlyExchangeRate, RecurringExpense, SettlementPayment } from '@/lib/db'
+import { db, User, ExpensePayment, MonthlyIncome, MonthlyExchangeRate, RecurringExpense, SettlementPayment, deleteWithSync } from '@/lib/db'
 import { formatARS, generateId } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -230,7 +230,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
   // Delete settlement payment (unmark as paid)
   const handleUnmarkSettlement = async (settlementPayment: SettlementPayment) => {
     try {
-      await db.settlementPayments.delete(settlementPayment.id!)
+      await deleteWithSync(db.settlementPayments, 'settlementPayments', settlementPayment.id!)
       toast.success(tMessages('settlementUnmarked'))
     } catch (error) {
       console.error('Error deleting settlement:', error)

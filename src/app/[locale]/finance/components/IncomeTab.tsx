@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { db, User, MonthlyIncome, MonthlyExchangeRate } from '@/lib/db'
+import { db, User, MonthlyIncome, MonthlyExchangeRate, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -172,7 +172,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
 
     setIsSubmitting(true)
     try {
-      await db.monthlyIncomes.delete(deletingIncome.id!)
+      await deleteWithSync(db.monthlyIncomes, 'monthlyIncomes', deletingIncome.id!)
       toast.success(t('incomeDeleted'))
       setShowDeleteDialog(false)
       setDeletingIncome(null)

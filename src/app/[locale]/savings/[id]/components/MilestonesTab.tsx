@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { SavingsCampaign, SavingsMilestone, db } from '@/lib/db'
+import { SavingsCampaign, SavingsMilestone, db, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -261,7 +261,7 @@ export function MilestonesTab({ campaign, milestones }: MilestonesTabProps) {
     if (!selectedMilestone) return
 
     try {
-      await db.savingsMilestones.delete(selectedMilestone.id!)
+      await deleteWithSync(db.savingsMilestones, 'savingsMilestones', selectedMilestone.id!)
       toast.success(t('messages.milestoneDeleted'))
       setShowDeleteDialog(false)
       setSelectedMilestone(null)

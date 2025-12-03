@@ -770,6 +770,15 @@ export interface SavingsContribution {
   createdAt: Date
 }
 
+// Deletion log for sync - tracks deleted records so they can be synced
+export interface DeletionLog {
+  id?: string
+  tableName: string               // Which table the record was deleted from
+  recordId: string                // ID of the deleted record
+  householdId?: string
+  deletedAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -820,6 +829,8 @@ export class DomusDatabase extends Dexie {
   savingsMilestones!: Table<SavingsMilestone>
   savingsParticipants!: Table<SavingsParticipant>
   savingsContributions!: Table<SavingsContribution>
+  // Sync support
+  deletionLog!: Table<DeletionLog>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
@@ -889,6 +900,11 @@ export class DomusDatabase extends Dexie {
         }
       }
       console.log('Database upgraded to v26 with income source field')
+    })
+
+    // v28: Add deletion log for sync support
+    this.version(28).stores({
+      deletionLog: 'id, tableName, recordId, householdId, deletedAt'
     })
 
     // v27: Add Savings module tables
@@ -1509,3 +1525,58 @@ export async function getDatabase(): Promise<DomusDatabase> {
 // Export synchronous instance for backward compatibility
 // NOTE: This will not have migration support, use getDatabase() for full migration support
 export const db = new DomusDatabase()
+
+/**
+ * Delete a record and log it for sync
+ * Use this instead of direct table.delete() to ensure deletions sync properly
+ */
+export async function deleteWithSync<T extends { id?: string; householdId?: string }>(
+  table: Table<T>,
+  tableName: string,
+  recordId: string
+): Promise<void> {
+  // Get the record first to capture householdId
+  const record = await table.get(recordId)
+  const householdId = record?.householdId
+
+  // Delete the record
+  await table.delete(recordId)
+
+  // Log the deletion for sync
+  await db.deletionLog.add({
+    id: generateId('del'),
+    tableName,
+    recordId,
+    householdId,
+    deletedAt: new Date()
+  })
+}
+
+/**
+ * Bulk delete records and log them for sync
+ */
+export async function bulkDeleteWithSync<T extends { id?: string; householdId?: string }>(
+  table: Table<T>,
+  tableName: string,
+  recordIds: string[]
+): Promise<void> {
+  if (recordIds.length === 0) return
+
+  // Get records first to capture householdIds
+  const records = await table.bulkGet(recordIds)
+  const now = new Date()
+
+  // Delete the records
+  await table.bulkDelete(recordIds)
+
+  // Log the deletions for sync
+  const deletionLogs = recordIds.map((recordId, index) => ({
+    id: generateId('del'),
+    tableName,
+    recordId,
+    householdId: records[index]?.householdId,
+    deletedAt: now
+  }))
+
+  await db.deletionLog.bulkAdd(deletionLogs)
+}

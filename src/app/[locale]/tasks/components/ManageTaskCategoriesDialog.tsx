@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Edit3, X, Plus } from "lucide-react"
-import { db, TaskCategory } from '@/lib/db'
+import { db, TaskCategory, deleteWithSync } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 
 interface ManageTaskCategoriesDialogProps {
@@ -84,7 +84,7 @@ export function ManageTaskCategoriesDialog({ open, onOpenChange, categories }: M
     if (isDefault) return // Don't allow deleting default categories
 
     try {
-      await db.taskCategories.delete(categoryId)
+      await deleteWithSync(db.taskCategories, 'taskCategories', categoryId)
     } catch (error) {
       console.error('Error deleting category:', error)
     }

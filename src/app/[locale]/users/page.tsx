@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { AddUserModal } from "@/components/AddUserModal"
 import { EditUserModal } from "@/components/EditUserModal"
-import { db, User as UserType } from "@/lib/db"
+import { db, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -100,7 +100,7 @@ export default function UsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      await db.users.delete(userId)
+      await deleteWithSync(db.users, 'users', userId)
       await loadUsers()
       toast.success(t('messages.userDeleted'))
     } catch (error) {

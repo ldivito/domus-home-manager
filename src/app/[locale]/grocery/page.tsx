@@ -7,7 +7,7 @@ import { ShoppingCart, Plus, Settings2, List, Grid3X3, Trash2, Archive, ArrowLef
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db, GroceryItem, SavedGroceryItem } from '@/lib/db'
+import { db, GroceryItem, SavedGroceryItem, deleteWithSync } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddItemDialog } from './components/AddItemDialog'
@@ -45,7 +45,7 @@ export default function GroceryPage() {
   ) || []
 
   const handleBought = async (itemId: string) => {
-    await db.groceryItems.delete(itemId)
+    await deleteWithSync(db.groceryItems, 'groceryItems', itemId)
   }
 
   const handleAddSavedItem = async (savedItem: SavedGroceryItem) => {

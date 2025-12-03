@@ -7,6 +7,7 @@
   "hoursAgo": "{count, plural, one {hace 1 hora} other {hace {count} horas}}",
   "error": "Error de sincronización",
   "syncNow": "Sincronizar Ahora",
+  "syncComplete": "¡Sincronización completa!",
   "forceFullSync": "Forzar Sincronización Completa",
   "resetSyncState": "Restablecer Estado de Sincronización",
   "syncStateReset": "Estado de sincronización restablecido. La próxima sincronización será completa."

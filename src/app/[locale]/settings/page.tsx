@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar, Users, Copy, RefreshCw, UserMinus, Check, LogIn, Plus } from "lucide-react"
+import { Palette, Download, Upload, Trash2, Moon, Sun, Monitor, Globe, Bell, Database, Info, Languages, HardDrive, Shield, Home, MapPin, Phone, Save, X, Edit3, Calendar, Users, Copy, RefreshCw, UserMinus, Check, LogIn, Plus, Cloud, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,7 @@ import { db, HomeSettings } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
+import { performSync, resetSyncState, isAuthenticated, getSyncStatus } from '@/lib/sync'
 
 interface HouseholdInfo {
   id: string
@@ -78,13 +79,57 @@ export default function SettingsPage() {
   const [joinHouseholdPreview, setJoinHouseholdPreview] = useState<{ id: string; name: string; description: string | null; memberCount: number } | null>(null)
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
 
+  // Advanced sync options state
+  const [showAdvancedSync, setShowAdvancedSync] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [isAuth, setIsAuth] = useState(false)
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
+
   useEffect(() => {
     setMounted(true)
     loadDatabaseStats()
     loadNotificationSettings()
     loadHomeSettings()
     loadHouseholdInfo()
+    loadSyncStatus()
   }, [])
+
+  const loadSyncStatus = async () => {
+    const authenticated = await isAuthenticated()
+    setIsAuth(authenticated)
+    const status = await getSyncStatus()
+    setLastSyncAt(status.lastSyncAt)
+  }
+
+  const handleForceFullSync = async () => {
+    if (!isAuth) {
+      toast.error(t('dataManagement.mustBeLoggedIn') || 'You must be logged in to sync')
+      return
+    }
+
+    setIsSyncing(true)
+    try {
+      const result = await performSync(true)
+      if (result.success) {
+        setLastSyncAt(new Date())
+        toast.success(t('dataManagement.fullSyncComplete') || 'Full sync complete!')
+      } else {
+        toast.error(result.error || 'Sync failed')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      toast.error(`Sync failed: ${errorMessage}`)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleResetSyncState = () => {
+    if (!confirm(t('dataManagement.confirmResetSync') || 'Are you sure? This will force a full sync on next sync operation.')) return
+    resetSyncState()
+    setLastSyncAt(null)
+    toast.success(t('dataManagement.syncStateReset') || 'Sync state reset. Next sync will be a full sync.')
+  }
 
   const loadDatabaseStats = async () => {
     try {
@@ -1384,6 +1429,67 @@ export default function SettingsPage() {
                   {t('dataManagement.importData')}
                 </Button>
               </div>
+
+              <div className="border-t border-border"></div>
+
+              {/* Advanced Sync Options (collapsible) */}
+              {isAuth && (
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setShowAdvancedSync(!showAdvancedSync)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showAdvancedSync ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    {t('dataManagement.advancedSyncOptions') || 'Advanced Sync Options'}
+                  </button>
+
+                  {showAdvancedSync && (
+                    <div className="bg-muted/30 border border-border rounded-lg p-4 md:p-6 space-y-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Cloud className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                        <p className="text-xs md:text-sm text-muted-foreground">
+                          {t('dataManagement.advancedSyncDescription') || 'These options are for troubleshooting sync issues. Use with caution.'}
+                        </p>
+                      </div>
+
+                      {lastSyncAt && (
+                        <p className="text-xs text-muted-foreground">
+                          {t('dataManagement.lastSync') || 'Last sync'}: {lastSyncAt.toLocaleString(locale)}
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={handleForceFullSync}
+                          disabled={isSyncing}
+                          className="h-10 md:h-11"
+                        >
+                          {isSyncing ? (
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Cloud className="mr-2 h-4 w-4" />
+                          )}
+                          {t('dataManagement.forceFullSync') || 'Force Full Sync'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleResetSyncState}
+                          disabled={isSyncing}
+                          className="h-10 md:h-11"
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          {t('dataManagement.resetSyncState') || 'Reset Sync State'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="border-t border-border"></div>
 

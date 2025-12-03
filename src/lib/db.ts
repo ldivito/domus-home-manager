@@ -11,6 +11,7 @@ export interface User {
   type: 'resident' | 'guest'
   householdId?: string
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface Chore {
@@ -32,6 +33,7 @@ export interface Chore {
   isCompleted: boolean
   completedAt?: Date // Timestamp when marked complete
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface GroceryItem {
@@ -53,6 +55,7 @@ export interface GroceryCategory {
   householdId?: string
   locale?: string // For user-created categories, store the language they were created in
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface SavedGroceryItem {
@@ -66,6 +69,7 @@ export interface SavedGroceryItem {
   timesUsed: number
   lastUsed?: Date
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface MealIngredient {
@@ -85,6 +89,7 @@ export interface TaskCategory {
   householdId?: string
   locale?: string
   createdAt: Date
+  updatedAt?: Date
 }
 
 // Estimated time for tasks
@@ -109,6 +114,7 @@ export interface Task {
   estimatedTime?: TaskEstimatedTime  // How long the task will take
   blockedByTaskId?: string      // Task that must be completed first
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface HomeImprovement {
@@ -121,6 +127,7 @@ export interface HomeImprovement {
   estimatedCost?: number
   priority: 'low' | 'medium' | 'high'
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface Meal {
@@ -183,6 +190,7 @@ export interface CalendarEvent {
   // Multiple users can be assigned to an event
   userIds?: string[]
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface Household {
@@ -744,6 +752,7 @@ export interface SavingsMilestone {
   order: number                   // Display order (1, 2, 3...)
   householdId?: string
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface SavingsParticipant {
@@ -755,6 +764,7 @@ export interface SavingsParticipant {
   joinedAt: Date
   householdId?: string
   createdAt: Date
+  updatedAt?: Date
 }
 
 export interface SavingsContribution {

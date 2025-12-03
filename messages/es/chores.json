@@ -28,7 +28,9 @@
   "dailyProgress": "Progreso de Hoy",
   "sections": {
     "pending": "Pendientes",
-    "completed": "Completadas"
+    "completed": "Completadas",
+    "dueToday": "Vence Hoy",
+    "upcoming": "Próximas"
   },
   "filters": {
     "title": "Filtros",

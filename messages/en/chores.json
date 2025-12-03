@@ -28,7 +28,9 @@
   "dailyProgress": "Today's Progress",
   "sections": {
     "pending": "Pending",
-    "completed": "Completed"
+    "completed": "Completed",
+    "dueToday": "Due Today",
+    "upcoming": "Upcoming"
   },
   "filters": {
     "title": "Filters",

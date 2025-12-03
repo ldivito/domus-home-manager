@@ -462,137 +462,148 @@ export default function HomePage() {
       <div className="h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
         <div className="h-full max-h-[100vh] overflow-y-auto mx-auto p-2 flex flex-col gap-2">
           
-          {/* Mobile Quick Stats - Compact Card */}
-          <Card className="glass-card shadow-modern-lg border-border/30 md:hidden">
-            <CardContent className="p-3">
-              {/* Primary Stats Row */}
-              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5">
-                <Link href="/chores" className="flex items-center gap-1.5">
-                  <CheckSquare className="h-3.5 w-3.5 text-blue-500" />
-                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{pendingChores.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.stats.chores')}</span>
+          {/* Mobile Quick Stats - Clean Grid Design */}
+          <Card className="glass-card shadow-modern-lg border-border/30 md:hidden overflow-hidden">
+            <CardContent className="p-0">
+              {/* Title */}
+              <div className="px-3 py-2 border-b border-border/30 bg-muted/20">
+                <h2 className="text-sm font-semibold text-foreground">{t('widgets.stats.overview')}</h2>
+              </div>
+              {/* Stats Grid - 4 columns */}
+              <div className="grid grid-cols-4 divide-x divide-border/30">
+                <Link href="/chores" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <CheckSquare className="h-5 w-5 text-blue-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{pendingChores.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.stats.chores')}</span>
                 </Link>
-                <Link href="/grocery" className="flex items-center gap-1.5">
-                  <ShoppingCart className="h-3.5 w-3.5 text-green-500" />
-                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">{groceryItems.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.grocery.title')}</span>
+                <Link href="/grocery" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <ShoppingCart className="h-5 w-5 text-green-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{groceryItems.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.grocery.title')}</span>
                 </Link>
-                <Link href="/tasks" className="flex items-center gap-1.5">
-                  <List className="h-3.5 w-3.5 text-yellow-500" />
-                  <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{pendingTasks.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.tasks.title')}</span>
+                <Link href="/tasks" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <List className="h-5 w-5 text-yellow-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{pendingTasks.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.tasks.title')}</span>
                 </Link>
-                <Link href="/meals" className="flex items-center gap-1.5">
-                  <UtensilsCrossed className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">{todaysMeals.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.meals.title')}</span>
+                <Link href="/meals" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <UtensilsCrossed className="h-5 w-5 text-orange-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{todaysMeals.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.meals.title')}</span>
                 </Link>
               </div>
 
-              {/* Secondary Stats Row */}
-              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 mt-2 pt-2 border-t border-border/30">
-                <Link href="/projects" className="flex items-center gap-1.5">
-                  <Hammer className="h-3.5 w-3.5 text-red-500" />
-                  <span className="text-sm font-semibold text-red-600 dark:text-red-400">{activeProjects.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.projects.title')}</span>
+              {/* Second Row */}
+              <div className="grid grid-cols-4 divide-x divide-border/30 border-t border-border/30">
+                <Link href="/projects" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <Hammer className="h-5 w-5 text-red-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{activeProjects.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.projects.title')}</span>
                 </Link>
-                <Link href="/reminders" className="flex items-center gap-1.5">
-                  <Bell className="h-3.5 w-3.5 text-amber-500" />
-                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{activeReminders.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.stats.activeReminders')}</span>
+                <Link href="/planner" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <Calendar className="h-5 w-5 text-purple-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{todaysEvents.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.schedule.title')}</span>
                 </Link>
-                <Link href="/finance" className="flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className={`text-sm font-semibold ${netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {netBalance >= 0 ? '+' : ''}{Math.round(netBalance / 1000)}k
+                <Link href="/reminders" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <Bell className="h-5 w-5 text-amber-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{activeReminders.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.notifications.title')}</span>
+                </Link>
+                <Link href="/finance" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <DollarSign className="h-5 w-5 text-emerald-500 mb-1" />
+                  <span className={`text-lg font-bold ${netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {netBalance >= 0 ? '+' : ''}{Math.abs(netBalance) >= 1000000 ? `${(netBalance / 1000000).toFixed(1)}M` : `${Math.round(netBalance / 1000)}k`}
                   </span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.finance.balance')}</span>
-                </Link>
-                <Link href="/keto" className="flex items-center gap-1.5">
-                  <Flame className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">{ketoStreak}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.keto.streak')}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.finance.balance')}</span>
                 </Link>
               </div>
 
-              {/* Tertiary Stats Row */}
-              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 mt-2 pt-2 border-t border-border/30">
-                <Link href="/documents" className="flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{documents.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.documents.title')}</span>
+              {/* Third Row */}
+              <div className="grid grid-cols-4 divide-x divide-border/30 border-t border-border/30">
+                <Link href="/documents" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <FileText className="h-5 w-5 text-slate-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{documents.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.documents.title')}</span>
                 </Link>
-                <Link href="/maintenance" className="flex items-center gap-1.5">
-                  <Wrench className="h-3.5 w-3.5 text-cyan-500" />
-                  <span className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">{maintenanceItems.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.maintenance.title')}</span>
+                <Link href="/maintenance" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <Wrench className="h-5 w-5 text-cyan-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{maintenanceItems.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.maintenance.title')}</span>
                 </Link>
-                <Link href="/subscriptions" className="flex items-center gap-1.5">
-                  <CreditCard className="h-3.5 w-3.5 text-violet-500" />
-                  <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">{activeSubscriptions.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.subscriptions.title')}</span>
+                <Link href="/subscriptions" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <CreditCard className="h-5 w-5 text-violet-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{activeSubscriptions.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.subscriptions.title')}</span>
                 </Link>
-                <Link href="/pets" className="flex items-center gap-1.5">
-                  <PawPrint className="h-3.5 w-3.5 text-amber-500" />
-                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{pets.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.pets.title')}</span>
+                <Link href="/pets" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <PawPrint className="h-5 w-5 text-amber-600 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{pets.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.pets.title')}</span>
                 </Link>
               </div>
 
-              {/* Savings & Users Row */}
-              <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 mt-2 pt-2 border-t border-border/30">
-                <Link href="/savings" className="flex items-center gap-1.5">
-                  <PiggyBank className="h-3.5 w-3.5 text-purple-500" />
-                  <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">{activeSavingsCampaigns.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.savings.title')}</span>
+              {/* Fourth Row */}
+              <div className="grid grid-cols-4 divide-x divide-border/30 border-t border-border/30">
+                <Link href="/keto" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <Flame className="h-5 w-5 text-orange-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{ketoStreak}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.keto.streak')}</span>
                 </Link>
-                <Link href="/planner" className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-purple-500" />
-                  <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">{todaysEvents.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.stats.todaysEvents')}</span>
+                <Link href="/savings" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <PiggyBank className="h-5 w-5 text-purple-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{activeSavingsCampaigns.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.savings.title')}</span>
                 </Link>
-                <Link href="/users" className="flex items-center gap-1.5">
-                  <div className="flex -space-x-1">
-                    {users.slice(0, 2).map((user) => (
-                      <Avatar key={user.id} className={`h-4 w-4 ${user.color} border border-background`}>
-                        <AvatarFallback className="text-white text-[8px] font-bold">
+                <Link href="/users" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <Users className="h-5 w-5 text-indigo-500 mb-1" />
+                  <span className="text-lg font-bold text-foreground">{users.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.users.members')}</span>
+                </Link>
+                <Link href="/settings" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
+                  <div className="flex -space-x-1.5 mb-1">
+                    {users.slice(0, 3).map((user) => (
+                      <Avatar key={user.id} className={`h-5 w-5 ${user.color} border-2 border-background`}>
+                        <AvatarFallback className="text-white text-[9px] font-bold">
                           {user.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     ))}
                   </div>
-                  <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{users.length}</span>
-                  <span className="text-xs text-muted-foreground">{t('widgets.users.members')}</span>
+                  <span className="text-lg font-bold text-foreground">{users.length}</span>
+                  <span className="text-[10px] text-muted-foreground">{t('widgets.users.residents')}</span>
                 </Link>
               </div>
 
-              {/* Alerts Row */}
+              {/* Alerts Bar */}
               {(overdueChores.length > 0 || highPriorityTasks.length > 0 || overdueMaintenanceTasks.length > 0 || expiredDocuments.length > 0) && (
-                <div className="mt-2 pt-2 border-t border-red-200/50 dark:border-red-800/30 flex items-center flex-wrap gap-3">
-                  {overdueChores.length > 0 && (
-                    <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                      <AlertCircle className="h-3 w-3" />
-                      <span className="text-xs font-medium">{overdueChores.length} {t('widgets.stats.overdue')}</span>
-                    </div>
-                  )}
-                  {highPriorityTasks.length > 0 && (
-                    <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                      <AlertCircle className="h-3 w-3" />
-                      <span className="text-xs font-medium">{highPriorityTasks.length} {t('widgets.stats.highPriority')}</span>
-                    </div>
-                  )}
-                  {overdueMaintenanceTasks.length > 0 && (
-                    <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">
-                      <Wrench className="h-3 w-3" />
-                      <span className="text-xs font-medium">{overdueMaintenanceTasks.length} {t('widgets.maintenance.overdue')}</span>
-                    </div>
-                  )}
-                  {expiredDocuments.length > 0 && (
-                    <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
-                      <FileText className="h-3 w-3" />
-                      <span className="text-xs font-medium">{expiredDocuments.length} {t('widgets.documents.expired')}</span>
-                    </div>
-                  )}
+                <div className="px-3 py-2 bg-red-50 dark:bg-red-950/30 border-t border-red-200/50 dark:border-red-800/30">
+                  <div className="flex items-center justify-center gap-4 flex-wrap">
+                    {overdueChores.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="text-xs font-medium text-red-700 dark:text-red-300">{overdueChores.length} {t('widgets.stats.overdue')}</span>
+                      </div>
+                    )}
+                    {highPriorityTasks.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span className="text-xs font-medium text-orange-700 dark:text-orange-300">{highPriorityTasks.length} {t('widgets.stats.highPriority')}</span>
+                      </div>
+                    )}
+                    {overdueMaintenanceTasks.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                        <span className="text-xs font-medium text-cyan-700 dark:text-cyan-300">{overdueMaintenanceTasks.length} {t('widgets.maintenance.overdue')}</span>
+                      </div>
+                    )}
+                    {expiredDocuments.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-slate-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{expiredDocuments.length} {t('widgets.documents.expired')}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>

@@ -80,7 +80,7 @@
       "low": "Baja Prioridad"
     },
     "projects": {
-      "title": "Proyectos Actuales",
+      "title": "Proyectos",
       "none": "No hay proyectos en progreso",
       "addFirst": "Iniciar Primer Proyecto",
       "viewAll": "Ver Todos los Proyectos"
@@ -116,7 +116,7 @@
       "highPriority": "alta prioridad"
     },
     "schedule": {
-      "title": "Horario de Hoy",
+      "title": "Agenda",
       "none": "No hay eventos programados",
       "free": "¡Tu día está libre!",
       "allDay": "Todo el día",
@@ -125,7 +125,7 @@
       "dayAfterTomorrow": "Pasado mañana"
     },
     "notifications": {
-      "title": "Notificaciones y Recordatorios",
+      "title": "Avisos",
       "overdueChores": "Tarea{count, plural, one {} other {s}} Vencida{count, plural, one {} other {s}}",
       "highPriorityTasks": "Tarea{count, plural, one {} other {s}} de Alta Prioridad",
       "moreReminders": "más recordatorios",

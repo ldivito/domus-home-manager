@@ -19,6 +19,7 @@ interface ExpensesTabProps {
   expenses: RecurringExpense[]
   categories: ExpenseCategory[]
   exchangeRate?: MonthlyExchangeRate
+  hideAmounts?: boolean
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -34,7 +35,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const frequencies = ['monthly', 'bimonthly', 'quarterly', 'yearly'] as const
 
-export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabProps) {
+export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _hideAmounts }: ExpensesTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.expenses')
   const tCat = useTranslations('finance.defaultExpenseCategories')
   const tMessages = useTranslations('finance.messages')

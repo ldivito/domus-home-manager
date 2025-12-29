@@ -3,6 +3,8 @@
   "subtitle": "General to-do list for one-off things",
   "addTask": "Add Task",
   "editTask": "Edit Task",
+  "viewDetails": "View Details",
+  "createdAt": "Created",
   "noTasks": "No tasks yet",
   "addFirstTask": "Create your first task to get started",
   "noTasksFound": "No tasks found",

@@ -30,6 +30,7 @@ interface PaymentsTabProps {
   currentYear: number
   exchangeRate?: MonthlyExchangeRate
   isFutureMonth?: boolean
+  hideAmounts?: boolean
 }
 
 export function PaymentsTab({
@@ -40,8 +41,11 @@ export function PaymentsTab({
   currentMonth,
   currentYear,
   exchangeRate,
-  isFutureMonth
+  isFutureMonth,
+  hideAmounts: _hideAmounts
 }: PaymentsTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.payments')
   const tMessages = useTranslations('finance.messages')
 

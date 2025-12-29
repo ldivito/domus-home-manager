@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import type { SyncRecord } from '@/lib/sync'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('Push sync error:', error)
+    logger.error('Push sync error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

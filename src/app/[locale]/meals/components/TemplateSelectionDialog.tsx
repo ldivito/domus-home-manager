@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Search, X, UtensilsCrossed } from "lucide-react"
 import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { logger } from '@/lib/logger'
 
 interface TemplateSelectionDialogProps {
   open: boolean
@@ -44,7 +45,7 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
 
   useEffect(() => {
     db.ensureMealIngredientStructure().catch((error) => {
-      console.error('Failed to ensure meal ingredient structure:', error)
+      logger.error('Failed to ensure meal ingredient structure:', error)
     })
   }, [])
 

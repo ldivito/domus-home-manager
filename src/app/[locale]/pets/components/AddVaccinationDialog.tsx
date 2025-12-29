@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Syringe } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddVaccinationDialogProps {
   open: boolean
@@ -89,7 +90,7 @@ export function AddVaccinationDialog({ open, onOpenChange, petId }: AddVaccinati
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error adding vaccination:', error)
+      logger.error('Error adding vaccination:', error)
       toast.error(t('messages.vaccinationAddError'))
     } finally {
       setIsSubmitting(false)

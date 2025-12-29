@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { logger } from '@/lib/logger'
 
 interface PaymentsTabProps {
   expenses: RecurringExpense[]
@@ -30,6 +31,7 @@ interface PaymentsTabProps {
   currentYear: number
   exchangeRate?: MonthlyExchangeRate
   isFutureMonth?: boolean
+  hideAmounts?: boolean
 }
 
 export function PaymentsTab({
@@ -40,8 +42,11 @@ export function PaymentsTab({
   currentMonth,
   currentYear,
   exchangeRate,
-  isFutureMonth
+  isFutureMonth,
+  hideAmounts: _hideAmounts
 }: PaymentsTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.payments')
   const tMessages = useTranslations('finance.messages')
 
@@ -132,7 +137,7 @@ export function PaymentsTab({
           } catch (error) {
             // If add fails, remove from generated set so it can be retried
             generatedPaymentsRef.current.delete(paymentKey)
-            console.error('Error generating payment:', error)
+            logger.error('Error generating payment:', error)
           }
         } else {
           // Mark as generated since it already exists
@@ -212,7 +217,7 @@ export function PaymentsTab({
       setShowMarkPaidDialog(false)
       setSelectedPayment(null)
     } catch (error) {
-      console.error('Error marking payment:', error)
+      logger.error('Error marking payment:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -224,7 +229,7 @@ export function PaymentsTab({
       await deleteWithSync(db.expensePayments, 'expensePayments', paymentId)
       toast.success(tMessages('paymentDeleted'))
     } catch (error) {
-      console.error('Error deleting payment:', error)
+      logger.error('Error deleting payment:', error)
       toast.error(tMessages('error'))
     }
   }
@@ -247,7 +252,7 @@ export function PaymentsTab({
       })
       toast.success(tMessages('paymentUnmarked'))
     } catch (error) {
-      console.error('Error unmarking payment:', error)
+      logger.error('Error unmarking payment:', error)
       toast.error(tMessages('error'))
     }
   }

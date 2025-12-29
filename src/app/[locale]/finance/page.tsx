@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { DollarSign, Receipt, Scale, Calendar, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
+import { DollarSign, Receipt, Scale, Calendar, ChevronLeft, ChevronRight, BarChart3, Eye, EyeOff } from 'lucide-react'
 import { IncomeTab } from './components/IncomeTab'
 import { ExpensesTab } from './components/ExpensesTab'
 import { PaymentsTab } from './components/PaymentsTab'
@@ -18,6 +18,7 @@ import { formatARS } from '@/lib/utils'
 export default function FinancePage() {
   const t = useTranslations('finance')
   const [activeTab, setActiveTab] = useState('income')
+  const [hideAmounts, setHideAmounts] = useState(false)
 
   // Current date for reference
   const currentDate = new Date()
@@ -122,18 +123,37 @@ export default function FinancePage() {
     return sum + exp.amount
   }, 0)
 
+  // Helper function to display amounts
+  const displayAmount = (amount: number, prefix: string = '$ ') => {
+    if (hideAmounts) {
+      return `${prefix}••••••`
+    }
+    return `${prefix}${formatARS(amount)}`
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header with Month Navigator */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">
-              {t('title')}
-            </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400">
-              {t('subtitle')}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">
+                {t('title')}
+              </h1>
+              <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400">
+                {t('subtitle')}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setHideAmounts(!hideAmounts)}
+              className="h-10 w-10 text-muted-foreground hover:text-foreground"
+              title={hideAmounts ? t('showAmounts') : t('hideAmounts')}
+            >
+              {hideAmounts ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
           </div>
 
           {/* Compact Month Navigator */}
@@ -195,11 +215,11 @@ export default function FinancePage() {
                     {t('income.totalHousehold')}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold text-green-700 dark:text-green-300">
-                    $ {formatARS(totalHouseholdIncome)}
+                    {displayAmount(totalHouseholdIncome)}
                   </p>
                   {exchangeRate > 1 && (
                     <p className="text-xs sm:text-sm text-green-600/70 dark:text-green-400/70">
-                      USD {formatARS(totalHouseholdIncome / exchangeRate)}
+                      {displayAmount(totalHouseholdIncome / exchangeRate, 'USD ')}
                     </p>
                   )}
                 </div>
@@ -218,11 +238,11 @@ export default function FinancePage() {
                     {t('expenses.title')}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold text-red-700 dark:text-red-300">
-                    $ {formatARS(totalMonthlyExpenses)}
+                    {displayAmount(totalMonthlyExpenses)}
                   </p>
                   {exchangeRate > 1 && (
                     <p className="text-xs sm:text-sm text-red-600/70 dark:text-red-400/70">
-                      USD {formatARS(totalMonthlyExpenses / exchangeRate)}
+                      {displayAmount(totalMonthlyExpenses / exchangeRate, 'USD ')}
                     </p>
                   )}
                 </div>
@@ -241,11 +261,11 @@ export default function FinancePage() {
                     {t('balance.netBalance')}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    $ {formatARS(totalHouseholdIncome - totalMonthlyExpenses)}
+                    {displayAmount(totalHouseholdIncome - totalMonthlyExpenses)}
                   </p>
                   {exchangeRate > 1 && (
                     <p className="text-xs sm:text-sm text-blue-600/70 dark:text-blue-400/70">
-                      USD {formatARS((totalHouseholdIncome - totalMonthlyExpenses) / exchangeRate)}
+                      {displayAmount((totalHouseholdIncome - totalMonthlyExpenses) / exchangeRate, 'USD ')}
                     </p>
                   )}
                 </div>
@@ -293,6 +313,7 @@ export default function FinancePage() {
               currentYear={selectedYear}
               exchangeRate={selectedExchangeRate}
               isFutureMonth={isFutureMonth}
+              hideAmounts={hideAmounts}
             />
           </TabsContent>
 
@@ -301,6 +322,7 @@ export default function FinancePage() {
               expenses={recurringExpenses}
               categories={expenseCategories}
               exchangeRate={selectedExchangeRate}
+              hideAmounts={hideAmounts}
             />
           </TabsContent>
 
@@ -314,6 +336,7 @@ export default function FinancePage() {
               currentYear={selectedYear}
               exchangeRate={selectedExchangeRate}
               isFutureMonth={isFutureMonth}
+              hideAmounts={hideAmounts}
             />
           </TabsContent>
 
@@ -326,6 +349,7 @@ export default function FinancePage() {
               exchangeRate={selectedExchangeRate}
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
+              hideAmounts={hideAmounts}
             />
           </TabsContent>
 
@@ -338,6 +362,7 @@ export default function FinancePage() {
               allExchangeRates={allExchangeRates}
               currentMonth={selectedMonth}
               currentYear={selectedYear}
+              hideAmounts={hideAmounts}
             />
           </TabsContent>
         </Tabs>

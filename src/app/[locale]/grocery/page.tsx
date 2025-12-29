@@ -13,6 +13,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { AddItemDialog } from './components/AddItemDialog'
 import { ManageCategoriesDialog } from './components/ManageCategoriesDialog'
 import { ManageSavedItemsDialog } from './components/ManageSavedItemsDialog'
+import { logger } from '@/lib/logger'
 
 type ViewMode = 'list' | 'categories'
 type ViewType = 'current' | 'saved'
@@ -67,7 +68,7 @@ export default function GroceryPage() {
         updatedAt: new Date()
       })
     } catch (error) {
-      console.error('Error adding saved item:', error)
+      logger.error('Error adding saved item:', error)
     }
   }
 

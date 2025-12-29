@@ -21,6 +21,7 @@ import { db, Meal, SavedGroceryItem, MealIngredient, deleteWithSync } from '@/li
 import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from "sonner"
+import { logger } from '@/lib/logger'
 
 interface MealDetailsDialogProps {
   open: boolean
@@ -69,7 +70,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
 
   useEffect(() => {
     db.ensureMealIngredientStructure().catch((error) => {
-      console.error('Failed to ensure meal ingredient structure:', error)
+      logger.error('Failed to ensure meal ingredient structure:', error)
     })
   }, [])
 
@@ -146,7 +147,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
       setIsEditing(false)
       onMealUpdated?.()
     } catch (error) {
-      console.error('Error updating meal:', error)
+      logger.error('Error updating meal:', error)
     }
   }
 
@@ -175,7 +176,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
       onMealDeleted?.()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error deleting meal:', error)
+      logger.error('Error deleting meal:', error)
     }
   }
 
@@ -217,13 +218,13 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
             label: t('notifications.viewList'),
             onClick: () => {
               // Could navigate to grocery page here
-              console.log('Navigate to grocery list')
+              logger.debug('Navigate to grocery list')
             }
           }
         }
       )
     } catch (error) {
-      console.error('Error adding ingredients to grocery list:', error)
+      logger.error('Error adding ingredients to grocery list:', error)
       toast.error(t('notifications.errorAddingToGrocery'))
     }
   }
@@ -292,7 +293,7 @@ export function MealDetailsDialog({ open, onOpenChange, meal, onMealUpdated, onM
 
       handleAddIngredientEntry(savedItemId, newIngredientRecipeAmount, newIngredientUsageNotes)
     } catch (error) {
-      console.error('Error saving ingredient:', error)
+      logger.error('Error saving ingredient:', error)
     }
 
     setNewIngredientName('')

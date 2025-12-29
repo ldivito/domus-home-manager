@@ -14,11 +14,13 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Receipt, Trash2, Edit, Home, Zap, Wifi, Shield, FileText, Tv, Wrench, MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface ExpensesTabProps {
   expenses: RecurringExpense[]
   categories: ExpenseCategory[]
   exchangeRate?: MonthlyExchangeRate
+  hideAmounts?: boolean
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -34,7 +36,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const frequencies = ['monthly', 'bimonthly', 'quarterly', 'yearly'] as const
 
-export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabProps) {
+export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _hideAmounts }: ExpensesTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.expenses')
   const tCat = useTranslations('finance.defaultExpenseCategories')
   const tMessages = useTranslations('finance.messages')
@@ -140,7 +144,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
       setShowDialog(false)
       resetForm()
     } catch (error) {
-      console.error('Error saving expense:', error)
+      logger.error('Error saving expense:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -154,7 +158,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
         updatedAt: new Date()
       })
     } catch (error) {
-      console.error('Error toggling expense:', error)
+      logger.error('Error toggling expense:', error)
       toast.error(tMessages('error'))
     }
   }
@@ -164,7 +168,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate }: ExpensesTabP
       await deleteWithSync(db.recurringExpenses, 'recurringExpenses', expenseId)
       toast.success(tMessages('expenseDeleted'))
     } catch (error) {
-      console.error('Error deleting expense:', error)
+      logger.error('Error deleting expense:', error)
       toast.error(tMessages('error'))
     }
   }

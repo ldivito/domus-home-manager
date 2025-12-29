@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import {
   Calendar,
   Wallet,
@@ -178,7 +179,7 @@ export function AddCampaignDialog({ open, onOpenChange, users }: AddCampaignDial
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error creating campaign:', error)
+      logger.error('Error creating campaign:', error)
       toast.error(t('messages.error'))
     } finally {
       setIsSubmitting(false)

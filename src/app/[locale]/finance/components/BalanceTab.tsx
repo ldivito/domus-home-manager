@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Scale, ArrowRight, Check, TrendingUp, TrendingDown, Wallet, Receipt, PiggyBank, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { logger } from '@/lib/logger'
 
 interface BalanceTabProps {
   users: User[]
@@ -23,6 +24,7 @@ interface BalanceTabProps {
   exchangeRate?: MonthlyExchangeRate
   selectedMonth: number
   selectedYear: number
+  hideAmounts?: boolean
 }
 
 interface UserBalance {
@@ -45,7 +47,9 @@ interface Settlement {
   amount: number
 }
 
-export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, selectedMonth, selectedYear }: BalanceTabProps) {
+export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, selectedMonth, selectedYear, hideAmounts: _hideAmounts }: BalanceTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.balance')
   const tMessages = useTranslations('finance.messages')
 
@@ -220,7 +224,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
       setSelectedSettlement(null)
       setSettlementNotes('')
     } catch (error) {
-      console.error('Error saving settlement:', error)
+      logger.error('Error saving settlement:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -233,7 +237,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
       await deleteWithSync(db.settlementPayments, 'settlementPayments', settlementPayment.id!)
       toast.success(tMessages('settlementUnmarked'))
     } catch (error) {
-      console.error('Error deleting settlement:', error)
+      logger.error('Error deleting settlement:', error)
       toast.error(tMessages('error'))
     }
   }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { generateInviteCode } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       inviteCode: newInviteCode
     })
   } catch (error) {
-    console.error('Regenerate invite code error:', error)
+    logger.error('Regenerate invite code error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

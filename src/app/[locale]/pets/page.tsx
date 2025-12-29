@@ -47,6 +47,7 @@ import { toast } from 'sonner'
 import { AddPetDialog } from './components/AddPetDialog'
 import { EditPetDialog } from './components/EditPetDialog'
 import { PetDetailDialog } from './components/PetDetailDialog'
+import { logger } from '@/lib/logger'
 
 const EMPTY_PETS: Pet[] = []
 const EMPTY_USERS: User[] = []
@@ -198,7 +199,7 @@ export default function PetsPage() {
       setDeleteDialogOpen(false)
       setSelectedPet(null)
     } catch (error) {
-      console.error('Error deleting pet:', error)
+      logger.error('Error deleting pet:', error)
       toast.error(t('messages.deleteError'))
     }
   }

@@ -47,6 +47,8 @@
   "chores": "Tareas del Hogar",
   "topPerformer": "Mejor Desempeño",
   "recentActivity": "Actividad Reciente",
+  "noActivity": "Sin actividad reciente",
+  "noActivityDescription": "Las tareas y quehaceres completados aparecerán aquí",
   "familyStats": "Estadísticas Familiares",
   "totalTasksCompleted": "Total de Tareas Completadas",
   "assignedChores": "Tareas Asignadas",

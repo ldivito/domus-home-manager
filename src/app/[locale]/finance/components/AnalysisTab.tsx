@@ -42,6 +42,7 @@ interface AnalysisTabProps {
   allExchangeRates: MonthlyExchangeRate[]
   currentMonth: number
   currentYear: number
+  hideAmounts?: boolean
 }
 
 // Color palette for charts
@@ -64,8 +65,11 @@ export function AnalysisTab({
   allPayments,
   allExchangeRates,
   currentMonth,
-  currentYear
+  currentYear,
+  hideAmounts: _hideAmounts
 }: AnalysisTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.analysis')
 
   // Get exchange rate for a specific month/year

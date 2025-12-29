@@ -1,6 +1,8 @@
 {
   "title": "Finanzas",
   "subtitle": "Gestiona gastos e ingresos compartidos del hogar",
+  "hideAmounts": "Ocultar montos",
+  "showAmounts": "Mostrar montos",
   "months": {
     "january": "Enero",
     "february": "Febrero",

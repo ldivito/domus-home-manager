@@ -19,6 +19,7 @@ import { db, Meal, SavedMeal, SavedGroceryItem, MealIngredient } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { TemplateSelectionDialog } from './TemplateSelectionDialog'
+import { logger } from '@/lib/logger'
 
 interface AddMealDialogProps {
   open: boolean
@@ -88,7 +89,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
 
   useEffect(() => {
     db.ensureMealIngredientStructure().catch((error) => {
-      console.error('Failed to ensure meal ingredient structure:', error)
+      logger.error('Failed to ensure meal ingredient structure:', error)
     })
   }, [])
 
@@ -241,7 +242,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
 
       handleAddIngredientEntry(savedItemId, newIngredientRecipeAmount, newIngredientUsageNotes)
     } catch (error) {
-      console.error('Error saving ingredient to grocery items:', error)
+      logger.error('Error saving ingredient to grocery items:', error)
     }
 
     setNewIngredientName('')
@@ -268,7 +269,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
       setNewCategoryName('')
       setNewCategoryColor('#6b7280')
     } catch (error) {
-      console.error('Error creating category:', error)
+      logger.error('Error creating category:', error)
     }
   }
 
@@ -294,7 +295,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
           lastUsed: new Date()
         })
       } catch (error) {
-        console.error('Error updating template usage:', error)
+        logger.error('Error updating template usage:', error)
       }
     }
   }
@@ -341,7 +342,7 @@ export function AddMealDialog({ open, onOpenChange, onMealCreated, preSelectedDa
       onMealCreated?.()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error saving meal:', error)
+      logger.error('Error saving meal:', error)
     }
   }
 

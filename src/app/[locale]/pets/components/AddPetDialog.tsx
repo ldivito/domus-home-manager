@@ -28,6 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PawPrint, Camera, Dog, Cat, Bird, Fish, Rabbit } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddPetDialogProps {
   open: boolean
@@ -160,7 +161,7 @@ export function AddPetDialog({ open, onOpenChange }: AddPetDialogProps) {
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error adding pet:', error)
+      logger.error('Error adding pet:', error)
       toast.error(t('messages.addError'))
     } finally {
       setIsSubmitting(false)

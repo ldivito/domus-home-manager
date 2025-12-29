@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Calendar } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddVetVisitDialogProps {
   open: boolean
@@ -104,7 +105,7 @@ export function AddVetVisitDialog({ open, onOpenChange, petId }: AddVetVisitDial
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error adding vet visit:', error)
+      logger.error('Error adding vet visit:', error)
       toast.error(t('messages.vetVisitAddError'))
     } finally {
       setIsSubmitting(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -19,49 +19,73 @@ import { CalendarIcon, User, FolderKanban, Clock, AlertTriangle, Tag } from "luc
 import { format } from "date-fns"
 import { db, User as UserType, Task, HomeImprovement, TaskCategory } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { generateId } from '@/lib/utils'
 import { cn } from "@/lib/utils"
+import { logger } from '@/lib/logger'
 
-interface EditTaskDialogProps {
+interface TaskFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  task: Task | null
+  task?: Task | null  // If provided, we're editing. If not, we're creating.
   users: UserType[]
   categories: TaskCategory[]
 }
 
-export function EditTaskDialog({ open, onOpenChange, task, users, categories }: EditTaskDialogProps) {
+interface TaskFormState {
+  title: string
+  description: string
+  assignedUserId: string
+  dueDate: Date | undefined
+  priority: 'low' | 'medium' | 'high'
+  categoryId: string
+  linkedProjectId: string
+  estimatedHours: string
+  estimatedMinutes: string
+  blockedByTaskId: string
+}
+
+const initialFormState: TaskFormState = {
+  title: '',
+  description: '',
+  assignedUserId: '',
+  dueDate: undefined,
+  priority: 'medium',
+  categoryId: '',
+  linkedProjectId: '',
+  estimatedHours: '',
+  estimatedMinutes: '',
+  blockedByTaskId: ''
+}
+
+export function TaskFormDialog({ open, onOpenChange, task, users, categories }: TaskFormDialogProps) {
   const t = useTranslations('tasks')
   const tCommon = useTranslations('common')
   const tCat = useTranslations('tasks.defaultTaskCategories')
 
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [assignedUserId, setAssignedUserId] = useState<string>('')
-  const [dueDate, setDueDate] = useState<Date | undefined>()
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
-  const [categoryId, setCategoryId] = useState<string>('')
-  const [linkedProjectId, setLinkedProjectId] = useState<string>('')
-  const [estimatedHours, setEstimatedHours] = useState<string>('')
-  const [estimatedMinutes, setEstimatedMinutes] = useState<string>('')
-  const [blockedByTaskId, setBlockedByTaskId] = useState<string>('')
+  const isEditing = !!task
+  const [formState, setFormState] = useState<TaskFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch projects for dropdown
   const projects = useLiveQuery(
-    () => db.homeImprovements.toArray(),
-    []
+    () => isEditing
+      ? db.homeImprovements.toArray()
+      : db.homeImprovements.where('status').notEqual('done').toArray(),
+    [isEditing]
   ) || []
 
-  // Fetch other tasks for blocker dropdown (excluding current task)
+  // Fetch other tasks for blocker dropdown
   const existingTasks = useLiveQuery(
     () => db.tasks.where('isCompleted').equals(0).toArray(),
     []
   ) || []
 
-  // Filter out current task from blocker options
-  const blockerOptions = existingTasks.filter(t => t.id !== task?.id)
+  // Filter out current task from blocker options when editing
+  const blockerOptions = isEditing
+    ? existingTasks.filter(t => t.id !== task?.id)
+    : existingTasks
 
-  const translateCategoryName = (categoryName: string) => {
+  const translateCategoryName = useCallback((categoryName: string) => {
     if (categoryName.startsWith('defaultTaskCategories.')) {
       const key = categoryName.replace('defaultTaskCategories.', '')
       const categoryMap: Record<string, string> = {
@@ -77,80 +101,107 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
       return categoryMap[key] || categoryName
     }
     return categoryName
-  }
+  }, [tCat])
 
-  // Pre-fill form when task changes
+  // Pre-fill form when task changes (edit mode) or reset when opening (create mode)
   useEffect(() => {
-    if (task && open) {
-      setTitle(task.title)
-      setDescription(task.description || '')
-      setAssignedUserId(task.assignedUserId ? task.assignedUserId.toString() : 'unassigned')
-      setDueDate(task.dueDate ? new Date(task.dueDate) : undefined)
-      setPriority(task.priority)
-      setCategoryId(task.category || 'none')
-      setLinkedProjectId(task.linkedProjectId || 'none')
-      setEstimatedHours(task.estimatedTime?.hours?.toString() || '')
-      setEstimatedMinutes(task.estimatedTime?.minutes?.toString() || '')
-      setBlockedByTaskId(task.blockedByTaskId || 'none')
+    if (open) {
+      if (task) {
+        setFormState({
+          title: task.title,
+          description: task.description || '',
+          assignedUserId: task.assignedUserId ? task.assignedUserId.toString() : 'unassigned',
+          dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+          priority: task.priority,
+          categoryId: task.category || 'none',
+          linkedProjectId: task.linkedProjectId || 'none',
+          estimatedHours: task.estimatedTime?.hours?.toString() || '',
+          estimatedMinutes: task.estimatedTime?.minutes?.toString() || '',
+          blockedByTaskId: task.blockedByTaskId || 'none'
+        })
+      } else {
+        setFormState(initialFormState)
+      }
     }
   }, [task, open])
+
+  const updateField = <K extends keyof TaskFormState>(field: K, value: TaskFormState[K]) => {
+    setFormState(prev => ({ ...prev, [field]: value }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!title.trim() || !task?.id) {
-      return
-    }
+    if (!formState.title.trim()) return
+    if (isEditing && !task?.id) return
 
     setIsSubmitting(true)
 
     try {
-      const hours = estimatedHours ? parseInt(estimatedHours) : 0
-      const minutes = estimatedMinutes ? parseInt(estimatedMinutes) : 0
+      const hours = formState.estimatedHours ? parseInt(formState.estimatedHours) : 0
+      const minutes = formState.estimatedMinutes ? parseInt(formState.estimatedMinutes) : 0
       const hasEstimatedTime = hours > 0 || minutes > 0
 
-      await db.tasks.update(task.id, {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
-        dueDate: dueDate,
-        priority,
-        category: categoryId && categoryId !== 'none' ? categoryId : undefined,
-        linkedProjectId: linkedProjectId && linkedProjectId !== 'none' ? linkedProjectId : undefined,
+      const taskData = {
+        title: formState.title.trim(),
+        description: formState.description.trim() || undefined,
+        assignedUserId: formState.assignedUserId && formState.assignedUserId !== 'unassigned' ? formState.assignedUserId : undefined,
+        dueDate: formState.dueDate,
+        priority: formState.priority,
+        category: formState.categoryId && formState.categoryId !== 'none' ? formState.categoryId : undefined,
+        linkedProjectId: formState.linkedProjectId && formState.linkedProjectId !== 'none' ? formState.linkedProjectId : undefined,
         estimatedTime: hasEstimatedTime ? { hours, minutes } : undefined,
-        blockedByTaskId: blockedByTaskId && blockedByTaskId !== 'none' ? blockedByTaskId : undefined,
-        updatedAt: new Date()
-      })
+        blockedByTaskId: formState.blockedByTaskId && formState.blockedByTaskId !== 'none' ? formState.blockedByTaskId : undefined,
+      }
 
+      if (isEditing) {
+        await db.tasks.update(task!.id!, {
+          ...taskData,
+          updatedAt: new Date()
+        })
+      } else {
+        const newTask: Task = {
+          id: generateId('tsk'),
+          ...taskData,
+          isCompleted: false,
+          createdAt: new Date()
+        }
+        await db.tasks.add(newTask)
+      }
+
+      setFormState(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating task:', error)
+      logger.error(`Error ${isEditing ? 'updating' : 'creating'} task:`, error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleCancel = () => {
+    setFormState(initialFormState)
     onOpenChange(false)
   }
 
-  if (!task) return null
+  if (isEditing && !task) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="text-xl font-semibold">{t('editTask')}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            {isEditing ? t('editTask') : t('addTask')}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-4">
           {/* Title - Full width */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-title" className="text-sm font-medium">{t('form.title')} *</Label>
+            <Label htmlFor="task-title" className="text-sm font-medium">{t('form.title')} *</Label>
             <Input
-              id="edit-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              id="task-title"
+              value={formState.title}
+              onChange={(e) => updateField('title', e.target.value)}
               placeholder={t('form.titlePlaceholder')}
               className="h-10"
               required
@@ -159,11 +210,11 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
 
           {/* Description - Full width */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-description" className="text-sm font-medium">{t('form.description')}</Label>
+            <Label htmlFor="task-description" className="text-sm font-medium">{t('form.description')}</Label>
             <Textarea
-              id="edit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              id="task-description"
+              value={formState.description}
+              onChange={(e) => updateField('description', e.target.value)}
               placeholder={t('form.descriptionPlaceholder')}
               rows={2}
               className="resize-none"
@@ -174,7 +225,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('form.category')}</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={formState.categoryId} onValueChange={(v) => updateField('categoryId', v)}>
                 <SelectTrigger className="h-10">
                   <div className="flex items-center">
                     <Tag className="mr-2 h-4 w-4 text-gray-400" />
@@ -200,7 +251,10 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
 
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('form.priority')}</Label>
-              <Select value={priority} onValueChange={(value) => setPriority(value as 'low' | 'medium' | 'high')}>
+              <Select
+                value={formState.priority}
+                onValueChange={(v) => updateField('priority', v as 'low' | 'medium' | 'high')}
+              >
                 <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
@@ -232,7 +286,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('form.assignedTo')}</Label>
-              <Select value={assignedUserId} onValueChange={setAssignedUserId}>
+              <Select value={formState.assignedUserId} onValueChange={(v) => updateField('assignedUserId', v)}>
                 <SelectTrigger className="h-10">
                   <div className="flex items-center">
                     <User className="mr-2 h-4 w-4 text-gray-400" />
@@ -264,18 +318,18 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
                     variant="outline"
                     className={cn(
                       "w-full h-10 justify-start text-left font-normal",
-                      !dueDate && "text-muted-foreground"
+                      !formState.dueDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
-                    {dueDate ? format(dueDate, "PPP") : <span>{t('form.pickDate')}</span>}
+                    {formState.dueDate ? format(formState.dueDate, "PPP") : <span>{t('form.pickDate')}</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
+                    selected={formState.dueDate}
+                    onSelect={(date) => updateField('dueDate', date)}
                     disabled={(date) =>
                       date < new Date(new Date().setHours(0, 0, 0, 0))
                     }
@@ -296,8 +350,8 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
                   type="number"
                   min="0"
                   max="99"
-                  value={estimatedHours}
-                  onChange={(e) => setEstimatedHours(e.target.value)}
+                  value={formState.estimatedHours}
+                  onChange={(e) => updateField('estimatedHours', e.target.value)}
                   placeholder="0"
                   className="w-16 h-10 text-center"
                 />
@@ -308,8 +362,8 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
                   type="number"
                   min="0"
                   max="59"
-                  value={estimatedMinutes}
-                  onChange={(e) => setEstimatedMinutes(e.target.value)}
+                  value={formState.estimatedMinutes}
+                  onChange={(e) => updateField('estimatedMinutes', e.target.value)}
                   placeholder="0"
                   className="w-16 h-10 text-center"
                 />
@@ -322,7 +376,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('form.linkedProject')}</Label>
-              <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
+              <Select value={formState.linkedProjectId} onValueChange={(v) => updateField('linkedProjectId', v)}>
                 <SelectTrigger className="h-10">
                   <div className="flex items-center">
                     <FolderKanban className="mr-2 h-4 w-4 text-gray-400" />
@@ -345,7 +399,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
 
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('form.blockedBy')}</Label>
-              <Select value={blockedByTaskId} onValueChange={setBlockedByTaskId}>
+              <Select value={formState.blockedByTaskId} onValueChange={(v) => updateField('blockedByTaskId', v)}>
                 <SelectTrigger className="h-10">
                   <div className="flex items-center">
                     <AlertTriangle className="mr-2 h-4 w-4 text-gray-400" />
@@ -371,9 +425,12 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
             </Button>
             <Button
               type="submit"
-              disabled={!title.trim() || isSubmitting}
+              disabled={!formState.title.trim() || isSubmitting}
             >
-              {isSubmitting ? t('form.updating') : t('form.updateTask')}
+              {isSubmitting
+                ? (isEditing ? t('form.updating') : t('form.creating'))
+                : (isEditing ? t('form.updateTask') : t('form.createTask'))
+              }
             </Button>
           </div>
         </form>
@@ -381,3 +438,7 @@ export function EditTaskDialog({ open, onOpenChange, task, users, categories }: 
     </Dialog>
   )
 }
+
+// Re-export with legacy names for backward compatibility
+export { TaskFormDialog as AddTaskDialog }
+export { TaskFormDialog as EditTaskDialog }

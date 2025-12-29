@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest, createToken, createSessionCookie, storeSession } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
 
     return response
   } catch (error) {
-    console.error('Error creating household:', error)
+    logger.error('Error creating household:', error)
     return NextResponse.json(
       { error: 'Failed to create household' },
       { status: 500 }

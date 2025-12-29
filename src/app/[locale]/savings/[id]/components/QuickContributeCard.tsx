@@ -7,6 +7,7 @@ import { generateId, formatARS } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Zap, Plus } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface QuickContributeCardProps {
   campaign: SavingsCampaign
@@ -114,7 +115,7 @@ export function QuickContributeCard({
 
       onContributionAdded?.()
     } catch (error) {
-      console.error('Error adding contribution:', error)
+      logger.error('Error adding contribution:', error)
       toast.error(t('messages.error'))
     } finally {
       setIsAdding(null)

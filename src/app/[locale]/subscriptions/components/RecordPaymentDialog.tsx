@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { db, Subscription } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface RecordPaymentDialogProps {
   open: boolean
@@ -118,7 +119,7 @@ export function RecordPaymentDialog({ open, onOpenChange, subscription }: Record
         notes: ''
       })
     } catch (error) {
-      console.error('Error recording payment:', error)
+      logger.error('Error recording payment:', error)
       toast.error(t('messages.paymentError'))
     } finally {
       setIsSubmitting(false)

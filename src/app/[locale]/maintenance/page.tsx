@@ -47,6 +47,7 @@ import { AddTaskDialog } from './components/AddTaskDialog'
 import { EditTaskDialog } from './components/EditTaskDialog'
 import { LogMaintenanceDialog } from './components/LogMaintenanceDialog'
 import { ItemDetailDialog } from './components/ItemDetailDialog'
+import { logger } from '@/lib/logger'
 
 // Stable empty arrays to avoid useMemo dependency issues
 const EMPTY_ITEMS: MaintenanceItem[] = []
@@ -196,7 +197,7 @@ export default function MaintenancePage() {
       setDeleteItemOpen(false)
       setSelectedItem(null)
     } catch (error) {
-      console.error('Error deleting item:', error)
+      logger.error('Error deleting item:', error)
       toast.error(t('messages.deleteError'))
     }
   }
@@ -209,7 +210,7 @@ export default function MaintenancePage() {
       setDeleteTaskOpen(false)
       setSelectedTask(null)
     } catch (error) {
-      console.error('Error deleting task:', error)
+      logger.error('Error deleting task:', error)
       toast.error(t('messages.deleteError'))
     }
   }

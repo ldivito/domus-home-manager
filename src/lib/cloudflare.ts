@@ -1,10 +1,12 @@
 /**
  * Cloudflare bindings utilities
- * 
+ *
  * Provides access to D1 database and KV namespace.
  * For local development (npm run dev), falls back to in-memory storage.
  * For production (Cloudflare Pages), uses actual D1/KV bindings.
  */
+
+import { logger } from '@/lib/logger'
 
 export interface CloudflareEnv {
   domus_db?: D1Database
@@ -350,7 +352,7 @@ export function getDB(env?: CloudflareEnv): D1Database {
 
   if (accountId && databaseId && apiToken) {
     if (!cloudflareRESTDB) {
-      console.log('[Cloudflare] Using D1 REST API for localhost')
+      logger.debug('[Cloudflare] Using D1 REST API for localhost')
       cloudflareRESTDB = new CloudflareD1REST(accountId, databaseId, apiToken)
     }
     return cloudflareRESTDB
@@ -358,7 +360,7 @@ export function getDB(env?: CloudflareEnv): D1Database {
 
   // 3. Fallback to in-memory for local development
   if (!inMemoryDB) {
-    console.log('[Cloudflare] Using in-memory D1 fallback')
+    logger.debug('[Cloudflare] Using in-memory D1 fallback')
     inMemoryDB = new InMemoryD1()
   }
   return inMemoryDB
@@ -384,7 +386,7 @@ export function getKV(env?: CloudflareEnv): KVNamespace {
 
   if (accountId && namespaceId && apiToken) {
     if (!cloudflareRESTKV) {
-      console.log('[Cloudflare] Using KV REST API for localhost')
+      logger.debug('[Cloudflare] Using KV REST API for localhost')
       cloudflareRESTKV = new CloudflareKVREST(accountId, namespaceId, apiToken)
     }
     return cloudflareRESTKV
@@ -392,7 +394,7 @@ export function getKV(env?: CloudflareEnv): KVNamespace {
 
   // 3. Fallback to in-memory for local development
   if (!inMemoryKV) {
-    console.log('[Cloudflare] Using in-memory KV fallback')
+    logger.debug('[Cloudflare] Using in-memory KV fallback')
     inMemoryKV = new InMemoryKV()
   }
   return inMemoryKV

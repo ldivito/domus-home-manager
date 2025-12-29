@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Download, Calendar, Tag, DollarSign, FileText, AlertTriangle } from "lucide-react"
 import { Document, DocumentCategory } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface DocumentPreviewDialogProps {
   open: boolean
@@ -88,7 +89,7 @@ export function DocumentPreviewDialog({ open, onOpenChange, document }: Document
 
       toast.success(t('messages.downloaded'))
     } catch (error) {
-      console.error('Error downloading document:', error)
+      logger.error('Error downloading document:', error)
       toast.error(t('messages.downloadError'))
     }
   }

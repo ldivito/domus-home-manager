@@ -16,6 +16,7 @@ import { ChoreFormModal } from "@/components/ChoreFormModal"
 import { CompleteChoreModal } from "@/components/CompleteChoreModal"
 import { db, Chore, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
+import { logger } from '@/lib/logger'
 
 type FrequencyFilter = 'all' | 'daily' | 'weekly' | 'monthly' | 'custom'
 type StatusFilter = 'all' | 'pending' | 'completed' | 'overdue'
@@ -52,7 +53,7 @@ export default function ChoresPage() {
       setChores(dbChores)
       setUsers(dbUsers)
     } catch (error) {
-      console.error('Error loading data:', error)
+      logger.error('Error loading data:', error)
     } finally {
       setIsLoading(false)
     }
@@ -69,7 +70,7 @@ export default function ChoresPage() {
       await db.chores.add(newChore)
       await loadData()
     } catch (error) {
-      console.error('Error creating chore:', error)
+      logger.error('Error creating chore:', error)
       throw error
     }
   }
@@ -90,7 +91,7 @@ export default function ChoresPage() {
       await deleteWithSync(db.chores, 'chores', chore.id)
       await loadData()
     } catch (error) {
-      console.error('Error deleting chore:', error)
+      logger.error('Error deleting chore:', error)
     }
   }
 
@@ -134,7 +135,7 @@ export default function ChoresPage() {
 
       await loadData()
     } catch (error) {
-      console.error('Error completing chore:', error)
+      logger.error('Error completing chore:', error)
       throw error
     }
   }
@@ -152,7 +153,7 @@ export default function ChoresPage() {
 
       await loadData()
     } catch (error) {
-      console.error('Error undoing completion:', error)
+      logger.error('Error undoing completion:', error)
     }
   }
 
@@ -161,7 +162,7 @@ export default function ChoresPage() {
       await db.chores.update(choreId, { ...choreData, updatedAt: new Date() })
       await loadData()
     } catch (error) {
-      console.error('Error editing chore:', error)
+      logger.error('Error editing chore:', error)
       throw error
     }
   }

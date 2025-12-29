@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
 import { User } from "@/lib/db"
+import { logger } from '@/lib/logger'
 
 interface UserFormModalProps {
   open: boolean
@@ -101,7 +102,7 @@ export function UserFormModal({ open, onOpenChange, user, onCreateUser, onUpdate
       setFormState(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      console.error(`Error ${isEditing ? 'updating' : 'creating'} user:`, error)
+      logger.error(`Error ${isEditing ? 'updating' : 'creating'} user:`, error)
     } finally {
       setIsSubmitting(false)
     }
@@ -116,7 +117,7 @@ export function UserFormModal({ open, onOpenChange, user, onCreateUser, onUpdate
       await onDeleteUser(user.id)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error deleting user:', error)
+      logger.error('Error deleting user:', error)
     } finally {
       setIsDeleting(false)
     }

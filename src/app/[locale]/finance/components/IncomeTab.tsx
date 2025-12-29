@@ -24,6 +24,7 @@ import {
   Briefcase
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface IncomeTabProps {
   users: User[]
@@ -163,7 +164,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
       setCurrency('ARS')
       setSource('')
     } catch (error) {
-      console.error('Error saving income:', error)
+      logger.error('Error saving income:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -180,7 +181,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
       setShowDeleteDialog(false)
       setDeletingIncome(null)
     } catch (error) {
-      console.error('Error deleting income:', error)
+      logger.error('Error deleting income:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -220,7 +221,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
       setShowExchangeDialog(false)
       setExchangeRateValue('')
     } catch (error) {
-      console.error('Error saving exchange rate:', error)
+      logger.error('Error saving exchange rate:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)

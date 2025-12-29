@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User } from "lucide-react"
 import { db, User as UserType, HomeImprovement } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 interface EditProjectDialogProps {
   open: boolean
@@ -69,7 +70,7 @@ export function EditProjectDialog({ open, onOpenChange, project, users }: EditPr
 
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating project:', error)
+      logger.error('Error updating project:', error)
     } finally {
       setIsSubmitting(false)
     }

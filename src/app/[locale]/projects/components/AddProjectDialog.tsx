@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User } from "lucide-react"
 import { db, User as UserType, HomeImprovement } from '@/lib/db'
 import { generateId } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 interface AddProjectDialogProps {
   open: boolean
@@ -68,7 +69,7 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
       
       onOpenChange(false)
     } catch (error) {
-      console.error('Error creating project:', error)
+      logger.error('Error creating project:', error)
     } finally {
       setIsSubmitting(false)
     }

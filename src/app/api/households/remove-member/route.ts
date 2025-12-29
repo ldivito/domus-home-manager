@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { logger } from '@/lib/logger'
 
 export async function DELETE(request: Request) {
   try {
@@ -84,7 +85,7 @@ export async function DELETE(request: Request) {
       message: 'Member removed successfully'
     })
   } catch (error) {
-    console.error('Remove member error:', error)
+    logger.error('Remove member error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

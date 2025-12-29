@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { User, db } from "@/lib/db"
 import { CheckSquare, User as UserIcon } from "lucide-react"
+import { logger } from '@/lib/logger'
 
 interface CompleteChoreModalProps {
   open: boolean
@@ -30,7 +31,7 @@ export function CompleteChoreModal({ open, onOpenChange, onComplete, choreTitle 
         const dbUsers = await db.users.toArray()
         setUsers(dbUsers)
       } catch (error) {
-        console.error('Error loading users:', error)
+        logger.error('Error loading users:', error)
       }
     }
     
@@ -53,7 +54,7 @@ export function CompleteChoreModal({ open, onOpenChange, onComplete, choreTitle 
       setCompletedByUserId("none")
       onOpenChange(false)
     } catch (error) {
-      console.error('Error completing chore:', error)
+      logger.error('Error completing chore:', error)
     } finally {
       setIsSubmitting(false)
     }

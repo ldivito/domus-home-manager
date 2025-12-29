@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import {
   Calendar,
   Wallet,
@@ -109,7 +110,7 @@ export function EditCampaignDialog({ open, onOpenChange, campaign }: EditCampaig
       toast.success(t('messages.campaignUpdated'))
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating campaign:', error)
+      logger.error('Error updating campaign:', error)
       toast.error(t('messages.error'))
     } finally {
       setIsSubmitting(false)

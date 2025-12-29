@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { db, MaintenanceTask, MaintenanceItem, MaintenanceFrequency, deleteWithSync } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface LogMaintenanceDialogProps {
   open: boolean
@@ -137,7 +138,7 @@ export function LogMaintenanceDialog({ open, onOpenChange, task, items }: LogMai
         notes: ''
       })
     } catch (error) {
-      console.error('Error logging maintenance:', error)
+      logger.error('Error logging maintenance:', error)
       toast.error(t('messages.logError'))
     } finally {
       setIsSubmitting(false)

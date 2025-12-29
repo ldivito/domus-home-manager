@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Receipt, Trash2, Edit, Home, Zap, Wifi, Shield, FileText, Tv, Wrench, MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface ExpensesTabProps {
   expenses: RecurringExpense[]
@@ -143,7 +144,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
       setShowDialog(false)
       resetForm()
     } catch (error) {
-      console.error('Error saving expense:', error)
+      logger.error('Error saving expense:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -157,7 +158,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
         updatedAt: new Date()
       })
     } catch (error) {
-      console.error('Error toggling expense:', error)
+      logger.error('Error toggling expense:', error)
       toast.error(tMessages('error'))
     }
   }
@@ -167,7 +168,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
       await deleteWithSync(db.recurringExpenses, 'recurringExpenses', expenseId)
       toast.success(tMessages('expenseDeleted'))
     } catch (error) {
-      console.error('Error deleting expense:', error)
+      logger.error('Error deleting expense:', error)
       toast.error(tMessages('error'))
     }
   }

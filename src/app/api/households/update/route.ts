@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { logger } from '@/lib/logger'
 
 export async function PUT(request: Request) {
   try {
@@ -46,7 +47,7 @@ export async function PUT(request: Request) {
       message: 'Household updated successfully'
     })
   } catch (error) {
-    console.error('Update household error:', error)
+    logger.error('Update household error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

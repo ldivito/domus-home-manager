@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db, Document, DocumentCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { AddDocumentDialog } from './components/AddDocumentDialog'
-import { EditDocumentDialog } from './components/EditDocumentDialog'
+import { DocumentFormDialog } from './components/DocumentFormDialog'
 import { DocumentPreviewDialog } from './components/DocumentPreviewDialog'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 const CATEGORY_COLORS: Record<DocumentCategory, string> = {
   warranty: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -57,7 +57,7 @@ export default function DocumentsPage() {
       await deleteWithSync(db.documents, 'documents', documentId)
       toast.success(t('messages.deleted'))
     } catch (error) {
-      console.error('Error deleting document:', error)
+      logger.error('Error deleting document:', error)
       toast.error(t('messages.deleteError'))
     }
   }
@@ -100,7 +100,7 @@ export default function DocumentsPage() {
 
       toast.success(t('messages.downloaded'))
     } catch (error) {
-      console.error('Error downloading document:', error)
+      logger.error('Error downloading document:', error)
       toast.error(t('messages.downloadError'))
     }
   }
@@ -404,13 +404,15 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        <AddDocumentDialog
+        {/* Add Document Dialog */}
+        <DocumentFormDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           users={users}
         />
 
-        <EditDocumentDialog
+        {/* Edit Document Dialog */}
+        <DocumentFormDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           document={editingDocument}

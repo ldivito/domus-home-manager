@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { db, MaintenanceItemType } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddItemDialogProps {
   open: boolean
@@ -89,7 +90,7 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
         notes: ''
       })
     } catch (error) {
-      console.error('Error adding item:', error)
+      logger.error('Error adding item:', error)
       toast.error(t('messages.addError'))
     } finally {
       setIsSubmitting(false)

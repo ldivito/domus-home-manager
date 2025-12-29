@@ -17,6 +17,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { TaskFormDialog } from './components/TaskFormDialog'
 import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
 import { ImportTasksDialog } from './components/ImportTasksDialog'
+import { logger } from '@/lib/logger'
 
 const TASKS_PER_PAGE = 20
 
@@ -88,7 +89,7 @@ export default function TasksPage() {
     try {
       await db.tasks.update(taskId, { isCompleted: true, updatedAt: new Date() })
     } catch (error) {
-      console.error('Error marking task as complete:', error)
+      logger.error('Error marking task as complete:', error)
     }
   }
 
@@ -96,7 +97,7 @@ export default function TasksPage() {
     try {
       await deleteWithSync(db.tasks, 'tasks', taskId)
     } catch (error) {
-      console.error('Error deleting task:', error)
+      logger.error('Error deleting task:', error)
     }
   }
 

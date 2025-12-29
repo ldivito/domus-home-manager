@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2, Edit2, Palette } from "lucide-react"
 import { db, GroceryCategory, deleteWithSync } from '@/lib/db'
 import { generateId } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 interface ManageCategoriesDialogProps {
   open: boolean
@@ -54,7 +55,7 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
       setNewCategoryName('')
       setSelectedColor(PREDEFINED_COLORS[0])
     } catch (error) {
-      console.error('Error adding category:', error)
+      logger.error('Error adding category:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -75,7 +76,7 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
       setEditName('')
       setEditColor('')
     } catch (error) {
-      console.error('Error updating category:', error)
+      logger.error('Error updating category:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -118,7 +119,7 @@ export function ManageCategoriesDialog({ open, onOpenChange, categories }: Manag
     try {
       await deleteWithSync(db.groceryCategories, 'groceryCategories', categoryId)
     } catch (error) {
-      console.error('Error deleting category:', error)
+      logger.error('Error deleting category:', error)
     }
   }
 

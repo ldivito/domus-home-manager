@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       }
     })
   } catch (error) {
-    console.error('Verify invite code error:', error)
+    logger.error('Verify invite code error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

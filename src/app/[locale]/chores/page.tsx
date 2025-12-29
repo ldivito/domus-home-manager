@@ -12,8 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AddChoreModal } from "@/components/AddChoreModal"
-import { EditChoreModal } from "@/components/EditChoreModal"
+import { ChoreFormModal } from "@/components/ChoreFormModal"
 import { CompleteChoreModal } from "@/components/CompleteChoreModal"
 import { db, Chore, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
@@ -680,17 +679,19 @@ export default function ChoresPage() {
           </div>
         )}
 
-        <AddChoreModal
+        {/* Add Chore Modal */}
+        <ChoreFormModal
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
           onCreateChore={handleCreateChore}
         />
 
-        <EditChoreModal
+        {/* Edit Chore Modal */}
+        <ChoreFormModal
           open={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
-          onEditChore={handleEditChoreSubmit}
           chore={selectedChore}
+          onEditChore={handleEditChoreSubmit}
         />
 
         <CompleteChoreModal

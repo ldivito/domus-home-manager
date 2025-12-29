@@ -1,6 +1,7 @@
 import Dexie, { Table } from 'dexie'
 import { generateId } from './utils'
 import { checkMigrationNeeded, performMigration, importMigratedData, isMigrationCompleted } from './migration'
+import { dbLogger } from './logger'
 
 export interface User {
   id?: string
@@ -909,7 +910,7 @@ export class DomusDatabase extends Dexie {
           })
         }
       }
-      console.log('Database upgraded to v26 with income source field')
+      dbLogger.debug('Database upgraded to v26 with income source field')
     })
 
     // v28: Add deletion log for sync support
@@ -1113,7 +1114,7 @@ export class DomusDatabase extends Dexie {
           })
         }
       }
-      console.log('Database upgraded to v17 with expense currency support')
+      dbLogger.debug('Database upgraded to v17 with expense currency support')
     })
 
     // v16: Add exchange rates and currency to income
@@ -1153,7 +1154,7 @@ export class DomusDatabase extends Dexie {
           })
         }
       }
-      console.log('Database upgraded to v16 with currency support')
+      dbLogger.debug('Database upgraded to v16 with currency support')
     })
 
     // v15: Add Finance module tables
@@ -1287,12 +1288,12 @@ export class DomusDatabase extends Dexie {
 
     // Migration for fasting support in Keto tracking (v13 upgrade)
     this.version(13).upgrade(async () => {
-      console.log('Database upgraded to v13 with fasting support in Keto tracking')
+      dbLogger.debug('Database upgraded to v13 with fasting support in Keto tracking')
     })
 
     // Database ready handler with timeout protection
     this.on('ready', async () => {
-      console.log('Database ready - local IndexedDB mode')
+      dbLogger.info('Database ready - local IndexedDB mode')
 
       // Helper to wrap async operations with timeout
       const withTimeout = <T>(promise: Promise<T>, ms: number, name: string): Promise<T | null> => {
@@ -1300,7 +1301,7 @@ export class DomusDatabase extends Dexie {
           promise,
           new Promise<null>((resolve) => {
             setTimeout(() => {
-              console.warn(`${name} timed out after ${ms}ms`)
+              dbLogger.warn(`${name} timed out after ${ms}ms`)
               resolve(null)
             }, ms)
           })
@@ -1312,7 +1313,7 @@ export class DomusDatabase extends Dexie {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await withTimeout(importMigratedData(this as any), 5000, 'importMigratedData')
       } catch (error) {
-        console.error('Error importing migrated data:', error)
+        dbLogger.error('Error importing migrated data:', error)
         // Clear potentially corrupted migration data
         if (typeof window !== 'undefined') {
           localStorage.removeItem('domus_migration_data')
@@ -1323,14 +1324,14 @@ export class DomusDatabase extends Dexie {
         // Run meal ingredient structure check (with 5s timeout)
         await withTimeout(this.ensureMealIngredientStructure(), 5000, 'ensureMealIngredientStructure')
       } catch (error) {
-        console.warn('Meal ingredient migration issue:', error)
+        dbLogger.warn('Meal ingredient migration issue:', error)
       }
 
       try {
         // Seed default categories if needed (with 5s timeout)
         await withTimeout(this.seedDefaultCategoriesIfNeeded(), 5000, 'seedDefaultCategoriesIfNeeded')
       } catch (error) {
-        console.warn('Error seeding default categories:', error)
+        dbLogger.warn('Error seeding default categories:', error)
       }
     })
   }
@@ -1405,7 +1406,7 @@ export class DomusDatabase extends Dexie {
         this.legacyMealIngredientMigrationComplete = true
       })
       .catch((error) => {
-        console.error('Error migrating legacy meal ingredients:', error)
+        dbLogger.error('Error migrating legacy meal ingredients:', error)
         throw error
       })
       .finally(() => {
@@ -1432,7 +1433,7 @@ export class DomusDatabase extends Dexie {
           { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.maintenance', icon: 'Wrench', color: '#6B7280', isDefault: true, createdAt: now },
           { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.other', icon: 'MoreHorizontal', color: '#9CA3AF', isDefault: true, createdAt: now }
         ])
-        console.log('Default expense categories seeded successfully')
+        dbLogger.debug('Default expense categories seeded successfully')
       }
 
       // Seed task categories if needed
@@ -1449,7 +1450,7 @@ export class DomusDatabase extends Dexie {
           { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.errands', icon: 'MapPin', color: '#EC4899', isDefault: true, createdAt: now },
           { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.other', icon: 'MoreHorizontal', color: '#6B7280', isDefault: true, createdAt: now }
         ])
-        console.log('Default task categories seeded successfully')
+        dbLogger.debug('Default task categories seeded successfully')
       }
 
       const categoryCount = await this.groceryCategories.count()
@@ -1485,9 +1486,9 @@ export class DomusDatabase extends Dexie {
         { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
       ])
 
-      console.log('Default categories seeded successfully')
+      dbLogger.debug('Default categories seeded successfully')
     } catch (error) {
-      console.error('Error seeding default categories:', error)
+      dbLogger.error('Error seeding default categories:', error)
     }
   }
 }
@@ -1500,13 +1501,13 @@ async function initializeDatabase(): Promise<DomusDatabase> {
   if (!isMigrationCompleted()) {
     const migrationStatus = await checkMigrationNeeded()
     if (migrationStatus.needsMigration) {
-      console.log('Legacy database detected, performing migration...')
+      dbLogger.info('Legacy database detected, performing migration...')
       const migrationResult = await performMigration()
       if (!migrationResult.success) {
-        console.error('Migration failed:', migrationResult.error)
+        dbLogger.error('Migration failed:', migrationResult.error)
         // Continue anyway to try opening the database
       } else {
-        console.log('Migration successful:', migrationResult)
+        dbLogger.info('Migration successful:', migrationResult)
       }
     }
   }

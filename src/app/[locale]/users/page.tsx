@@ -7,8 +7,7 @@ import { Plus, User, Settings, Award, TrendingUp, UserPlus, CheckCircle, Utensil
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { AddUserModal } from "@/components/AddUserModal"
-import { EditUserModal } from "@/components/EditUserModal"
+import { UserFormModal } from "@/components/UserFormModal"
 import { db, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 import { toast } from "sonner"
@@ -472,13 +471,15 @@ export default function UsersPage() {
           </>
         )}
         
-        <AddUserModal
+        {/* Add User Modal */}
+        <UserFormModal
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           onCreateUser={handleCreateUser}
         />
 
-        <EditUserModal
+        {/* Edit User Modal */}
+        <UserFormModal
           open={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           user={selectedUser}

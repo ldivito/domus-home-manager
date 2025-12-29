@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -18,88 +18,127 @@ import { db, User as UserType, HomeImprovement } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 
-interface AddProjectDialogProps {
+interface ProjectFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  project?: HomeImprovement | null  // If provided, we're editing
   users: UserType[]
 }
 
-export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialogProps) {
+interface ProjectFormState {
+  title: string
+  description: string
+  assignedUserId: string
+  estimatedCost: string
+  priority: 'low' | 'medium' | 'high'
+  status: 'todo' | 'in-progress' | 'done'
+}
+
+const initialFormState: ProjectFormState = {
+  title: '',
+  description: '',
+  assignedUserId: 'unassigned',
+  estimatedCost: '',
+  priority: 'medium',
+  status: 'todo'
+}
+
+export function ProjectFormDialog({ open, onOpenChange, project, users }: ProjectFormDialogProps) {
   const t = useTranslations('projects')
   const tCommon = useTranslations('common')
-  
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [assignedUserId, setAssignedUserId] = useState<string>('')
-  const [estimatedCost, setEstimatedCost] = useState('')
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
-  const [status, setStatus] = useState<'todo' | 'in-progress' | 'done'>('todo')
+
+  const isEditing = !!project
+  const [formState, setFormState] = useState<ProjectFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      if (project) {
+        // Edit mode - populate with project data
+        setFormState({
+          title: project.title,
+          description: project.description || '',
+          assignedUserId: project.assignedUserId ? project.assignedUserId.toString() : 'unassigned',
+          estimatedCost: project.estimatedCost ? project.estimatedCost.toString() : '',
+          priority: project.priority,
+          status: project.status
+        })
+      } else {
+        // Create mode - reset form
+        setFormState(initialFormState)
+      }
+    }
+  }, [open, project])
+
+  const updateField = <K extends keyof ProjectFormState>(field: K, value: ProjectFormState[K]) => {
+    setFormState(prev => ({ ...prev, [field]: value }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!title.trim()) {
-      return
-    }
+
+    if (!formState.title.trim()) return
+    if (isEditing && !project?.id) return
 
     setIsSubmitting(true)
-    
+
     try {
-      const project: HomeImprovement = {
-        id: generateId('prj'),
-        title: title.trim(),
-        description: description.trim() || undefined,
-        assignedUserId: assignedUserId && assignedUserId !== 'unassigned' ? assignedUserId : undefined,
-        estimatedCost: estimatedCost ? parseFloat(estimatedCost) : undefined,
-        priority,
-        status,
-        createdAt: new Date()
+      const projectData = {
+        title: formState.title.trim(),
+        description: formState.description.trim() || undefined,
+        assignedUserId: formState.assignedUserId && formState.assignedUserId !== 'unassigned' ? formState.assignedUserId : undefined,
+        estimatedCost: formState.estimatedCost ? parseFloat(formState.estimatedCost) : undefined,
+        priority: formState.priority,
+        status: formState.status,
       }
 
-      await db.homeImprovements.add(project)
+      if (isEditing) {
+        await db.homeImprovements.update(project!.id!, {
+          ...projectData,
+          updatedAt: new Date()
+        })
+      } else {
+        const newProject: HomeImprovement = {
+          id: generateId('prj'),
+          ...projectData,
+          createdAt: new Date()
+        }
+        await db.homeImprovements.add(newProject)
+      }
 
-      // Reset form
-      setTitle('')
-      setDescription('')
-      setAssignedUserId('')
-      setEstimatedCost('')
-      setPriority('medium')
-      setStatus('todo')
-      
+      setFormState(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      logger.error('Error creating project:', error)
+      logger.error(`Error ${isEditing ? 'updating' : 'creating'} project:`, error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleCancel = () => {
-    setTitle('')
-    setDescription('')
-    setAssignedUserId('')
-    setEstimatedCost('')
-    setPriority('medium')
-    setStatus('todo')
+    setFormState(initialFormState)
     onOpenChange(false)
   }
+
+  if (isEditing && !project) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{t('addProject')}</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {isEditing ? t('editProject') : t('addProject')}
+          </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">{t('form.name')} *</Label>
+            <Label htmlFor="prj-title">{t('form.name')} *</Label>
             <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              id="prj-title"
+              value={formState.title}
+              onChange={(e) => updateField('title', e.target.value)}
               placeholder={t('form.namePlaceholder')}
               required
             />
@@ -107,11 +146,11 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">{t('form.description')}</Label>
+            <Label htmlFor="prj-description">{t('form.description')}</Label>
             <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              id="prj-description"
+              value={formState.description}
+              onChange={(e) => updateField('description', e.target.value)}
               placeholder={t('form.descriptionPlaceholder')}
               rows={3}
             />
@@ -119,8 +158,8 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
 
           {/* Assigned User */}
           <div className="space-y-2">
-            <Label htmlFor="assignedUser">{t('form.assignedTo')}</Label>
-            <Select value={assignedUserId} onValueChange={setAssignedUserId}>
+            <Label htmlFor="prj-assignedUser">{t('form.assignedTo')}</Label>
+            <Select value={formState.assignedUserId} onValueChange={(v) => updateField('assignedUserId', v)}>
               <SelectTrigger>
                 <User className="mr-2 h-4 w-4" />
                 <SelectValue placeholder={t('form.selectUser')} />
@@ -138,8 +177,8 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
 
           {/* Priority */}
           <div className="space-y-2">
-            <Label htmlFor="priority">{t('form.priority')}</Label>
-            <Select value={priority} onValueChange={(value) => setPriority(value as 'low' | 'medium' | 'high')}>
+            <Label htmlFor="prj-priority">{t('form.priority')}</Label>
+            <Select value={formState.priority} onValueChange={(v) => updateField('priority', v as ProjectFormState['priority'])}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -168,8 +207,8 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
 
           {/* Status */}
           <div className="space-y-2">
-            <Label htmlFor="status">{t('form.status')}</Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as 'todo' | 'in-progress' | 'done')}>
+            <Label htmlFor="prj-status">{t('form.status')}</Label>
+            <Select value={formState.status} onValueChange={(v) => updateField('status', v as ProjectFormState['status'])}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -183,14 +222,14 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
 
           {/* Estimated Cost */}
           <div className="space-y-2">
-            <Label htmlFor="estimatedCost">{t('form.estimatedCost')}</Label>
+            <Label htmlFor="prj-estimatedCost">{t('form.estimatedCost')}</Label>
             <Input
-              id="estimatedCost"
+              id="prj-estimatedCost"
               type="number"
               step="0.01"
               min="0"
-              value={estimatedCost}
-              onChange={(e) => setEstimatedCost(e.target.value)}
+              value={formState.estimatedCost}
+              onChange={(e) => updateField('estimatedCost', e.target.value)}
               placeholder={t('form.costPlaceholder')}
             />
           </div>
@@ -200,11 +239,14 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
             <Button type="button" variant="outline" onClick={handleCancel}>
               {tCommon('cancel')}
             </Button>
-            <Button 
-              type="submit" 
-              disabled={!title.trim() || isSubmitting}
+            <Button
+              type="submit"
+              disabled={!formState.title.trim() || isSubmitting}
             >
-              {isSubmitting ? t('form.creating') : t('form.createProject')}
+              {isSubmitting
+                ? (isEditing ? t('form.updating') : t('form.creating'))
+                : (isEditing ? t('form.updateProject') : t('form.createProject'))
+              }
             </Button>
           </div>
         </form>
@@ -212,3 +254,7 @@ export function AddProjectDialog({ open, onOpenChange, users }: AddProjectDialog
     </Dialog>
   )
 }
+
+// Re-export with legacy names for backward compatibility
+export { ProjectFormDialog as AddProjectDialog }
+export { ProjectFormDialog as EditProjectDialog }

@@ -40,10 +40,10 @@ import {
   Play
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { AddSubscriptionDialog } from './components/AddSubscriptionDialog'
-import { EditSubscriptionDialog } from './components/EditSubscriptionDialog'
+import { SubscriptionFormDialog } from './components/SubscriptionFormDialog'
 import { RecordPaymentDialog } from './components/RecordPaymentDialog'
 import { SubscriptionDetailDialog } from './components/SubscriptionDetailDialog'
+import { logger } from '@/lib/logger'
 
 // Stable empty arrays to avoid useMemo dependency issues
 const EMPTY_SUBSCRIPTIONS: Subscription[] = []
@@ -238,7 +238,7 @@ export default function SubscriptionsPage() {
       setDeleteDialogOpen(false)
       setSelectedSubscription(null)
     } catch (error) {
-      console.error('Error deleting subscription:', error)
+      logger.error('Error deleting subscription:', error)
       toast.error(t('messages.deleteError'))
     }
   }
@@ -253,7 +253,7 @@ export default function SubscriptionsPage() {
       })
       toast.success(newStatus === 'paused' ? t('messages.paused') : t('messages.resumed'))
     } catch (error) {
-      console.error('Error updating subscription:', error)
+      logger.error('Error updating subscription:', error)
       toast.error(t('messages.updateError'))
     }
   }
@@ -628,8 +628,11 @@ export default function SubscriptionsPage() {
       </Tabs>
 
       {/* Dialogs */}
-      <AddSubscriptionDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-      <EditSubscriptionDialog
+      {/* Add Subscription Dialog */}
+      <SubscriptionFormDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+
+      {/* Edit Subscription Dialog */}
+      <SubscriptionFormDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         subscription={selectedSubscription}

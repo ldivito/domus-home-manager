@@ -26,6 +26,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Utensils } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddFeedingScheduleDialogProps {
   open: boolean
@@ -108,7 +109,7 @@ export function AddFeedingScheduleDialog({ open, onOpenChange, petId }: AddFeedi
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error adding feeding schedule:', error)
+      logger.error('Error adding feeding schedule:', error)
       toast.error(t('messages.feedingAddError'))
     } finally {
       setIsSubmitting(false)

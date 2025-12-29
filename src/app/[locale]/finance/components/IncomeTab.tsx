@@ -24,6 +24,7 @@ import {
   Briefcase
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface IncomeTabProps {
   users: User[]
@@ -32,6 +33,7 @@ interface IncomeTabProps {
   currentYear: number
   exchangeRate?: MonthlyExchangeRate
   isFutureMonth?: boolean
+  hideAmounts?: boolean
 }
 
 const monthNames = [
@@ -39,7 +41,9 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, exchangeRate, isFutureMonth }: IncomeTabProps) {
+export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, exchangeRate, isFutureMonth, hideAmounts: _hideAmounts }: IncomeTabProps) {
+  // Note: _hideAmounts is reserved for future implementation of hiding amounts in this tab
+  void _hideAmounts
   const t = useTranslations('finance.income')
   const tMessages = useTranslations('finance.messages')
   const [showDialog, setShowDialog] = useState(false)
@@ -160,7 +164,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
       setCurrency('ARS')
       setSource('')
     } catch (error) {
-      console.error('Error saving income:', error)
+      logger.error('Error saving income:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -177,7 +181,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
       setShowDeleteDialog(false)
       setDeletingIncome(null)
     } catch (error) {
-      console.error('Error deleting income:', error)
+      logger.error('Error deleting income:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -217,7 +221,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
       setShowExchangeDialog(false)
       setExchangeRateValue('')
     } catch (error) {
-      console.error('Error saving exchange rate:', error)
+      logger.error('Error saving exchange rate:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)

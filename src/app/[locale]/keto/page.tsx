@@ -12,6 +12,7 @@ import { generateId } from "@/lib/utils"
 import { toast } from "sonner"
 import { useCalendarSettings } from "@/hooks/useCalendarSettings"
 import KetoSettingsModal from "./components/KetoSettingsModal"
+import { logger } from '@/lib/logger'
 
 interface DayStatus {
   date: Date
@@ -291,7 +292,7 @@ export default function KetoPage() {
 
       toast.success(t('messages.dayUpdated'))
     } catch (error) {
-      console.error('Error updating keto day:', error)
+      logger.error('Error updating keto day:', error)
       toast.error(t('messages.error'))
     }
   }
@@ -323,7 +324,7 @@ export default function KetoPage() {
       toast.success(t('messages.settingsUpdated'))
       setIsSettingsModalOpen(false)
     } catch (error) {
-      console.error('Error saving keto settings:', error)
+      logger.error('Error saving keto settings:', error)
       toast.error(t('messages.error'))
     }
   }

@@ -21,14 +21,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { db, MaintenanceItem, MaintenanceFrequency } from '@/lib/db'
+import { db, MaintenanceItem, MaintenanceTask, MaintenanceFrequency } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
-interface AddTaskDialogProps {
+interface MaintenanceTaskFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: MaintenanceItem | null
-  items: MaintenanceItem[]
+  task?: MaintenanceTask | null  // If provided, we're editing
+  item?: MaintenanceItem | null  // Pre-selected item for new tasks
+  items?: MaintenanceItem[]      // List of items for selection
+}
+
+interface TaskFormState {
+  maintenanceItemId: string
+  name: string
+  description: string
+  frequency: MaintenanceFrequency
+  customFrequencyDays: number
+  nextDue: string
+  reminderEnabled: boolean
+  reminderDaysBefore: number
+  estimatedCostMin: string
+  estimatedCostMax: string
+  estimatedCurrency: 'ARS' | 'USD'
+  estimatedDurationMinutes: string
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  assignedUserId: string
+  preferredProvider: string
+  providerPhone: string
+  providerEmail: string
+  notes: string
 }
 
 const FREQUENCIES: MaintenanceFrequency[] = [
@@ -37,56 +60,88 @@ const FREQUENCIES: MaintenanceFrequency[] = [
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical'] as const
 
-export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialogProps) {
+const initialFormState: TaskFormState = {
+  maintenanceItemId: '',
+  name: '',
+  description: '',
+  frequency: 'monthly',
+  customFrequencyDays: 30,
+  nextDue: new Date().toISOString().split('T')[0],
+  reminderEnabled: true,
+  reminderDaysBefore: 7,
+  estimatedCostMin: '',
+  estimatedCostMax: '',
+  estimatedCurrency: 'ARS',
+  estimatedDurationMinutes: '',
+  priority: 'medium',
+  assignedUserId: '',
+  preferredProvider: '',
+  providerPhone: '',
+  providerEmail: '',
+  notes: ''
+}
+
+export function MaintenanceTaskFormDialog({ open, onOpenChange, task, item, items = [] }: MaintenanceTaskFormDialogProps) {
   const t = useTranslations('maintenance')
   const tCommon = useTranslations('common')
 
+  const isEditing = !!task
   const users = useLiveQuery(() => db.users.toArray()) || []
-
-  const [formData, setFormData] = useState({
-    maintenanceItemId: '',
-    name: '',
-    description: '',
-    frequency: 'monthly' as MaintenanceFrequency,
-    customFrequencyDays: 30,
-    nextDue: new Date().toISOString().split('T')[0],
-    reminderEnabled: true,
-    reminderDaysBefore: 7,
-    estimatedCostMin: '',
-    estimatedCostMax: '',
-    estimatedCurrency: 'ARS' as 'ARS' | 'USD',
-    estimatedDurationMinutes: '',
-    priority: 'medium' as typeof PRIORITIES[number],
-    assignedUserId: '',
-    preferredProvider: '',
-    providerPhone: '',
-    providerEmail: '',
-    notes: ''
-  })
+  const [formData, setFormData] = useState<TaskFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (item) {
-      setFormData(prev => ({ ...prev, maintenanceItemId: item.id || '' }))
+    if (open) {
+      if (task) {
+        // Edit mode - populate with task data
+        setFormData({
+          maintenanceItemId: task.maintenanceItemId,
+          name: task.name,
+          description: task.description || '',
+          frequency: task.frequency,
+          customFrequencyDays: task.customFrequencyDays || 30,
+          nextDue: new Date(task.nextDue).toISOString().split('T')[0],
+          reminderEnabled: task.reminderEnabled,
+          reminderDaysBefore: task.reminderDaysBefore || 7,
+          estimatedCostMin: task.estimatedCostMin?.toString() || '',
+          estimatedCostMax: task.estimatedCostMax?.toString() || '',
+          estimatedCurrency: task.estimatedCurrency || 'ARS',
+          estimatedDurationMinutes: task.estimatedDurationMinutes?.toString() || '',
+          priority: task.priority,
+          assignedUserId: task.assignedUserId || '',
+          preferredProvider: task.preferredProvider || '',
+          providerPhone: task.providerPhone || '',
+          providerEmail: task.providerEmail || '',
+          notes: task.notes || ''
+        })
+      } else {
+        // Create mode - reset form, optionally pre-select item
+        setFormData({
+          ...initialFormState,
+          maintenanceItemId: item?.id || ''
+        })
+      }
     }
-  }, [item])
+  }, [open, task, item])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!formData.name.trim()) {
       toast.error(t('validation.nameRequired'))
       return
     }
-    if (!formData.maintenanceItemId) {
+
+    if (!isEditing && !formData.maintenanceItemId) {
       toast.error(t('validation.itemRequired'))
       return
     }
 
+    if (isEditing && !task?.id) return
+
     setIsSubmitting(true)
     try {
-      await db.maintenanceTasks.add({
-        id: `task_${crypto.randomUUID()}`,
-        maintenanceItemId: formData.maintenanceItemId,
+      const taskData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         frequency: formData.frequency,
@@ -104,72 +159,73 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
         providerPhone: formData.providerPhone.trim() || undefined,
         providerEmail: formData.providerEmail.trim() || undefined,
         notes: formData.notes.trim() || undefined,
-        createdAt: new Date()
-      })
+      }
 
-      toast.success(t('messages.taskAdded'))
+      if (isEditing) {
+        await db.maintenanceTasks.update(task!.id!, {
+          ...taskData,
+          updatedAt: new Date()
+        })
+        toast.success(t('messages.taskUpdated'))
+      } else {
+        await db.maintenanceTasks.add({
+          id: `task_${crypto.randomUUID()}`,
+          maintenanceItemId: formData.maintenanceItemId,
+          ...taskData,
+          createdAt: new Date()
+        })
+        toast.success(t('messages.taskAdded'))
+      }
+
+      setFormData(initialFormState)
       onOpenChange(false)
-      setFormData({
-        maintenanceItemId: '',
-        name: '',
-        description: '',
-        frequency: 'monthly',
-        customFrequencyDays: 30,
-        nextDue: new Date().toISOString().split('T')[0],
-        reminderEnabled: true,
-        reminderDaysBefore: 7,
-        estimatedCostMin: '',
-        estimatedCostMax: '',
-        estimatedCurrency: 'ARS',
-        estimatedDurationMinutes: '',
-        priority: 'medium',
-        assignedUserId: '',
-        preferredProvider: '',
-        providerPhone: '',
-        providerEmail: '',
-        notes: ''
-      })
     } catch (error) {
-      console.error('Error adding task:', error)
-      toast.error(t('messages.addError'))
+      logger.error(`Error ${isEditing ? 'updating' : 'adding'} task:`, error)
+      toast.error(isEditing ? t('messages.updateError') : t('messages.addError'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  if (isEditing && !task) return null
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('dialogs.addTask.title')}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? t('dialogs.editTask.title') : t('dialogs.addTask.title')}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {/* Item Selection */}
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="item">{t('form.item')} *</Label>
-              <Select
-                value={formData.maintenanceItemId}
-                onValueChange={(value) => setFormData({ ...formData, maintenanceItemId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('form.selectItem')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {items.map((i) => (
-                    <SelectItem key={i.id} value={i.id || ''}>
-                      {i.name} {i.location && `(${i.location})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Item Selection - only show for new tasks */}
+            {!isEditing && (
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="mtask-item">{t('form.item')} *</Label>
+                <Select
+                  value={formData.maintenanceItemId}
+                  onValueChange={(value) => setFormData({ ...formData, maintenanceItemId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('form.selectItem')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {items.map((i) => (
+                      <SelectItem key={i.id} value={i.id || ''}>
+                        {i.name} {i.location && `(${i.location})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Task Name */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="name">{t('form.taskName')} *</Label>
+              <Label htmlFor="mtask-name">{t('form.taskName')} *</Label>
               <Input
-                id="name"
+                id="mtask-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={t('form.taskNamePlaceholder')}
@@ -178,7 +234,7 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {/* Frequency and Next Due */}
             <div className="space-y-2">
-              <Label htmlFor="frequency">{t('form.frequency')}</Label>
+              <Label htmlFor="mtask-frequency">{t('form.frequency')}</Label>
               <Select
                 value={formData.frequency}
                 onValueChange={(value) => setFormData({ ...formData, frequency: value as MaintenanceFrequency })}
@@ -197,9 +253,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nextDue">{t('form.nextDue')} *</Label>
+              <Label htmlFor="mtask-nextDue">{t('form.nextDue')} *</Label>
               <Input
-                id="nextDue"
+                id="mtask-nextDue"
                 type="date"
                 value={formData.nextDue}
                 onChange={(e) => setFormData({ ...formData, nextDue: e.target.value })}
@@ -208,9 +264,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {formData.frequency === 'custom' && (
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="customFrequencyDays">{t('form.customDays')}</Label>
+                <Label htmlFor="mtask-customFrequencyDays">{t('form.customDays')}</Label>
                 <Input
-                  id="customFrequencyDays"
+                  id="mtask-customFrequencyDays"
                   type="number"
                   value={formData.customFrequencyDays}
                   onChange={(e) => setFormData({ ...formData, customFrequencyDays: parseInt(e.target.value) || 30 })}
@@ -221,10 +277,10 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {/* Priority and Assignee */}
             <div className="space-y-2">
-              <Label htmlFor="priority">{t('form.priority')}</Label>
+              <Label htmlFor="mtask-priority">{t('form.priority')}</Label>
               <Select
                 value={formData.priority}
-                onValueChange={(value) => setFormData({ ...formData, priority: value as typeof PRIORITIES[number] })}
+                onValueChange={(value) => setFormData({ ...formData, priority: value as TaskFormState['priority'] })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -240,7 +296,7 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assignee">{t('form.assignee')}</Label>
+              <Label htmlFor="mtask-assignee">{t('form.assignee')}</Label>
               <Select
                 value={formData.assignedUserId}
                 onValueChange={(value) => setFormData({ ...formData, assignedUserId: value })}
@@ -262,11 +318,11 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
             {/* Reminder */}
             <div className="col-span-2 flex items-center justify-between p-3 border rounded-lg">
               <div>
-                <Label htmlFor="reminder">{t('form.enableReminder')}</Label>
+                <Label htmlFor="mtask-reminder">{t('form.enableReminder')}</Label>
                 <p className="text-sm text-muted-foreground">{t('form.reminderDescription')}</p>
               </div>
               <Switch
-                id="reminder"
+                id="mtask-reminder"
                 checked={formData.reminderEnabled}
                 onCheckedChange={(checked) => setFormData({ ...formData, reminderEnabled: checked })}
               />
@@ -274,9 +330,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {formData.reminderEnabled && (
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="reminderDays">{t('form.reminderDaysBefore')}</Label>
+                <Label htmlFor="mtask-reminderDays">{t('form.reminderDaysBefore')}</Label>
                 <Input
-                  id="reminderDays"
+                  id="mtask-reminderDays"
                   type="number"
                   value={formData.reminderDaysBefore}
                   onChange={(e) => setFormData({ ...formData, reminderDaysBefore: parseInt(e.target.value) || 7 })}
@@ -288,9 +344,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {/* Cost Estimates */}
             <div className="space-y-2">
-              <Label htmlFor="costMin">{t('form.estimatedCostMin')}</Label>
+              <Label htmlFor="mtask-costMin">{t('form.estimatedCostMin')}</Label>
               <Input
-                id="costMin"
+                id="mtask-costMin"
                 type="number"
                 value={formData.estimatedCostMin}
                 onChange={(e) => setFormData({ ...formData, estimatedCostMin: e.target.value })}
@@ -299,9 +355,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="costMax">{t('form.estimatedCostMax')}</Label>
+              <Label htmlFor="mtask-costMax">{t('form.estimatedCostMax')}</Label>
               <Input
-                id="costMax"
+                id="mtask-costMax"
                 type="number"
                 value={formData.estimatedCostMax}
                 onChange={(e) => setFormData({ ...formData, estimatedCostMax: e.target.value })}
@@ -311,9 +367,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {/* Description */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="description">{t('form.description')}</Label>
+              <Label htmlFor="mtask-description">{t('form.description')}</Label>
               <Textarea
-                id="description"
+                id="mtask-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder={t('form.taskDescriptionPlaceholder')}
@@ -323,9 +379,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {/* Service Provider */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="provider">{t('form.preferredProvider')}</Label>
+              <Label htmlFor="mtask-provider">{t('form.preferredProvider')}</Label>
               <Input
-                id="provider"
+                id="mtask-provider"
                 value={formData.preferredProvider}
                 onChange={(e) => setFormData({ ...formData, preferredProvider: e.target.value })}
                 placeholder={t('form.providerPlaceholder')}
@@ -334,9 +390,9 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
 
             {/* Notes */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="notes">{t('form.notes')}</Label>
+              <Label htmlFor="mtask-notes">{t('form.notes')}</Label>
               <Textarea
-                id="notes"
+                id="mtask-notes"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder={t('form.notesPlaceholder')}
@@ -358,3 +414,7 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
     </Dialog>
   )
 }
+
+// Re-export with legacy names for backward compatibility
+export { MaintenanceTaskFormDialog as AddTaskDialog }
+export { MaintenanceTaskFormDialog as EditTaskDialog }

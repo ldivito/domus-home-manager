@@ -36,6 +36,7 @@ import {
 import { toast } from 'sonner'
 import { Plus, TrendingUp, Trash2, Calendar } from 'lucide-react'
 import { QuickContributeCard } from './QuickContributeCard'
+import { logger } from '@/lib/logger'
 
 interface ContributionsTabProps {
   campaign: SavingsCampaign
@@ -155,7 +156,7 @@ export function ContributionsTab({ campaign, contributions, participants, users 
       resetForm()
       setShowAddDialog(false)
     } catch (error) {
-      console.error('Error adding contribution:', error)
+      logger.error('Error adding contribution:', error)
       toast.error(t('messages.error'))
     } finally {
       setIsSubmitting(false)
@@ -173,7 +174,7 @@ export function ContributionsTab({ campaign, contributions, participants, users 
       setShowDeleteDialog(false)
       setSelectedContribution(null)
     } catch (error) {
-      console.error('Error deleting contribution:', error)
+      logger.error('Error deleting contribution:', error)
       toast.error(t('messages.error'))
     }
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Dialog,
@@ -20,12 +20,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { db, SubscriptionCategory, SubscriptionBillingCycle, SubscriptionStatus } from '@/lib/db'
+import { db, Subscription, SubscriptionCategory, SubscriptionBillingCycle, SubscriptionStatus } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
-interface AddSubscriptionDialogProps {
+interface SubscriptionFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  subscription?: Subscription | null  // If provided, we're editing
+}
+
+interface SubscriptionFormState {
+  name: string
+  description: string
+  category: SubscriptionCategory
+  amountARS: string
+  amountUSD: string
+  billingCycle: SubscriptionBillingCycle
+  billingDay: string
+  nextBillingDate: string
+  status: SubscriptionStatus
+  autoRenew: boolean
+  reminderEnabled: boolean
+  reminderDaysBefore: string
+  providerName: string
+  providerWebsite: string
+  accountEmail: string
+  notes: string
 }
 
 const CATEGORIES: SubscriptionCategory[] = [
@@ -37,32 +58,72 @@ const BILLING_CYCLES: SubscriptionBillingCycle[] = [
   'weekly', 'monthly', 'quarterly', 'biannually', 'yearly'
 ]
 
-export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDialogProps) {
+const initialFormState: SubscriptionFormState = {
+  name: '',
+  description: '',
+  category: 'streaming',
+  amountARS: '',
+  amountUSD: '',
+  billingCycle: 'monthly',
+  billingDay: '1',
+  nextBillingDate: new Date().toISOString().split('T')[0],
+  status: 'active',
+  autoRenew: true,
+  reminderEnabled: true,
+  reminderDaysBefore: '3',
+  providerName: '',
+  providerWebsite: '',
+  accountEmail: '',
+  notes: ''
+}
+
+export function SubscriptionFormDialog({ open, onOpenChange, subscription }: SubscriptionFormDialogProps) {
   const t = useTranslations('subscriptions')
   const tCommon = useTranslations('common')
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: 'streaming' as SubscriptionCategory,
-    amountARS: '',
-    amountUSD: '',
-    billingCycle: 'monthly' as SubscriptionBillingCycle,
-    billingDay: '1',
-    nextBillingDate: new Date().toISOString().split('T')[0],
-    status: 'active' as SubscriptionStatus,
-    autoRenew: true,
-    reminderEnabled: true,
-    reminderDaysBefore: '3',
-    providerName: '',
-    providerWebsite: '',
-    accountEmail: '',
-    notes: ''
-  })
+  const isEditing = !!subscription
+  const [formData, setFormData] = useState<SubscriptionFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      if (subscription) {
+        // Edit mode - populate with subscription data
+        const amountARS = subscription.amountARS !== undefined
+          ? subscription.amountARS.toString()
+          : (subscription.currency === 'ARS' ? subscription.amount.toString() : '')
+        const amountUSD = subscription.amountUSD !== undefined
+          ? subscription.amountUSD.toString()
+          : (subscription.currency === 'USD' ? subscription.amount.toString() : '')
+
+        setFormData({
+          name: subscription.name,
+          description: subscription.description || '',
+          category: subscription.category,
+          amountARS,
+          amountUSD,
+          billingCycle: subscription.billingCycle,
+          billingDay: subscription.billingDay.toString(),
+          nextBillingDate: new Date(subscription.nextBillingDate).toISOString().split('T')[0],
+          status: subscription.status,
+          autoRenew: subscription.autoRenew,
+          reminderEnabled: subscription.reminderEnabled,
+          reminderDaysBefore: (subscription.reminderDaysBefore || 3).toString(),
+          providerName: subscription.providerName || '',
+          providerWebsite: subscription.providerWebsite || '',
+          accountEmail: subscription.accountEmail || '',
+          notes: subscription.notes || ''
+        })
+      } else {
+        // Create mode - reset form
+        setFormData(initialFormState)
+      }
+    }
+  }, [open, subscription])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!formData.name.trim()) {
       toast.error(t('validation.nameRequired'))
       return
@@ -71,20 +132,19 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
     const amountARS = formData.amountARS ? parseFloat(formData.amountARS) : undefined
     const amountUSD = formData.amountUSD ? parseFloat(formData.amountUSD) : undefined
 
-    // At least one amount must be provided
     if (!amountARS && !amountUSD) {
       toast.error(t('validation.amountRequired'))
       return
     }
 
-    // Determine primary amount and currency for legacy fields
+    if (isEditing && !subscription?.id) return
+
     const primaryAmount = amountARS || amountUSD || 0
-    const primaryCurrency = amountARS ? 'ARS' : 'USD'
+    const primaryCurrency: 'ARS' | 'USD' = amountARS ? 'ARS' : 'USD'
 
     setIsSubmitting(true)
     try {
-      await db.subscriptions.add({
-        id: `sub_${crypto.randomUUID()}`,
+      const subscriptionData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         category: formData.category,
@@ -103,50 +163,50 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
         providerWebsite: formData.providerWebsite.trim() || undefined,
         accountEmail: formData.accountEmail.trim() || undefined,
         notes: formData.notes.trim() || undefined,
-        createdAt: new Date()
-      })
+      }
 
-      toast.success(t('messages.added'))
+      if (isEditing) {
+        await db.subscriptions.update(subscription!.id!, {
+          ...subscriptionData,
+          updatedAt: new Date()
+        })
+        toast.success(t('messages.updated'))
+      } else {
+        await db.subscriptions.add({
+          id: `sub_${crypto.randomUUID()}`,
+          ...subscriptionData,
+          createdAt: new Date()
+        })
+        toast.success(t('messages.added'))
+      }
+
+      setFormData(initialFormState)
       onOpenChange(false)
-      setFormData({
-        name: '',
-        description: '',
-        category: 'streaming',
-        amountARS: '',
-        amountUSD: '',
-        billingCycle: 'monthly',
-        billingDay: '1',
-        nextBillingDate: new Date().toISOString().split('T')[0],
-        status: 'active',
-        autoRenew: true,
-        reminderEnabled: true,
-        reminderDaysBefore: '3',
-        providerName: '',
-        providerWebsite: '',
-        accountEmail: '',
-        notes: ''
-      })
     } catch (error) {
-      console.error('Error adding subscription:', error)
-      toast.error(t('messages.addError'))
+      logger.error(`Error ${isEditing ? 'updating' : 'adding'} subscription:`, error)
+      toast.error(isEditing ? t('messages.updateError') : t('messages.addError'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  if (isEditing && !subscription) return null
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('dialogs.add.title')}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? t('dialogs.edit.title') : t('dialogs.add.title')}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Name */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="name">{t('form.name')} *</Label>
+              <Label htmlFor="sub-name">{t('form.name')} *</Label>
               <Input
-                id="name"
+                id="sub-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={t('form.namePlaceholder')}
@@ -155,7 +215,7 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {/* Category and Status */}
             <div className="space-y-2">
-              <Label htmlFor="category">{t('form.category')}</Label>
+              <Label htmlFor="sub-category">{t('form.category')}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value as SubscriptionCategory })}
@@ -174,7 +234,7 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">{t('form.status')}</Label>
+              <Label htmlFor="sub-status">{t('form.status')}</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => setFormData({ ...formData, status: value as SubscriptionStatus })}
@@ -186,17 +246,18 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
                   <SelectItem value="active">{t('status.active')}</SelectItem>
                   <SelectItem value="trial">{t('status.trial')}</SelectItem>
                   <SelectItem value="paused">{t('status.paused')}</SelectItem>
+                  {isEditing && <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Amount in ARS */}
             <div className="space-y-2">
-              <Label htmlFor="amountARS">{t('form.amountARS')}</Label>
+              <Label htmlFor="sub-amountARS">{t('form.amountARS')}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">ARS</span>
                 <Input
-                  id="amountARS"
+                  id="sub-amountARS"
                   type="number"
                   value={formData.amountARS}
                   onChange={(e) => setFormData({ ...formData, amountARS: e.target.value })}
@@ -209,11 +270,11 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {/* Amount in USD */}
             <div className="space-y-2">
-              <Label htmlFor="amountUSD">{t('form.amountUSD')}</Label>
+              <Label htmlFor="sub-amountUSD">{t('form.amountUSD')}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">USD</span>
                 <Input
-                  id="amountUSD"
+                  id="sub-amountUSD"
                   type="number"
                   value={formData.amountUSD}
                   onChange={(e) => setFormData({ ...formData, amountUSD: e.target.value })}
@@ -225,9 +286,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
               <p className="text-xs text-muted-foreground">{t('form.amountHint')}</p>
             </div>
 
-            {/* Billing Cycle and Day */}
+            {/* Billing Cycle and Next Billing Date */}
             <div className="space-y-2">
-              <Label htmlFor="billingCycle">{t('form.billingCycle')}</Label>
+              <Label htmlFor="sub-billingCycle">{t('form.billingCycle')}</Label>
               <Select
                 value={formData.billingCycle}
                 onValueChange={(value) => setFormData({ ...formData, billingCycle: value as SubscriptionBillingCycle })}
@@ -246,9 +307,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nextBillingDate">{t('form.nextBillingDate')}</Label>
+              <Label htmlFor="sub-nextBillingDate">{t('form.nextBillingDate')}</Label>
               <Input
-                id="nextBillingDate"
+                id="sub-nextBillingDate"
                 type="date"
                 value={formData.nextBillingDate}
                 onChange={(e) => setFormData({ ...formData, nextBillingDate: e.target.value })}
@@ -257,9 +318,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {/* Provider Info */}
             <div className="space-y-2">
-              <Label htmlFor="providerName">{t('form.providerName')}</Label>
+              <Label htmlFor="sub-providerName">{t('form.providerName')}</Label>
               <Input
-                id="providerName"
+                id="sub-providerName"
                 value={formData.providerName}
                 onChange={(e) => setFormData({ ...formData, providerName: e.target.value })}
                 placeholder={t('form.providerNamePlaceholder')}
@@ -267,9 +328,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="providerWebsite">{t('form.providerWebsite')}</Label>
+              <Label htmlFor="sub-providerWebsite">{t('form.providerWebsite')}</Label>
               <Input
-                id="providerWebsite"
+                id="sub-providerWebsite"
                 type="url"
                 value={formData.providerWebsite}
                 onChange={(e) => setFormData({ ...formData, providerWebsite: e.target.value })}
@@ -279,9 +340,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {/* Account Email */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="accountEmail">{t('form.accountEmail')}</Label>
+              <Label htmlFor="sub-accountEmail">{t('form.accountEmail')}</Label>
               <Input
-                id="accountEmail"
+                id="sub-accountEmail"
                 type="email"
                 value={formData.accountEmail}
                 onChange={(e) => setFormData({ ...formData, accountEmail: e.target.value })}
@@ -292,11 +353,11 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
             {/* Auto Renew */}
             <div className="col-span-2 flex items-center justify-between p-3 border rounded-lg">
               <div>
-                <Label htmlFor="autoRenew">{t('form.autoRenew')}</Label>
+                <Label htmlFor="sub-autoRenew">{t('form.autoRenew')}</Label>
                 <p className="text-sm text-muted-foreground">{t('form.autoRenewDescription')}</p>
               </div>
               <Switch
-                id="autoRenew"
+                id="sub-autoRenew"
                 checked={formData.autoRenew}
                 onCheckedChange={(checked) => setFormData({ ...formData, autoRenew: checked })}
               />
@@ -305,11 +366,11 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
             {/* Reminder */}
             <div className="col-span-2 flex items-center justify-between p-3 border rounded-lg">
               <div>
-                <Label htmlFor="reminder">{t('form.enableReminder')}</Label>
+                <Label htmlFor="sub-reminder">{t('form.enableReminder')}</Label>
                 <p className="text-sm text-muted-foreground">{t('form.reminderDescription')}</p>
               </div>
               <Switch
-                id="reminder"
+                id="sub-reminder"
                 checked={formData.reminderEnabled}
                 onCheckedChange={(checked) => setFormData({ ...formData, reminderEnabled: checked })}
               />
@@ -317,9 +378,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {formData.reminderEnabled && (
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="reminderDays">{t('form.reminderDaysBefore')}</Label>
+                <Label htmlFor="sub-reminderDays">{t('form.reminderDaysBefore')}</Label>
                 <Input
-                  id="reminderDays"
+                  id="sub-reminderDays"
                   type="number"
                   value={formData.reminderDaysBefore}
                   onChange={(e) => setFormData({ ...formData, reminderDaysBefore: e.target.value })}
@@ -331,9 +392,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {/* Description */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="description">{t('form.description')}</Label>
+              <Label htmlFor="sub-description">{t('form.description')}</Label>
               <Textarea
-                id="description"
+                id="sub-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder={t('form.descriptionPlaceholder')}
@@ -343,9 +404,9 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
 
             {/* Notes */}
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="notes">{t('form.notes')}</Label>
+              <Label htmlFor="sub-notes">{t('form.notes')}</Label>
               <Textarea
-                id="notes"
+                id="sub-notes"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder={t('form.notesPlaceholder')}
@@ -367,3 +428,7 @@ export function AddSubscriptionDialog({ open, onOpenChange }: AddSubscriptionDia
     </Dialog>
   )
 }
+
+// Re-export with legacy names for backward compatibility
+export { SubscriptionFormDialog as AddSubscriptionDialog }
+export { SubscriptionFormDialog as EditSubscriptionDialog }

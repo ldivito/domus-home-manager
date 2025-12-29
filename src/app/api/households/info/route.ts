@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: Request) {
   try {
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
       })) || []
     })
   } catch (error) {
-    console.error('Get household info error:', error)
+    logger.error('Get household info error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

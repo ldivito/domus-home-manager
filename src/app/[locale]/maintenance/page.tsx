@@ -41,12 +41,11 @@ import {
   ClipboardList
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { AddItemDialog } from './components/AddItemDialog'
-import { EditItemDialog } from './components/EditItemDialog'
-import { AddTaskDialog } from './components/AddTaskDialog'
-import { EditTaskDialog } from './components/EditTaskDialog'
+import { MaintenanceItemFormDialog } from './components/MaintenanceItemFormDialog'
+import { MaintenanceTaskFormDialog } from './components/MaintenanceTaskFormDialog'
 import { LogMaintenanceDialog } from './components/LogMaintenanceDialog'
 import { ItemDetailDialog } from './components/ItemDetailDialog'
+import { logger } from '@/lib/logger'
 
 // Stable empty arrays to avoid useMemo dependency issues
 const EMPTY_ITEMS: MaintenanceItem[] = []
@@ -196,7 +195,7 @@ export default function MaintenancePage() {
       setDeleteItemOpen(false)
       setSelectedItem(null)
     } catch (error) {
-      console.error('Error deleting item:', error)
+      logger.error('Error deleting item:', error)
       toast.error(t('messages.deleteError'))
     }
   }
@@ -209,7 +208,7 @@ export default function MaintenancePage() {
       setDeleteTaskOpen(false)
       setSelectedTask(null)
     } catch (error) {
-      console.error('Error deleting task:', error)
+      logger.error('Error deleting task:', error)
       toast.error(t('messages.deleteError'))
     }
   }
@@ -599,15 +598,22 @@ export default function MaintenancePage() {
       </Tabs>
 
       {/* Dialogs */}
-      <AddItemDialog open={addItemOpen} onOpenChange={setAddItemOpen} />
-      <EditItemDialog open={editItemOpen} onOpenChange={setEditItemOpen} item={selectedItem} />
-      <AddTaskDialog
+      {/* Add Item Dialog */}
+      <MaintenanceItemFormDialog open={addItemOpen} onOpenChange={setAddItemOpen} />
+
+      {/* Edit Item Dialog */}
+      <MaintenanceItemFormDialog open={editItemOpen} onOpenChange={setEditItemOpen} item={selectedItem} />
+
+      {/* Add Task Dialog */}
+      <MaintenanceTaskFormDialog
         open={addTaskOpen}
         onOpenChange={setAddTaskOpen}
         item={selectedItemForTask}
         items={items}
       />
-      <EditTaskDialog open={editTaskOpen} onOpenChange={setEditTaskOpen} task={selectedTask} />
+
+      {/* Edit Task Dialog */}
+      <MaintenanceTaskFormDialog open={editTaskOpen} onOpenChange={setEditTaskOpen} task={selectedTask} />
       <LogMaintenanceDialog
         open={logMaintenanceOpen}
         onOpenChange={setLogMaintenanceOpen}

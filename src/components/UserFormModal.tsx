@@ -11,13 +11,21 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
 import { User } from "@/lib/db"
+import { logger } from '@/lib/logger'
 
-interface EditUserModalProps {
+interface UserFormModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  user: User | null
-  onUpdateUser: (userId: string, userData: Partial<User>) => Promise<void>
-  onDeleteUser: (userId: string) => Promise<void>
+  user?: User | null  // If provided, we're editing. If not, we're creating.
+  onCreateUser?: (user: Omit<User, 'id' | 'createdAt'>) => void
+  onUpdateUser?: (userId: string, userData: Partial<User>) => Promise<void>
+  onDeleteUser?: (userId: string) => Promise<void>
+}
+
+interface UserFormState {
+  name: string
+  userType: "resident" | "guest"
+  selectedColor: string
 }
 
 const AVATAR_COLORS = [
@@ -33,48 +41,75 @@ const AVATAR_COLORS = [
   "bg-cyan-500"
 ]
 
-export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDeleteUser }: EditUserModalProps) {
-  const t = useTranslations('users.editUserModal')
-  const [name, setName] = useState("")
-  const [userType, setUserType] = useState<"resident" | "guest">("resident")
-  const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
+const initialFormState: UserFormState = {
+  name: '',
+  userType: 'resident',
+  selectedColor: AVATAR_COLORS[0]
+}
+
+export function UserFormModal({ open, onOpenChange, user, onCreateUser, onUpdateUser, onDeleteUser }: UserFormModalProps) {
+  const tAdd = useTranslations('users.addUserModal')
+  const tEdit = useTranslations('users.editUserModal')
+
+  const isEditing = !!user
+  const t = isEditing ? tEdit : tAdd
+
+  const [formState, setFormState] = useState<UserFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Populate form when user changes
+  // Populate form when user changes or reset when opening in create mode
   useEffect(() => {
-    if (user) {
-      setName(user.name)
-      setUserType(user.type)
-      setSelectedColor(user.color || AVATAR_COLORS[0])
+    if (open) {
+      if (user) {
+        setFormState({
+          name: user.name,
+          userType: user.type,
+          selectedColor: user.color || AVATAR_COLORS[0]
+        })
+      } else {
+        setFormState(initialFormState)
+      }
     }
-  }, [user])
+  }, [open, user])
+
+  const updateField = <K extends keyof UserFormState>(field: K, value: UserFormState[K]) => {
+    setFormState(prev => ({ ...prev, [field]: value }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!name.trim() || !user?.id) return
+    if (!formState.name.trim()) return
+    if (isEditing && !user?.id) return
 
     setIsSubmitting(true)
 
     try {
-      await onUpdateUser(user.id, {
-        name: name.trim(),
-        type: userType,
-        color: selectedColor,
-        avatar: name.charAt(0).toUpperCase()
-      })
+      const userData = {
+        name: formState.name.trim(),
+        type: formState.userType,
+        color: formState.selectedColor,
+        avatar: formState.name.charAt(0).toUpperCase()
+      }
 
+      if (isEditing && onUpdateUser) {
+        await onUpdateUser(user!.id!, userData)
+      } else if (onCreateUser) {
+        await onCreateUser(userData)
+      }
+
+      setFormState(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating user:', error)
+      logger.error(`Error ${isEditing ? 'updating' : 'creating'} user:`, error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDelete = async () => {
-    if (!user?.id) return
+    if (!user?.id || !onDeleteUser) return
 
     setIsDeleting(true)
 
@@ -82,13 +117,13 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
       await onDeleteUser(user.id)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error deleting user:', error)
+      logger.error('Error deleting user:', error)
     } finally {
       setIsDeleting(false)
     }
   }
 
-  if (!user) return null
+  if (isEditing && !user) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,13 +137,13 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name Input */}
           <div className="space-y-2">
-            <Label htmlFor="edit-name" className="text-base font-medium">
+            <Label htmlFor="user-name" className="text-base font-medium">
               {t('name')}
             </Label>
             <Input
-              id="edit-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              id="user-name"
+              value={formState.name}
+              onChange={(e) => updateField('name', e.target.value)}
               placeholder={t('namePlaceholder')}
               className="h-12 text-base"
               required
@@ -118,7 +153,10 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
           {/* User Type Selection */}
           <div className="space-y-3">
             <Label className="text-base font-medium">{t('userType')}</Label>
-            <Select value={userType} onValueChange={(value: "resident" | "guest") => setUserType(value)}>
+            <Select
+              value={formState.userType}
+              onValueChange={(value: "resident" | "guest") => updateField('userType', value)}
+            >
               <SelectTrigger className="h-12 text-base">
                 <SelectValue />
               </SelectTrigger>
@@ -146,9 +184,9 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
             {/* Avatar Preview */}
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <Avatar className={`h-20 w-20 ${selectedColor} ring-4 ring-background shadow-modern`}>
+                <Avatar className={`h-20 w-20 ${formState.selectedColor} ring-4 ring-background shadow-modern`}>
                   <AvatarFallback className="text-white text-2xl font-bold">
-                    {name ? name.charAt(0).toUpperCase() : "?"}
+                    {formState.name ? formState.name.charAt(0).toUpperCase() : "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full border-2 border-background flex items-center justify-center">
@@ -163,9 +201,9 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
                 <button
                   key={color}
                   type="button"
-                  onClick={() => setSelectedColor(color)}
+                  onClick={() => updateField('selectedColor', color)}
                   className={`h-14 w-14 rounded-full border-4 transition-all duration-200 ${color} hover:scale-110 active:scale-95 ${
-                    selectedColor === color
+                    formState.selectedColor === color
                       ? "border-primary scale-110 shadow-modern ring-2 ring-primary/50"
                       : "border-border hover:border-primary/50"
                   }`}
@@ -176,39 +214,41 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-6">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="h-14 px-4"
-                  disabled={isDeleting || isSubmitting}
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t('deleteDescription', { name: user.name })}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            {isEditing && onDeleteUser && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="h-14 px-4"
+                    disabled={isDeleting || isSubmitting}
                   >
-                    {isDeleting ? (
-                      <div className="w-5 h-5 border-2 border-destructive-foreground border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      t('confirmDelete')
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{tEdit('deleteTitle')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {tEdit('deleteDescription', { name: user?.name || '' })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{tEdit('cancel')}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeleting ? (
+                        <div className="w-5 h-5 border-2 border-destructive-foreground border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        tEdit('confirmDelete')
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
 
             <Button
               type="button"
@@ -220,13 +260,13 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim() || isSubmitting}
+              disabled={!formState.name.trim() || isSubmitting}
               className="flex-1 h-14 text-base font-medium shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95 disabled:hover:scale-100"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
               ) : (
-                t('save')
+                isEditing ? tEdit('save') : tAdd('create')
               )}
             </Button>
           </div>
@@ -235,3 +275,7 @@ export function EditUserModal({ open, onOpenChange, user, onUpdateUser, onDelete
     </Dialog>
   )
 }
+
+// Re-export with legacy names for backward compatibility
+export { UserFormModal as AddUserModal }
+export { UserFormModal as EditUserModal }

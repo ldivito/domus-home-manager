@@ -6,6 +6,7 @@ import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Database, RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { checkMigrationNeeded, performMigration, type MigrationResult } from '@/lib/migration'
+import { logger } from '@/lib/logger'
 
 export default function MigrationProgress() {
   const t = useTranslations('migration')
@@ -23,7 +24,7 @@ export default function MigrationProgress() {
       const status = await checkMigrationNeeded()
       setNeedsMigration(status.needsMigration || false)
     } catch (err) {
-      console.error('Error checking migration:', err)
+      logger.error('Error checking migration:', err)
     }
   }
 

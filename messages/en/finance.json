@@ -1,6 +1,8 @@
 {
   "title": "Finance",
   "subtitle": "Manage household expenses and income sharing",
+  "hideAmounts": "Hide amounts",
+  "showAmounts": "Show amounts",
   "months": {
     "january": "January",
     "february": "February",

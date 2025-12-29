@@ -25,6 +25,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Pill } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddMedicationDialogProps {
   open: boolean
@@ -128,7 +129,7 @@ export function AddMedicationDialog({ open, onOpenChange, petId }: AddMedication
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error('Error adding medication:', error)
+      logger.error('Error adding medication:', error)
       toast.error(t('messages.medicationAddError'))
     } finally {
       setIsSubmitting(false)

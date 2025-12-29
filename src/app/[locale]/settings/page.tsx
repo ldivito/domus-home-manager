@@ -17,6 +17,7 @@ import { generateId } from '@/lib/utils'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { performSync, resetSyncState, isAuthenticated, getSyncStatus } from '@/lib/sync'
+import { logger } from '@/lib/logger'
 
 interface HouseholdInfo {
   id: string
@@ -146,7 +147,7 @@ export default function SettingsPage() {
       const totalRecords = users + chores + tasks + groceryItems + meals + projects + homeSettings
       setDbStats({ totalRecords, storageSize: 'Local' })
     } catch (error) {
-      console.error('Error loading database stats:', error)
+      logger.error('Error loading database stats:', error)
     }
   }
 
@@ -171,7 +172,7 @@ export default function SettingsPage() {
         setHomeSettings(settings[0])
       }
     } catch (error) {
-      console.error('Error loading home settings:', error)
+      logger.error('Error loading home settings:', error)
     }
   }
 
@@ -195,7 +196,7 @@ export default function SettingsPage() {
       setIsEditingHome(false)
       toast.success(t('homeSettings.saved'))
     } catch (error) {
-      console.error('Error saving home settings:', error)
+      logger.error('Error saving home settings:', error)
       toast.error(t('homeSettings.saveError'))
     }
   }
@@ -257,7 +258,7 @@ export default function SettingsPage() {
       
       toast.success(t('dataExported'))
     } catch (error) {
-      console.error('Export error:', error)
+      logger.error('Export error:', error)
       toast.error(t('exportError'))
     }
   }
@@ -308,7 +309,7 @@ export default function SettingsPage() {
         await loadDatabaseStats()
         toast.success(t('dataImported'))
       } catch (error) {
-        console.error('Import error:', error)
+        logger.error('Import error:', error)
         toast.error(t('importError'))
       }
     }
@@ -336,7 +337,7 @@ export default function SettingsPage() {
       await loadDatabaseStats()
       toast.success(t('dataReset'))
     } catch (error) {
-      console.error('Reset error:', error)
+      logger.error('Reset error:', error)
       toast.error(t('resetError'))
     }
   }
@@ -359,7 +360,7 @@ export default function SettingsPage() {
       }
     } catch (error) {
       // Silently handle errors - user might not be logged in or household API might not be available
-      console.log('Household info not available:', error)
+      logger.debug('Household info not available:', error)
       setHouseholdInfo(null)
       setHouseholdMembers([])
     } finally {
@@ -389,7 +390,7 @@ export default function SettingsPage() {
         toast.error(data.error || th('insufficientPermissions'))
       }
     } catch (error) {
-      console.error('Error updating household:', error)
+      logger.error('Error updating household:', error)
       toast.error(th('insufficientPermissions'))
     }
   }
@@ -403,7 +404,7 @@ export default function SettingsPage() {
       toast.success(th('inviteCodeCopied'))
       setTimeout(() => setCopiedCode(false), 2000)
     } catch (error) {
-      console.error('Error copying invite code:', error)
+      logger.error('Error copying invite code:', error)
     }
   }
 
@@ -423,7 +424,7 @@ export default function SettingsPage() {
         toast.error(data.error || th('insufficientPermissions'))
       }
     } catch (error) {
-      console.error('Error regenerating invite code:', error)
+      logger.error('Error regenerating invite code:', error)
       toast.error(th('insufficientPermissions'))
     }
   }
@@ -446,7 +447,7 @@ export default function SettingsPage() {
         toast.error(data.error || th('insufficientPermissions'))
       }
     } catch (error) {
-      console.error('Error removing member:', error)
+      logger.error('Error removing member:', error)
       toast.error(th('insufficientPermissions'))
     }
   }
@@ -479,7 +480,7 @@ export default function SettingsPage() {
         setIsCreatingHousehold(false)
       }
     } catch (error) {
-      console.error('Error creating household:', error)
+      logger.error('Error creating household:', error)
       toast.error('Failed to create household')
       setIsCreatingHousehold(false)
     }
@@ -509,7 +510,7 @@ export default function SettingsPage() {
         toast.error(data.error || th('invalidInviteCode') || 'Invalid invite code')
       }
     } catch (error) {
-      console.error('Error verifying invite code:', error)
+      logger.error('Error verifying invite code:', error)
       toast.error(th('invalidInviteCode') || 'Invalid invite code')
     } finally {
       setIsVerifyingCode(false)
@@ -541,7 +542,7 @@ export default function SettingsPage() {
         setIsJoiningHousehold(false)
       }
     } catch (error) {
-      console.error('Error joining household:', error)
+      logger.error('Error joining household:', error)
       toast.error('Failed to join household')
       setIsJoiningHousehold(false)
     }

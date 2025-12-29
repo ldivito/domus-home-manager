@@ -1,4 +1,5 @@
 import { generateId } from './utils'
+import { logger } from '@/lib/logger'
 
 export interface MigrationStatus {
   needsMigration: boolean
@@ -67,7 +68,7 @@ export async function checkMigrationNeeded(): Promise<MigrationStatus> {
 
     return { needsMigration: false }
   } catch (error) {
-    console.error('Error checking migration status:', error)
+    logger.error('Error checking migration status:', error)
     return {
       needsMigration: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -203,7 +204,7 @@ async function deleteLegacyDatabase(oldName: string): Promise<void> {
       const deleteRequest = indexedDB.deleteDatabase(oldName)
 
       deleteRequest.onsuccess = () => {
-        console.log(`Legacy database ${oldName} deleted successfully`)
+        logger.debug(`Legacy database ${oldName} deleted successfully`)
         resolve()
       }
 
@@ -212,7 +213,7 @@ async function deleteLegacyDatabase(oldName: string): Promise<void> {
       }
 
       deleteRequest.onblocked = () => {
-        console.warn(`Delete blocked for ${oldName}. Waiting for connections to close...`)
+        logger.warn(`Delete blocked for ${oldName}. Waiting for connections to close...`)
       }
     }
 
@@ -236,15 +237,15 @@ export async function performMigration(): Promise<MigrationResult> {
     // Check if migration is needed
     const status = await checkMigrationNeeded()
     if (!status.needsMigration) {
-      console.log('No migration needed')
+      logger.debug('No migration needed')
       return { ...result, success: true }
     }
 
-    console.log('Starting database migration from version', status.currentVersion)
+    logger.debug('Starting database migration from version', status.currentVersion)
 
     // Export data from legacy database
     const legacyData = await exportLegacyData(LEGACY_DB_NAME)
-    console.log('Exported legacy data:', Object.keys(legacyData))
+    logger.debug('Exported legacy data:', Object.keys(legacyData))
 
     // Transform data with new IDs
     const transformedData: Record<string, unknown[]> = {}
@@ -254,7 +255,7 @@ export async function performMigration(): Promise<MigrationResult> {
       result.recordsMigrated += records.length
     }
 
-    console.log('Transformed data:', result)
+    logger.debug('Transformed data:', result)
 
     // Store transformed data temporarily in localStorage for import
     // (We'll import it after the new database is created)
@@ -265,12 +266,12 @@ export async function performMigration(): Promise<MigrationResult> {
     // Delete legacy database
     await deleteLegacyDatabase(LEGACY_DB_NAME)
 
-    console.log('Migration prepared successfully')
+    logger.debug('Migration prepared successfully')
     result.success = true
 
     return result
   } catch (error) {
-    console.error('Migration failed:', error)
+    logger.error('Migration failed:', error)
     result.error = error instanceof Error ? error.message : 'Unknown migration error'
     return result
   }
@@ -290,7 +291,7 @@ export async function importMigratedData(db: {
 
   const migratedDataStr = localStorage.getItem('domus_migration_data')
   if (!migratedDataStr) {
-    console.log('No migrated data to import')
+    logger.debug('No migrated data to import')
     return
   }
 
@@ -299,13 +300,13 @@ export async function importMigratedData(db: {
 
     // Validate that this is actually migration data
     if (!migratedData || typeof migratedData !== 'object' || Object.keys(migratedData).length === 0) {
-      console.log('Invalid or empty migration data, clearing...')
+      logger.debug('Invalid or empty migration data, clearing...')
       localStorage.removeItem('domus_migration_data')
       setMigrationCompleted()
       return
     }
 
-    console.log('Importing migrated data into new database...')
+    logger.debug('Importing migrated data into new database...')
 
     let successCount = 0
     let errorCount = 0
@@ -319,7 +320,7 @@ export async function importMigratedData(db: {
         if (table.count) {
           const existingCount = await table.count()
           if (existingCount > 0) {
-            console.log(`Table ${tableName} already has ${existingCount} records, skipping import`)
+            logger.debug(`Table ${tableName} already has ${existingCount} records, skipping import`)
             continue
           }
         }
@@ -331,10 +332,10 @@ export async function importMigratedData(db: {
             await table.add(record)
           }
         }
-        console.log(`Imported ${records.length} records into ${tableName}`)
+        logger.debug(`Imported ${records.length} records into ${tableName}`)
         successCount++
       } catch (error) {
-        console.error(`Error importing ${tableName}:`, error)
+        logger.error(`Error importing ${tableName}:`, error)
         errorCount++
         // Continue with other tables even if one fails
       }
@@ -345,9 +346,9 @@ export async function importMigratedData(db: {
     localStorage.removeItem('domus_migration_data')
     setMigrationCompleted()
 
-    console.log(`Migration completed: ${successCount} tables imported, ${errorCount} errors`)
+    logger.debug(`Migration completed: ${successCount} tables imported, ${errorCount} errors`)
   } catch (error) {
-    console.error('Error importing migrated data:', error)
+    logger.error('Error importing migrated data:', error)
     // Clear corrupted migration data to prevent infinite loops
     localStorage.removeItem('domus_migration_data')
     setMigrationCompleted()
@@ -373,7 +374,7 @@ export function clearMigrationState(): void {
   localStorage.removeItem(MIGRATION_FLAG_KEY)
   localStorage.removeItem('domus_migration_data')
   localStorage.removeItem('lastSyncAt')
-  console.log('Migration state cleared. Please refresh the page.')
+  logger.debug('Migration state cleared. Please refresh the page.')
 }
 
 // Make clearMigrationState available in browser console for debugging

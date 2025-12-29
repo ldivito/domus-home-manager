@@ -1,5 +1,6 @@
 import { db, getDatabase, DeletionLog } from './db'
 import { checkMigrationNeeded, performMigration } from './migration'
+import { logger } from '@/lib/logger'
 
 export interface SyncStatus {
   lastSyncAt: Date | null
@@ -160,7 +161,7 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
         })
       }
     } catch (error) {
-      console.error(`Error collecting changes from ${tableName}:`, error)
+      logger.error(`Error collecting changes from ${tableName}:`, error)
     }
   }
 
@@ -180,7 +181,7 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
       })
     }
   } catch (error) {
-    console.error('Error collecting deletions:', error)
+    logger.error('Error collecting deletions:', error)
   }
 
   return changes
@@ -193,7 +194,7 @@ async function clearDeletionLog(before: Date): Promise<void> {
   try {
     await db.deletionLog.where('deletedAt').belowOrEqual(before).delete()
   } catch (error) {
-    console.error('Error clearing deletion log:', error)
+    logger.error('Error clearing deletion log:', error)
   }
 }
 
@@ -218,7 +219,7 @@ async function applyRemoteChanges(changes: SyncRecord[]): Promise<number> {
       }
       applied++
     } catch (error) {
-      console.error(`Error applying change to ${change.table}:`, error)
+      logger.error(`Error applying change to ${change.table}:`, error)
     }
   }
 
@@ -302,7 +303,7 @@ export async function performSync(forceFullSync: boolean = false): Promise<SyncR
     // 0. Check if migration is needed before syncing
     const migrationStatus = await checkMigrationNeeded()
     if (migrationStatus.needsMigration) {
-      console.log('Migration needed before sync, performing migration...')
+      logger.debug('Migration needed before sync, performing migration...')
       const migrationResult = await performMigration()
       if (!migrationResult.success) {
         result.error = `Migration failed: ${migrationResult.error}. Please refresh the page.`

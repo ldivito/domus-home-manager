@@ -27,7 +27,9 @@ import {
   Syringe,
   Pill,
   PiggyBank,
-  Target
+  Target,
+  Eye,
+  EyeOff
 } from "lucide-react"
 import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
@@ -44,6 +46,9 @@ export default function HomePage() {
   // State for chore completion modal
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false)
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null)
+
+  // State for hiding financial numbers
+  const [hideFinances, setHideFinances] = useState(false)
 
   // Auto-reset completed chores that are now due
   const resetOverdueChores = async () => {
@@ -256,6 +261,21 @@ export default function HomePage() {
   const pendingPayments = expensePayments.filter(p => p.status === 'pending')
   const overduePayments = expensePayments.filter(p => p.status === 'overdue')
   const netBalance = totalIncome - totalExpenses
+
+  // Helper function to display financial amounts
+  const displayFinance = (amount: number, format: 'full' | 'short' = 'full') => {
+    if (hideFinances) {
+      return '••••'
+    }
+    if (format === 'short') {
+      const sign = amount >= 0 ? '+' : ''
+      if (Math.abs(amount) >= 1000000) {
+        return `${sign}${(amount / 1000000).toFixed(1)}M`
+      }
+      return `${sign}${Math.round(amount / 1000)}k`
+    }
+    return `$${Math.abs(amount).toLocaleString('es-AR')}`
+  }
 
   // Keto data queries
   const ketoSettings = useLiveQuery(() => db.ketoSettings.toArray(), [])
@@ -513,7 +533,7 @@ export default function HomePage() {
                 <Link href="/finance" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
                   <DollarSign className="h-5 w-5 text-emerald-500 mb-1" />
                   <span className={`text-lg font-bold ${netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {netBalance >= 0 ? '+' : ''}{Math.abs(netBalance) >= 1000000 ? `${(netBalance / 1000000).toFixed(1)}M` : `${Math.round(netBalance / 1000)}k`}
+                    {displayFinance(netBalance, 'short')}
                   </span>
                   <span className="text-[10px] text-muted-foreground">{t('widgets.finance.balance')}</span>
                 </Link>
@@ -1076,11 +1096,21 @@ export default function HomePage() {
                     </div>
                     {t('widgets.finance.title')}
                   </CardTitle>
-                  <Link href="/finance">
-                    <Button variant="ghost" size="lg" className="touch-target">
-                      <ExternalLink className="h-5 w-5" />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setHideFinances(!hideFinances)}
+                      className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                    >
+                      {hideFinances ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
-                  </Link>
+                    <Link href="/finance">
+                      <Button variant="ghost" size="lg" className="touch-target">
+                        <ExternalLink className="h-5 w-5" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 space-y-3">
@@ -1089,12 +1119,12 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{t('widgets.finance.balance')}</span>
                     <span className={`text-lg font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {netBalance >= 0 ? '+' : ''}${Math.abs(netBalance).toLocaleString('es-AR')}
+                      {hideFinances ? '••••••' : `${netBalance >= 0 ? '+' : ''}${displayFinance(netBalance)}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
-                    <span>{t('widgets.finance.income')}: ${totalIncome.toLocaleString('es-AR')}</span>
-                    <span>{t('widgets.finance.expenses')}: ${totalExpenses.toLocaleString('es-AR')}</span>
+                    <span>{t('widgets.finance.income')}: {hideFinances ? '••••••' : `$${totalIncome.toLocaleString('es-AR')}`}</span>
+                    <span>{t('widgets.finance.expenses')}: {hideFinances ? '••••••' : `$${totalExpenses.toLocaleString('es-AR')}`}</span>
                   </div>
                 </div>
 

@@ -14,7 +14,7 @@ interface Notification {
   id: string
   title: string
   description: string
-  type: 'chore' | 'task'
+  type: 'chore' | 'task' | 'document' | 'maintenance' | 'payment' | 'pet'
   priority: 'high' | 'medium' | 'low'
   triggerTime: Date
   sourceId: string
@@ -37,10 +37,44 @@ export default function NotificationsPage() {
     []
   )
 
+  // Additional data sources for notifications
+  const documents = useLiveQuery(
+    () => db.documents.toArray(),
+    []
+  )
 
-  const typeColors = {
+  const maintenanceTasks = useLiveQuery(
+    () => db.maintenanceTasks.where('isCompleted').equals(0).toArray(),
+    []
+  )
+
+  const expensePayments = useLiveQuery(
+    () => db.expensePayments.toArray(),
+    []
+  )
+
+  const recurringExpenses = useLiveQuery(
+    () => db.recurringExpenses.toArray(),
+    []
+  )
+
+  const petVaccinations = useLiveQuery(
+    () => db.petVaccinations.toArray(),
+    []
+  )
+
+  const pets = useLiveQuery(
+    () => db.pets.toArray(),
+    []
+  )
+
+  const typeColors: Record<string, string> = {
     chore: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    task: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+    task: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    document: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
+    maintenance: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+    payment: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    pet: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
   }
 
   const priorityIcons = {
@@ -49,7 +83,7 @@ export default function NotificationsPage() {
     low: Bell
   }
 
-  // Generate notifications from chores and tasks
+  // Generate notifications from all sources
   useEffect(() => {
     if (!chores || !tasks) {
       setNotifications([])
@@ -57,6 +91,8 @@ export default function NotificationsPage() {
     }
 
     const now = new Date()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const generated: Notification[] = []
 
     // Generate chore notifications
@@ -142,6 +178,173 @@ export default function NotificationsPage() {
       }
     })
 
+    // Generate document expiration notifications
+    if (documents) {
+      documents.forEach(doc => {
+        if (doc.expirationDate && doc.reminderEnabled) {
+          const expirationDate = new Date(doc.expirationDate)
+          const reminderDays = doc.reminderDaysBefore || 7
+          const reminderDate = new Date(expirationDate.getTime() - reminderDays * 24 * 60 * 60 * 1000)
+
+          // Document expired
+          if (expirationDate <= now) {
+            generated.push({
+              id: `doc-expired-${doc.id}`,
+              title: t('documentExpired', { name: doc.name }),
+              description: t('documentExpiredDescription'),
+              type: 'document',
+              priority: 'high',
+              triggerTime: expirationDate,
+              sourceId: doc.id!,
+              sourcePage: '/documents',
+              isRead: false
+            })
+          }
+          // Document expiring soon
+          else if (reminderDate <= now && expirationDate > now) {
+            generated.push({
+              id: `doc-expiring-${doc.id}`,
+              title: t('documentExpiring', { name: doc.name }),
+              description: t('documentExpiringDescription', { days: reminderDays }),
+              type: 'document',
+              priority: 'medium',
+              triggerTime: reminderDate,
+              sourceId: doc.id!,
+              sourcePage: '/documents',
+              isRead: false
+            })
+          }
+        }
+      })
+    }
+
+    // Generate maintenance task notifications
+    if (maintenanceTasks) {
+      maintenanceTasks.forEach(task => {
+        if (task.nextDue) {
+          const nextDue = new Date(task.nextDue)
+          const dayBefore = new Date(nextDue.getTime() - 24 * 60 * 60 * 1000)
+
+          // Maintenance overdue
+          if (nextDue <= now) {
+            generated.push({
+              id: `maintenance-due-${task.id}`,
+              title: t('maintenanceDue', { name: task.name }),
+              description: t('maintenanceDueDescription'),
+              type: 'maintenance',
+              priority: task.priority === 'high' ? 'high' : 'medium',
+              triggerTime: nextDue,
+              sourceId: task.id!,
+              sourcePage: '/maintenance',
+              isRead: false
+            })
+          }
+          // Maintenance due tomorrow
+          else if (dayBefore.toDateString() === now.toDateString()) {
+            generated.push({
+              id: `maintenance-soon-${task.id}`,
+              title: t('maintenanceSoon', { name: task.name }),
+              description: t('maintenanceSoonDescription'),
+              type: 'maintenance',
+              priority: 'low',
+              triggerTime: dayBefore,
+              sourceId: task.id!,
+              sourcePage: '/maintenance',
+              isRead: false
+            })
+          }
+        }
+      })
+    }
+
+    // Generate expense payment notifications
+    if (expensePayments && recurringExpenses) {
+      const currentMonth = now.getMonth() + 1
+      const currentYear = now.getFullYear()
+
+      expensePayments.forEach(payment => {
+        const dueDate = new Date(payment.dueDate)
+        const paymentMonth = dueDate.getMonth() + 1
+        const paymentYear = dueDate.getFullYear()
+
+        // Only check current month payments
+        if (paymentMonth === currentMonth && paymentYear === currentYear) {
+          const expense = recurringExpenses.find(e => e.id === payment.recurringExpenseId)
+          const expenseName = expense?.name || 'Payment'
+
+          // Payment overdue
+          if (payment.status === 'overdue' || (payment.status === 'pending' && dueDate < now)) {
+            generated.push({
+              id: `payment-overdue-${payment.id}`,
+              title: t('paymentOverdue', { name: expenseName }),
+              description: t('paymentOverdueDescription'),
+              type: 'payment',
+              priority: 'high',
+              triggerTime: dueDate,
+              sourceId: payment.id!,
+              sourcePage: '/finance',
+              isRead: false
+            })
+          }
+          // Payment due today
+          else if (payment.status === 'pending' && dueDate.toDateString() === now.toDateString()) {
+            generated.push({
+              id: `payment-due-${payment.id}`,
+              title: t('paymentDue', { name: expenseName }),
+              description: t('paymentDueDescription'),
+              type: 'payment',
+              priority: 'medium',
+              triggerTime: dueDate,
+              sourceId: payment.id!,
+              sourcePage: '/finance',
+              isRead: false
+            })
+          }
+        }
+      })
+    }
+
+    // Generate pet vaccination notifications
+    if (petVaccinations && pets) {
+      petVaccinations.forEach(vaccination => {
+        if (vaccination.nextDueDate) {
+          const nextDueDate = new Date(vaccination.nextDueDate)
+          const weekBefore = new Date(nextDueDate.getTime() - 7 * 24 * 60 * 60 * 1000)
+          const pet = pets.find(p => p.id === vaccination.petId)
+          const petName = pet?.name || 'Pet'
+
+          // Vaccination overdue
+          if (nextDueDate <= now) {
+            generated.push({
+              id: `vaccine-overdue-${vaccination.id}`,
+              title: t('vaccineOverdue', { pet: petName, vaccine: vaccination.vaccineName }),
+              description: t('vaccineOverdueDescription'),
+              type: 'pet',
+              priority: 'high',
+              triggerTime: nextDueDate,
+              sourceId: vaccination.id!,
+              sourcePage: '/pets',
+              isRead: false
+            })
+          }
+          // Vaccination due soon (within a week)
+          else if (weekBefore <= now && nextDueDate > now) {
+            generated.push({
+              id: `vaccine-soon-${vaccination.id}`,
+              title: t('vaccineSoon', { pet: petName, vaccine: vaccination.vaccineName }),
+              description: t('vaccineSoonDescription'),
+              type: 'pet',
+              priority: 'medium',
+              triggerTime: weekBefore,
+              sourceId: vaccination.id!,
+              sourcePage: '/pets',
+              isRead: false
+            })
+          }
+        }
+      })
+    }
+
     // Sort by priority and time
     generated.sort((a, b) => {
       const priorityOrder = { high: 3, medium: 2, low: 1 }
@@ -152,7 +355,7 @@ export default function NotificationsPage() {
     })
 
     setNotifications(generated)
-  }, [chores, tasks, t])
+  }, [chores, tasks, documents, maintenanceTasks, expensePayments, recurringExpenses, petVaccinations, pets, t])
 
   const handleNotificationClick = (notification: Notification) => {
     router.push(notification.sourcePage)

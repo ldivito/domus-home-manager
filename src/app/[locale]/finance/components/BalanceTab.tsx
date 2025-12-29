@@ -23,6 +23,7 @@ interface BalanceTabProps {
   exchangeRate?: MonthlyExchangeRate
   selectedMonth: number
   selectedYear: number
+  hideAmounts?: boolean
 }
 
 interface UserBalance {
@@ -45,7 +46,9 @@ interface Settlement {
   amount: number
 }
 
-export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, selectedMonth, selectedYear }: BalanceTabProps) {
+export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, selectedMonth, selectedYear, hideAmounts: _hideAmounts }: BalanceTabProps) {
+  // Note: _hideAmounts is reserved for future implementation
+  void _hideAmounts
   const t = useTranslations('finance.balance')
   const tMessages = useTranslations('finance.messages')
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, User, Settings, Award, TrendingUp, UserPlus } from "lucide-react"
+import { Plus, User, Settings, Award, TrendingUp, UserPlus, CheckCircle, Utensils, Repeat } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -19,10 +19,21 @@ interface UserStats {
   chores: number
 }
 
+interface RecentActivity {
+  id: string
+  type: 'task_completed' | 'chore_completed' | 'meal_planned' | 'task_created'
+  title: string
+  userId?: string
+  userName?: string
+  userColor?: string
+  timestamp: Date
+}
+
 export default function UsersPage() {
   const t = useTranslations('users')
   const [users, setUsers] = useState<UserType[]>([])
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null)
@@ -56,6 +67,70 @@ export default function UsersPage() {
         }
       }
       setUserStats(stats)
+
+      // Load recent activities
+      const activities: RecentActivity[] = []
+
+      // Get completed tasks (last 7 days)
+      const oneWeekAgo = new Date()
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
+      const allTasks = await db.tasks.toArray()
+      const completedTasks = allTasks.filter(
+        task => task.isCompleted && task.updatedAt && new Date(task.updatedAt) >= oneWeekAgo
+      )
+
+      for (const task of completedTasks.slice(0, 10)) {
+        const user = dbUsers.find(u => u.id === task.assignedUserId)
+        activities.push({
+          id: `task-${task.id}`,
+          type: 'task_completed',
+          title: task.title,
+          userId: task.assignedUserId,
+          userName: user?.name,
+          userColor: user?.color,
+          timestamp: task.updatedAt || task.createdAt
+        })
+      }
+
+      // Get completed chores (last 7 days)
+      const allChores = await db.chores.toArray()
+      const completedChores = allChores.filter(
+        chore => chore.isCompleted && chore.completedAt && new Date(chore.completedAt) >= oneWeekAgo
+      )
+
+      for (const chore of completedChores.slice(0, 10)) {
+        const user = dbUsers.find(u => u.id === chore.lastCompletedBy)
+        activities.push({
+          id: `chore-${chore.id}`,
+          type: 'chore_completed',
+          title: chore.title,
+          userId: chore.lastCompletedBy,
+          userName: user?.name,
+          userColor: user?.color,
+          timestamp: chore.completedAt!
+        })
+      }
+
+      // Get recent meals (last 7 days)
+      const allMeals = await db.meals.toArray()
+      const recentMeals = allMeals.filter(
+        meal => new Date(meal.date) >= oneWeekAgo && new Date(meal.date) <= new Date()
+      )
+
+      for (const meal of recentMeals.slice(0, 5)) {
+        activities.push({
+          id: `meal-${meal.id}`,
+          type: 'meal_planned',
+          title: meal.title,
+          timestamp: new Date(meal.date)
+        })
+      }
+
+      // Sort by timestamp and take top 10
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      setRecentActivities(activities.slice(0, 8))
+
     } catch (error) {
       console.error('Error loading users:', error)
     } finally {
@@ -269,15 +344,56 @@ export default function UsersPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className="text-center py-8 sm:py-10 md:py-12 space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-muted/50 rounded-full flex items-center justify-center">
-                      <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+                  {recentActivities.length === 0 ? (
+                    <div className="text-center py-8 sm:py-10 md:py-12 space-y-3 sm:space-y-4">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-muted/50 rounded-full flex items-center justify-center">
+                        <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-base sm:text-lg font-medium text-muted-foreground">{t('noActivity')}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground/70">{t('noActivityDescription')}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-base sm:text-lg font-medium text-muted-foreground">Coming Soon</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground/70">Recent activity will be displayed here</p>
+                  ) : (
+                    <div className="space-y-2 sm:space-y-3 max-h-80 overflow-y-auto">
+                      {recentActivities.map((activity) => (
+                        <div key={activity.id} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
+                            activity.type === 'task_completed'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                              : activity.type === 'chore_completed'
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                          }`}>
+                            {activity.type === 'task_completed' && <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />}
+                            {activity.type === 'chore_completed' && <Repeat className="h-4 w-4 sm:h-5 sm:w-5" />}
+                            {activity.type === 'meal_planned' && <Utensils className="h-4 w-4 sm:h-5 sm:w-5" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm sm:text-base font-medium text-foreground truncate">
+                              {activity.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {activity.userName && (
+                                <div className="flex items-center gap-1">
+                                  <div
+                                    className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                                    style={{ backgroundColor: activity.userColor || '#6b7280' }}
+                                  >
+                                    {activity.userName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">{activity.userName}</span>
+                                </div>
+                              )}
+                              <span className="text-xs text-muted-foreground/70">
+                                {new Date(activity.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 

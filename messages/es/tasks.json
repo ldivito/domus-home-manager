@@ -3,6 +3,8 @@
   "subtitle": "Lista general de tareas por hacer de una sola vez",
   "addTask": "Agregar Tarea",
   "editTask": "Editar Tarea",
+  "viewDetails": "Ver Detalles",
+  "createdAt": "Creada",
   "noTasks": "Aún no hay tareas",
   "addFirstTask": "Crea tu primera tarea para empezar",
   "noTasksFound": "No se encontraron tareas",

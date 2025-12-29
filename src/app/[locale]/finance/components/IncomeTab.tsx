@@ -32,6 +32,7 @@ interface IncomeTabProps {
   currentYear: number
   exchangeRate?: MonthlyExchangeRate
   isFutureMonth?: boolean
+  hideAmounts?: boolean
 }
 
 const monthNames = [
@@ -39,7 +40,9 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, exchangeRate, isFutureMonth }: IncomeTabProps) {
+export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, exchangeRate, isFutureMonth, hideAmounts: _hideAmounts }: IncomeTabProps) {
+  // Note: _hideAmounts is reserved for future implementation of hiding amounts in this tab
+  void _hideAmounts
   const t = useTranslations('finance.income')
   const tMessages = useTranslations('finance.messages')
   const [showDialog, setShowDialog] = useState(false)

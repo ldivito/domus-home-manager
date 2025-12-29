@@ -47,6 +47,8 @@
   "chores": "Chores",
   "topPerformer": "Top Performer",
   "recentActivity": "Recent Activity",
+  "noActivity": "No recent activity",
+  "noActivityDescription": "Completed tasks and chores will appear here",
   "familyStats": "Family Stats",
   "totalTasksCompleted": "Total Tasks Completed",
   "assignedChores": "Assigned Chores",

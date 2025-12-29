@@ -3,13 +3,15 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from "@/components/ui/card"
-import { Plus, Calendar, CheckCircle, Edit3, Trash2, Search, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload, ChevronLeft, ChevronRight, Filter, X } from "lucide-react"
+import { Plus, Calendar, CheckCircle, Edit3, Trash2, Search, User, Clock, FolderKanban, AlertTriangle, Tag, Settings, Upload, ChevronLeft, ChevronRight, Filter, X, Eye } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import { db, Task, HomeImprovement, TaskCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AddTaskDialog } from './components/AddTaskDialog'
@@ -28,9 +30,11 @@ export default function TasksPage() {
   const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [viewingTask, setViewingTask] = useState<Task | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('pending')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [projectFilter, setProjectFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -102,6 +106,11 @@ export default function TasksPage() {
     setEditDialogOpen(true)
   }
 
+  const handleViewTask = (task: Task) => {
+    setViewingTask(task)
+    setDetailsDialogOpen(true)
+  }
+
   const getProjectName = (projectId?: string) => {
     if (!projectId) return null
     const project = projects.find(p => p.id === projectId)
@@ -167,7 +176,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="p-4 sm:p-6 pb-24 sm:pb-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
@@ -506,11 +515,14 @@ export default function TasksPage() {
 
                     {/* Main Content */}
                     <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                      <span className={`font-medium text-sm truncate ${
-                        task.isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
-                      }`}>
+                      <button
+                        onClick={() => handleViewTask(task)}
+                        className={`font-medium text-sm text-left ${
+                          task.isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400'
+                        } sm:truncate line-clamp-2 sm:line-clamp-1`}
+                      >
                         {task.title}
-                      </span>
+                      </button>
 
                       {/* Inline badges - desktop only */}
                       <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
@@ -541,6 +553,13 @@ export default function TasksPage() {
 
                       {/* Actions - desktop: show on hover, mobile: always visible */}
                       <div className="flex items-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 ml-auto sm:ml-0">
+                        <button
+                          className="p-2 sm:p-1 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:text-purple-400 dark:hover:bg-purple-900/30 active:bg-purple-100 dark:active:bg-purple-900/50 sm:hidden"
+                          onClick={() => handleViewTask(task)}
+                          title={t('viewDetails')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                         <button
                           className="p-2 sm:p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600"
                           onClick={() => handleEditTask(task)}
@@ -741,6 +760,158 @@ export default function TasksPage() {
           projects={projects}
           existingTasks={tasks}
         />
+
+        {/* Task Details Dialog */}
+        <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            {viewingTask && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl pr-8">
+                    {viewingTask.title}
+                  </DialogTitle>
+                  {viewingTask.description && (
+                    <DialogDescription className="text-base mt-2 whitespace-pre-wrap">
+                      {viewingTask.description}
+                    </DialogDescription>
+                  )}
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  {/* Status and Priority */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant={viewingTask.isCompleted ? "secondary" : "default"}>
+                      {viewingTask.isCompleted ? t('status.completed') : t('status.pending')}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={
+                        viewingTask.priority === 'high'
+                          ? 'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/30'
+                          : viewingTask.priority === 'medium'
+                            ? 'border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30'
+                            : 'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/30'
+                      }
+                    >
+                      {t(`priority.${viewingTask.priority}`)}
+                    </Badge>
+                    {isBlockedByIncompleteTask(viewingTask) && (
+                      <Badge variant="outline" className="border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-900/30">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        {t('blocked')}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Category */}
+                  {viewingTask.category && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">
+                        {translateCategoryName(getCategory(viewingTask.category)?.name || '')}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Assigned User */}
+                  {viewingTask.assignedUserId && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">
+                        {users.find(u => u.id === viewingTask.assignedUserId)?.name || tCommon('notAssigned')}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Due Date */}
+                  {viewingTask.dueDate && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">
+                        {new Date(viewingTask.dueDate).toLocaleDateString(undefined, {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Estimated Time */}
+                  {viewingTask.estimatedTime && (viewingTask.estimatedTime.hours > 0 || viewingTask.estimatedTime.minutes > 0) && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">
+                        {formatEstimatedTime(viewingTask.estimatedTime)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Linked Project */}
+                  {viewingTask.linkedProjectId && (
+                    <div className="flex items-center gap-2">
+                      <FolderKanban className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm text-purple-600 dark:text-purple-400">
+                        {getProjectName(viewingTask.linkedProjectId)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Blocked By */}
+                  {viewingTask.blockedByTaskId && (
+                    <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('blockedBy')}:</span>
+                      </div>
+                      <span className="text-sm text-orange-700 dark:text-orange-300 mt-1 block">
+                        {tasks.find(t => t.id === viewingTask.blockedByTaskId)?.title || viewingTask.blockedByTaskId}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Created At */}
+                  <div className="text-xs text-gray-400 pt-2 border-t">
+                    {t('createdAt')}: {new Date(viewingTask.createdAt).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setDetailsDialogOpen(false)
+                        handleEditTask(viewingTask)
+                      }}
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      {t('editTask')}
+                    </Button>
+                    {!viewingTask.isCompleted && !isBlockedByIncompleteTask(viewingTask) && (
+                      <Button
+                        className="flex-1"
+                        onClick={() => {
+                          handleMarkComplete(viewingTask.id!)
+                          setDetailsDialogOpen(false)
+                        }}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        {t('markComplete')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

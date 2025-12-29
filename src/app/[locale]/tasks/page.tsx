@@ -14,8 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge"
 import { db, Task, HomeImprovement, TaskCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { AddTaskDialog } from './components/AddTaskDialog'
-import { EditTaskDialog } from './components/EditTaskDialog'
+import { TaskFormDialog } from './components/TaskFormDialog'
 import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
 import { ImportTasksDialog } from './components/ImportTasksDialog'
 
@@ -731,14 +730,16 @@ export default function TasksPage() {
           </div>
         )}
 
-        <AddTaskDialog
+        {/* Add Task Dialog */}
+        <TaskFormDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           users={users}
           categories={categories}
         />
 
-        <EditTaskDialog
+        {/* Edit Task Dialog */}
+        <TaskFormDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           task={editingTask}

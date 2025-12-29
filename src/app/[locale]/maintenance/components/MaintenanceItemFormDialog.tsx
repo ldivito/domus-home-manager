@@ -23,10 +23,23 @@ import { db, MaintenanceItem, MaintenanceItemType } from '@/lib/db'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 
-interface EditItemDialogProps {
+interface MaintenanceItemFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: MaintenanceItem | null
+  item?: MaintenanceItem | null  // If provided, we're editing
+}
+
+interface ItemFormState {
+  name: string
+  description: string
+  type: MaintenanceItemType
+  location: string
+  brand: string
+  model: string
+  serialNumber: string
+  purchaseDate: string
+  warrantyExpirationDate: string
+  notes: string
 }
 
 const ITEM_TYPES: MaintenanceItemType[] = [
@@ -34,52 +47,63 @@ const ITEM_TYPES: MaintenanceItemType[] = [
   'roof', 'exterior', 'landscaping', 'pool', 'security', 'other'
 ]
 
-export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps) {
+const initialFormState: ItemFormState = {
+  name: '',
+  description: '',
+  type: 'appliance',
+  location: '',
+  brand: '',
+  model: '',
+  serialNumber: '',
+  purchaseDate: '',
+  warrantyExpirationDate: '',
+  notes: ''
+}
+
+export function MaintenanceItemFormDialog({ open, onOpenChange, item }: MaintenanceItemFormDialogProps) {
   const t = useTranslations('maintenance')
   const tCommon = useTranslations('common')
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    type: 'appliance' as MaintenanceItemType,
-    location: '',
-    brand: '',
-    model: '',
-    serialNumber: '',
-    purchaseDate: '',
-    warrantyExpirationDate: '',
-    notes: ''
-  })
+  const isEditing = !!item
+  const [formData, setFormData] = useState<ItemFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (item) {
-      setFormData({
-        name: item.name,
-        description: item.description || '',
-        type: item.type,
-        location: item.location || '',
-        brand: item.brand || '',
-        model: item.model || '',
-        serialNumber: item.serialNumber || '',
-        purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : '',
-        warrantyExpirationDate: item.warrantyExpirationDate ? new Date(item.warrantyExpirationDate).toISOString().split('T')[0] : '',
-        notes: item.notes || ''
-      })
+    if (open) {
+      if (item) {
+        // Edit mode - populate with item data
+        setFormData({
+          name: item.name,
+          description: item.description || '',
+          type: item.type,
+          location: item.location || '',
+          brand: item.brand || '',
+          model: item.model || '',
+          serialNumber: item.serialNumber || '',
+          purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : '',
+          warrantyExpirationDate: item.warrantyExpirationDate ? new Date(item.warrantyExpirationDate).toISOString().split('T')[0] : '',
+          notes: item.notes || ''
+        })
+      } else {
+        // Create mode - reset form
+        setFormData(initialFormState)
+      }
     }
-  }, [item])
+  }, [open, item])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!item?.id) return
+
     if (!formData.name.trim()) {
       toast.error(t('validation.nameRequired'))
       return
     }
 
+    if (isEditing && !item?.id) return
+
     setIsSubmitting(true)
     try {
-      await db.maintenanceItems.update(item.id, {
+      const itemData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         type: formData.type,
@@ -90,33 +114,49 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
         purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate) : undefined,
         warrantyExpirationDate: formData.warrantyExpirationDate ? new Date(formData.warrantyExpirationDate) : undefined,
         notes: formData.notes.trim() || undefined,
-        updatedAt: new Date()
-      })
+      }
 
-      toast.success(t('messages.itemUpdated'))
+      if (isEditing) {
+        await db.maintenanceItems.update(item!.id!, {
+          ...itemData,
+          updatedAt: new Date()
+        })
+        toast.success(t('messages.itemUpdated'))
+      } else {
+        await db.maintenanceItems.add({
+          id: `maint_${crypto.randomUUID()}`,
+          ...itemData,
+          createdAt: new Date()
+        })
+        toast.success(t('messages.itemAdded'))
+      }
+
+      setFormData(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      logger.error('Error updating item:', error)
-      toast.error(t('messages.updateError'))
+      logger.error(`Error ${isEditing ? 'updating' : 'adding'} item:`, error)
+      toast.error(isEditing ? t('messages.updateError') : t('messages.addError'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (!item) return null
+  if (isEditing && !item) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('dialogs.editItem.title')}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? t('dialogs.editItem.title') : t('dialogs.addItem.title')}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="name">{t('form.name')} *</Label>
+              <Label htmlFor="maint-name">{t('form.name')} *</Label>
               <Input
-                id="name"
+                id="maint-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={t('form.namePlaceholder')}
@@ -124,7 +164,7 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">{t('form.type')}</Label>
+              <Label htmlFor="maint-type">{t('form.type')}</Label>
               <Select
                 value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value as MaintenanceItemType })}
@@ -143,9 +183,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location">{t('form.location')}</Label>
+              <Label htmlFor="maint-location">{t('form.location')}</Label>
               <Input
-                id="location"
+                id="maint-location"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder={t('form.locationPlaceholder')}
@@ -153,9 +193,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="brand">{t('form.brand')}</Label>
+              <Label htmlFor="maint-brand">{t('form.brand')}</Label>
               <Input
-                id="brand"
+                id="maint-brand"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 placeholder={t('form.brandPlaceholder')}
@@ -163,9 +203,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="model">{t('form.model')}</Label>
+              <Label htmlFor="maint-model">{t('form.model')}</Label>
               <Input
-                id="model"
+                id="maint-model"
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                 placeholder={t('form.modelPlaceholder')}
@@ -173,9 +213,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="serialNumber">{t('form.serialNumber')}</Label>
+              <Label htmlFor="maint-serialNumber">{t('form.serialNumber')}</Label>
               <Input
-                id="serialNumber"
+                id="maint-serialNumber"
                 value={formData.serialNumber}
                 onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
                 placeholder={t('form.serialNumberPlaceholder')}
@@ -183,9 +223,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="purchaseDate">{t('form.purchaseDate')}</Label>
+              <Label htmlFor="maint-purchaseDate">{t('form.purchaseDate')}</Label>
               <Input
-                id="purchaseDate"
+                id="maint-purchaseDate"
                 type="date"
                 value={formData.purchaseDate}
                 onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
@@ -193,9 +233,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="warrantyExpirationDate">{t('form.warrantyExpiration')}</Label>
+              <Label htmlFor="maint-warrantyExpirationDate">{t('form.warrantyExpiration')}</Label>
               <Input
-                id="warrantyExpirationDate"
+                id="maint-warrantyExpirationDate"
                 type="date"
                 value={formData.warrantyExpirationDate}
                 onChange={(e) => setFormData({ ...formData, warrantyExpirationDate: e.target.value })}
@@ -203,9 +243,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="description">{t('form.description')}</Label>
+              <Label htmlFor="maint-description">{t('form.description')}</Label>
               <Textarea
-                id="description"
+                id="maint-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder={t('form.descriptionPlaceholder')}
@@ -214,9 +254,9 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="notes">{t('form.notes')}</Label>
+              <Label htmlFor="maint-notes">{t('form.notes')}</Label>
               <Textarea
-                id="notes"
+                id="maint-notes"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder={t('form.notesPlaceholder')}
@@ -238,3 +278,7 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
     </Dialog>
   )
 }
+
+// Re-export with legacy names for backward compatibility
+export { MaintenanceItemFormDialog as AddItemDialog }
+export { MaintenanceItemFormDialog as EditItemDialog }

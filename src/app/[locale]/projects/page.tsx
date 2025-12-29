@@ -12,8 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label"
 import { db, HomeImprovement, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { AddProjectDialog } from './components/AddProjectDialog'
-import { EditProjectDialog } from './components/EditProjectDialog'
+import { ProjectFormDialog } from './components/ProjectFormDialog'
 import { ProjectDetailDialog } from './components/ProjectDetailDialog'
 import { logger } from '@/lib/logger'
 
@@ -584,13 +583,15 @@ export default function ProjectsPage() {
           </>
         )}
 
-        <AddProjectDialog
+        {/* Add Project Dialog */}
+        <ProjectFormDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           users={users}
         />
 
-        <EditProjectDialog
+        {/* Edit Project Dialog */}
+        <ProjectFormDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           project={editingProject}

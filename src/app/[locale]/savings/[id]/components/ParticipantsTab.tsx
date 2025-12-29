@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { Plus, Users, Trash2, TrendingUp, TrendingDown, CheckCircle2, Percent } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface ParticipantsTabProps {
   campaign: SavingsCampaign
@@ -144,7 +145,7 @@ export function ParticipantsTab({ campaign, participants, contributions, users }
       resetForm()
       setShowAddDialog(false)
     } catch (error) {
-      console.error('Error adding participant:', error)
+      logger.error('Error adding participant:', error)
       toast.error(t('messages.error'))
     } finally {
       setIsSubmitting(false)
@@ -175,7 +176,7 @@ export function ParticipantsTab({ campaign, participants, contributions, users }
       resetForm()
       setShowEditDialog(false)
     } catch (error) {
-      console.error('Error updating participant:', error)
+      logger.error('Error updating participant:', error)
       toast.error(t('messages.error'))
     } finally {
       setIsSubmitting(false)
@@ -212,7 +213,7 @@ export function ParticipantsTab({ campaign, participants, contributions, users }
       setShowRemoveDialog(false)
       setSelectedParticipant(null)
     } catch (error) {
-      console.error('Error removing participant:', error)
+      logger.error('Error removing participant:', error)
       toast.error(t('messages.error'))
     }
   }

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus } from "lucide-react"
 import { db, GroceryCategory, SavedGroceryItem, GroceryItem } from '@/lib/db'
 import { generateId } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 interface AddItemDialogProps {
   open: boolean
@@ -111,7 +112,7 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
       setShowNewCategoryInput(false)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error adding item:', error)
+      logger.error('Error adding item:', error)
     } finally {
       setIsSubmitting(false)
     }

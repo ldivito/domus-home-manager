@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Edit3, X, Plus } from "lucide-react"
 import { db, MealCategory, deleteWithSync } from '@/lib/db'
 import { generateId } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 interface ManageMealCategoriesDialogProps {
   open: boolean
@@ -72,7 +73,7 @@ export function ManageMealCategoriesDialog({ open, onOpenChange, categories }: M
       setEditName('')
       setEditColor('#6b7280')
     } catch (error) {
-      console.error('Error updating category:', error)
+      logger.error('Error updating category:', error)
     }
   }
 
@@ -88,7 +89,7 @@ export function ManageMealCategoriesDialog({ open, onOpenChange, categories }: M
     try {
       await deleteWithSync(db.mealCategories, 'mealCategories', categoryId)
     } catch (error) {
-      console.error('Error deleting category:', error)
+      logger.error('Error deleting category:', error)
     }
   }
 
@@ -108,7 +109,7 @@ export function ManageMealCategoriesDialog({ open, onOpenChange, categories }: M
       setNewColor('#6b7280')
       setIsCreating(false)
     } catch (error) {
-      console.error('Error creating category:', error)
+      logger.error('Error creating category:', error)
     }
   }
 

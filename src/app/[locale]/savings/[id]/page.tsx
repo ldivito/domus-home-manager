@@ -42,6 +42,7 @@ import { ContributionsTab } from './components/ContributionsTab'
 import { ParticipantsTab } from './components/ParticipantsTab'
 import { SettlementTab } from './components/SettlementTab'
 import { EditCampaignDialog } from './components/EditCampaignDialog'
+import { logger } from '@/lib/logger'
 
 export default function SavingsDetailPage() {
   const params = useParams()
@@ -119,7 +120,7 @@ export default function SavingsDetailPage() {
       toast.success(t('messages.campaignDeleted'))
       router.push('/savings')
     } catch (error) {
-      console.error('Error deleting campaign:', error)
+      logger.error('Error deleting campaign:', error)
       toast.error(t('messages.error'))
     }
   }
@@ -137,7 +138,7 @@ export default function SavingsDetailPage() {
       toast.success(t('messages.campaignCompleted'))
       setShowCompleteDialog(false)
     } catch (error) {
-      console.error('Error completing campaign:', error)
+      logger.error('Error completing campaign:', error)
       toast.error(t('messages.error'))
     }
   }
@@ -154,7 +155,7 @@ export default function SavingsDetailPage() {
       })
       toast.success(t('messages.campaignReopened'))
     } catch (error) {
-      console.error('Error reopening campaign:', error)
+      logger.error('Error reopening campaign:', error)
       toast.error(t('messages.error'))
     }
   }

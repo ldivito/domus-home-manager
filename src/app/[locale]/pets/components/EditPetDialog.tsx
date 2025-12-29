@@ -28,6 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PawPrint, Camera, Dog, Cat, Bird, Fish, Rabbit } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface EditPetDialogProps {
   open: boolean
@@ -161,7 +162,7 @@ export function EditPetDialog({ open, onOpenChange, pet }: EditPetDialogProps) {
       toast.success(t('messages.updated'))
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating pet:', error)
+      logger.error('Error updating pet:', error)
       toast.error(t('messages.updateError'))
     } finally {
       setIsSubmitting(false)

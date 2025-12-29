@@ -21,6 +21,7 @@ import { db, User as UserType, Task, HomeImprovement, TaskCategory } from '@/lib
 import { useLiveQuery } from 'dexie-react-hooks'
 import { generateId } from '@/lib/utils'
 import { cn } from "@/lib/utils"
+import { logger } from '@/lib/logger'
 
 interface TaskFormDialogProps {
   open: boolean
@@ -171,7 +172,7 @@ export function TaskFormDialog({ open, onOpenChange, task, users, categories }: 
       setFormState(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      console.error(`Error ${isEditing ? 'updating' : 'creating'} task:`, error)
+      logger.error(`Error ${isEditing ? 'updating' : 'creating'} task:`, error)
     } finally {
       setIsSubmitting(false)
     }

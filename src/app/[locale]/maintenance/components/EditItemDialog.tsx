@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { db, MaintenanceItem, MaintenanceItemType } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface EditItemDialogProps {
   open: boolean
@@ -95,7 +96,7 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
       toast.success(t('messages.itemUpdated'))
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating item:', error)
+      logger.error('Error updating item:', error)
       toast.error(t('messages.updateError'))
     } finally {
       setIsSubmitting(false)

@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Scale, ArrowRight, Check, TrendingUp, TrendingDown, Wallet, Receipt, PiggyBank, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { logger } from '@/lib/logger'
 
 interface BalanceTabProps {
   users: User[]
@@ -223,7 +224,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
       setSelectedSettlement(null)
       setSettlementNotes('')
     } catch (error) {
-      console.error('Error saving settlement:', error)
+      logger.error('Error saving settlement:', error)
       toast.error(tMessages('error'))
     } finally {
       setIsSubmitting(false)
@@ -236,7 +237,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
       await deleteWithSync(db.settlementPayments, 'settlementPayments', settlementPayment.id!)
       toast.success(tMessages('settlementUnmarked'))
     } catch (error) {
-      console.error('Error deleting settlement:', error)
+      logger.error('Error deleting settlement:', error)
       toast.error(tMessages('error'))
     }
   }

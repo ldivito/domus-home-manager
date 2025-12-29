@@ -16,6 +16,7 @@ import { Upload, Download, AlertCircle, CheckCircle, FileSpreadsheet, Info } fro
 import { db, User as UserType, Task, TaskCategory, HomeImprovement } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface ImportTasksDialogProps {
   open: boolean
@@ -432,7 +433,7 @@ export function ImportTasksDialog({
       setImportComplete(true)
       toast.success(t('import.success', { count: successCount }))
     } catch (error) {
-      console.error('Error importing tasks:', error)
+      logger.error('Error importing tasks:', error)
       toast.error(t('import.error'))
     } finally {
       setIsImporting(false)

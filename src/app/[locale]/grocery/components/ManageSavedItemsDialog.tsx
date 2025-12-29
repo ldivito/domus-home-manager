@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Edit3, X } from "lucide-react"
 import { db, SavedGroceryItem, GroceryCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { logger } from '@/lib/logger'
 
 interface ManageSavedItemsDialogProps {
   open: boolean
@@ -94,7 +95,7 @@ export function ManageSavedItemsDialog({ open, onOpenChange, categories }: Manag
       })
       setEditingItem(null)
     } catch (error) {
-      console.error('Error updating saved item:', error)
+      logger.error('Error updating saved item:', error)
     }
   }
 
@@ -110,7 +111,7 @@ export function ManageSavedItemsDialog({ open, onOpenChange, categories }: Manag
     try {
       await deleteWithSync(db.savedGroceryItems, 'savedGroceryItems', itemId)
     } catch (error) {
-      console.error('Error deleting saved item:', error)
+      logger.error('Error deleting saved item:', error)
     }
   }
 

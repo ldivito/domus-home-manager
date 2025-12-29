@@ -35,6 +35,7 @@ import Link from 'next/link'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { CompleteChoreModal } from '@/components/CompleteChoreModal'
+import { logger } from '@/lib/logger'
 
 export default function HomePage() {
   const t = useTranslations('home')
@@ -69,7 +70,7 @@ export default function HomePage() {
         }
       }
     } catch (error) {
-      console.error('Error resetting overdue chores:', error)
+      logger.error('Error resetting overdue chores:', error)
     }
   }
 
@@ -125,7 +126,7 @@ export default function HomePage() {
       })
       
     } catch (error) {
-      console.error('Error completing chore:', error)
+      logger.error('Error completing chore:', error)
       throw error
     }
   }

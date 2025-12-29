@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { db, MaintenanceTask, MaintenanceFrequency } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface EditTaskDialogProps {
   open: boolean
@@ -121,7 +122,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
       toast.success(t('messages.taskUpdated'))
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating task:', error)
+      logger.error('Error updating task:', error)
       toast.error(t('messages.updateError'))
     } finally {
       setIsSubmitting(false)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserFromRequest, createToken, createSessionCookie, storeSession } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
 
     return response
   } catch (error) {
-    console.error('Error joining household:', error)
+    logger.error('Error joining household:', error)
     return NextResponse.json(
       { error: 'Failed to join household' },
       { status: 500 }

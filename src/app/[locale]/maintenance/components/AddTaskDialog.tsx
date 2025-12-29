@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { db, MaintenanceItem, MaintenanceFrequency } from '@/lib/db'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface AddTaskDialogProps {
   open: boolean
@@ -130,7 +131,7 @@ export function AddTaskDialog({ open, onOpenChange, item, items }: AddTaskDialog
         notes: ''
       })
     } catch (error) {
-      console.error('Error adding task:', error)
+      logger.error('Error adding task:', error)
       toast.error(t('messages.addError'))
     } finally {
       setIsSubmitting(false)

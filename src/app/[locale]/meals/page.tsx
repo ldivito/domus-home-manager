@@ -14,6 +14,7 @@ import { AddMealDialog } from './components/AddMealDialog'
 import { ManageMealCategoriesDialog } from './components/ManageMealCategoriesDialog'
 import { ManageSavedMealsDialog } from './components/ManageSavedMealsDialog'
 import { MealDetailsDialog } from './components/MealDetailsDialog'
+import { logger } from '@/lib/logger'
 
 type ViewType = 'day' | 'week' | 'month'
 
@@ -39,7 +40,7 @@ export default function MealsPage() {
 
   useEffect(() => {
     db.ensureMealIngredientStructure().catch((error) => {
-      console.error('Failed to ensure meal ingredient structure:', error)
+      logger.error('Failed to ensure meal ingredient structure:', error)
     })
   }, [])
 
@@ -172,7 +173,7 @@ export default function MealsPage() {
         }
       }
     } catch (error) {
-      console.error('Error adding ingredients to grocery list:', error)
+      logger.error('Error adding ingredients to grocery list:', error)
     }
   }
 

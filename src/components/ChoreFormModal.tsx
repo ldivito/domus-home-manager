@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Chore, User, db } from "@/lib/db"
 import { CalendarDays, Clock, Repeat, Edit, User as UserIcon } from "lucide-react"
+import { logger } from '@/lib/logger'
 
 interface ChoreFormModalProps {
   open: boolean
@@ -68,7 +69,7 @@ export function ChoreFormModal({ open, onOpenChange, chore, onCreateChore, onEdi
         const dbUsers = await db.users.toArray()
         setUsers(dbUsers)
       } catch (error) {
-        console.error('Error loading users:', error)
+        logger.error('Error loading users:', error)
       }
     }
 
@@ -156,7 +157,7 @@ export function ChoreFormModal({ open, onOpenChange, chore, onCreateChore, onEdi
       setFormState(initialFormState)
       onOpenChange(false)
     } catch (error) {
-      console.error(`Error ${isEditing ? 'editing' : 'creating'} chore:`, error)
+      logger.error(`Error ${isEditing ? 'editing' : 'creating'} chore:`, error)
     } finally {
       setIsSubmitting(false)
     }

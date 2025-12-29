@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Plus, Edit3, X, Search } from "lucide-react"
 import { db, SavedMeal, MealCategory, MealIngredient, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { logger } from '@/lib/logger'
 
 interface TemplateData {
   name: string
@@ -54,7 +55,7 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
 
   useEffect(() => {
     db.ensureMealIngredientStructure().catch((error) => {
-      console.error('Failed to ensure meal ingredient structure:', error)
+      logger.error('Failed to ensure meal ingredient structure:', error)
     })
   }, [])
 
@@ -87,7 +88,7 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
     try {
       await deleteWithSync(db.savedMeals, 'savedMeals', mealId)
     } catch (error) {
-      console.error('Error deleting saved meal:', error)
+      logger.error('Error deleting saved meal:', error)
     }
   }
 
@@ -109,7 +110,7 @@ export function ManageSavedMealsDialog({ open, onOpenChange, categories, onAddMe
       })
       setEditingMeal(null)
     } catch (error) {
-      console.error('Error updating saved meal:', error)
+      logger.error('Error updating saved meal:', error)
     }
   }
 

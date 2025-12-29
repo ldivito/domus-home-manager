@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
 import { getKV, type CloudflareEnv } from './cloudflare'
+import { logger } from '@/lib/logger'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
@@ -53,7 +54,7 @@ export async function verifyToken(token: string): Promise<SessionData | null> {
     const { payload } = await jwtVerify(token, JWT_SECRET)
     return payload as SessionData
   } catch (error) {
-    console.error('Token verification failed:', error)
+    logger.error('Token verification failed:', error)
     return null
   }
 }

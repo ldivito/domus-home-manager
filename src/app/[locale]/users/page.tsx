@@ -11,6 +11,7 @@ import { UserFormModal } from "@/components/UserFormModal"
 import { db, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 import { toast } from "sonner"
+import { logger } from '@/lib/logger'
 
 interface UserStats {
   activeTasks: number
@@ -131,7 +132,7 @@ export default function UsersPage() {
       setRecentActivities(activities.slice(0, 8))
 
     } catch (error) {
-      console.error('Error loading users:', error)
+      logger.error('Error loading users:', error)
     } finally {
       setIsLoading(false)
     }
@@ -149,7 +150,7 @@ export default function UsersPage() {
       await loadUsers() // Reload users after creation
       toast.success(t('messages.userCreated'))
     } catch (error) {
-      console.error('Error creating user:', error)
+      logger.error('Error creating user:', error)
       toast.error(t('messages.error'))
       throw error
     }
@@ -166,7 +167,7 @@ export default function UsersPage() {
       await loadUsers()
       toast.success(t('messages.userUpdated'))
     } catch (error) {
-      console.error('Error updating user:', error)
+      logger.error('Error updating user:', error)
       toast.error(t('messages.error'))
       throw error
     }
@@ -178,7 +179,7 @@ export default function UsersPage() {
       await loadUsers()
       toast.success(t('messages.userDeleted'))
     } catch (error) {
-      console.error('Error deleting user:', error)
+      logger.error('Error deleting user:', error)
       toast.error(t('messages.error'))
       throw error
     }

@@ -1,13 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Check, X, CalendarDays, Clock, User, Users } from "lucide-react"
+import { Settings, Check, X, CalendarDays, Clock, Users } from "lucide-react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db, KetoSettings, KetoDay, KetoWeightEntry, deleteWithSync, bulkDeleteWithSync } from "@/lib/db"
+import {
+  db,
+  KetoSettings,
+  KetoDay,
+  KetoWeightEntry,
+  KetoBodyMeasurement,
+  KetoWaterEntry,
+  KetoSymptomEntry,
+  KetoSymptomType,
+  deleteWithSync,
+  bulkDeleteWithSync
+} from "@/lib/db"
 import { generateId } from "@/lib/utils"
 import { toast } from "sonner"
 import { useCalendarSettings } from "@/hooks/useCalendarSettings"
@@ -16,6 +26,9 @@ import WeightEntryDialog from "./components/WeightEntryDialog"
 import WeightProgressChart from "./components/WeightProgressChart"
 import KetoStagesCard from "./components/KetoStagesCard"
 import HouseholdOverview from "./components/HouseholdOverview"
+import BodyMeasurementsCard from "./components/BodyMeasurementsCard"
+import WaterTrackingCard from "./components/WaterTrackingCard"
+import SymptomJournalCard from "./components/SymptomJournalCard"
 import { logger } from '@/lib/logger'
 
 interface DayStatus {
@@ -23,15 +36,12 @@ interface DayStatus {
   status?: 'success' | 'fasting' | 'cheat'
 }
 
-type ViewMode = 'individual' | 'household'
-
 export default function KetoPage() {
   const t = useTranslations('keto')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isWeightDialogOpen, setIsWeightDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('individual')
 
   // Get calendar settings (start of week preference)
   const { startOfWeek } = useCalendarSettings()
@@ -57,6 +67,24 @@ export default function KetoPage() {
     return db.ketoWeightEntries.where('userId').equals(selectedUser).toArray()
   }, [selectedUser])
 
+  // Get current user's body measurements
+  const bodyMeasurements = useLiveQuery(() => {
+    if (!selectedUser) return []
+    return db.ketoBodyMeasurements.where('userId').equals(selectedUser).toArray()
+  }, [selectedUser])
+
+  // Get current user's water entries (for this week)
+  const waterEntries = useLiveQuery(() => {
+    if (!selectedUser) return []
+    return db.ketoWaterEntries.where('userId').equals(selectedUser).toArray()
+  }, [selectedUser])
+
+  // Get current user's symptom entries (for this week)
+  const symptomEntries = useLiveQuery(() => {
+    if (!selectedUser) return []
+    return db.ketoSymptomEntries.where('userId').equals(selectedUser).toArray()
+  }, [selectedUser])
+
   // Get all keto settings for household view
   const allKetoSettings = useLiveQuery(() => db.ketoSettings.toArray())
 
@@ -75,6 +103,43 @@ export default function KetoPage() {
       }
     }
   }, [selectedUser, users])
+
+  // Calculate today's and this week's data for water and symptoms
+  const { todayWaterEntry, weekWaterEntries, todaySymptoms, weekSymptoms } = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayKey = today.toISOString().split('T')[0]
+
+    const weekStart = new Date(today)
+    weekStart.setDate(today.getDate() - today.getDay())
+
+    const todayWater = waterEntries?.find(e => {
+      const entryDate = e.date instanceof Date ? e.date : new Date(e.date)
+      return entryDate.toISOString().split('T')[0] === todayKey
+    })
+
+    const weekWater = waterEntries?.filter(e => {
+      const entryDate = e.date instanceof Date ? e.date : new Date(e.date)
+      return entryDate >= weekStart
+    }) || []
+
+    const todaySym = symptomEntries?.filter(e => {
+      const entryDate = e.date instanceof Date ? e.date : new Date(e.date)
+      return entryDate.toISOString().split('T')[0] === todayKey
+    }) || []
+
+    const weekSym = symptomEntries?.filter(e => {
+      const entryDate = e.date instanceof Date ? e.date : new Date(e.date)
+      return entryDate >= weekStart
+    }) || []
+
+    return {
+      todayWaterEntry: todayWater,
+      weekWaterEntries: weekWater,
+      todaySymptoms: todaySym,
+      weekSymptoms: weekSym
+    }
+  }, [waterEntries, symptomEntries])
 
   // Auto-mark past days as 'cheat' if not marked after a grace period (next day has passed)
   useEffect(() => {
@@ -357,6 +422,27 @@ export default function KetoPage() {
         await bulkDeleteWithSync(db.ketoWeightEntries, 'ketoWeightEntries', weightIds)
       }
 
+      // Delete all body measurements for this user
+      const userMeasurements = bodyMeasurements || []
+      const measurementIds = userMeasurements.map(m => m.id!).filter(Boolean)
+      if (measurementIds.length > 0) {
+        await bulkDeleteWithSync(db.ketoBodyMeasurements, 'ketoBodyMeasurements', measurementIds)
+      }
+
+      // Delete all water entries for this user
+      const userWater = waterEntries || []
+      const waterIds = userWater.map(w => w.id!).filter(Boolean)
+      if (waterIds.length > 0) {
+        await bulkDeleteWithSync(db.ketoWaterEntries, 'ketoWaterEntries', waterIds)
+      }
+
+      // Delete all symptom entries for this user
+      const userSymptoms = symptomEntries || []
+      const symptomIds = userSymptoms.map(s => s.id!).filter(Boolean)
+      if (symptomIds.length > 0) {
+        await bulkDeleteWithSync(db.ketoSymptomEntries, 'ketoSymptomEntries', symptomIds)
+      }
+
       // Delete keto settings for this user
       if (ketoSettings?.id) {
         await deleteWithSync(db.ketoSettings, 'ketoSettings', ketoSettings.id)
@@ -391,6 +477,96 @@ export default function KetoPage() {
       toast.success(t('messages.weightAdded'))
     } catch (error) {
       logger.error('Error adding weight entry:', error)
+      toast.error(t('messages.error'))
+    }
+  }
+
+  const handleAddMeasurement = async (measurement: Omit<KetoBodyMeasurement, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!selectedUser) return
+
+    try {
+      const now = new Date()
+      const newMeasurement: KetoBodyMeasurement = {
+        ...measurement,
+        id: generateId('measurement'),
+        userId: selectedUser,
+        createdAt: now,
+        updatedAt: now
+      }
+      await db.ketoBodyMeasurements.add(newMeasurement)
+      toast.success(t('messages.measurementAdded'))
+    } catch (error) {
+      logger.error('Error adding measurement:', error)
+      toast.error(t('messages.error'))
+    }
+  }
+
+  const handleUpdateWater = async (glasses: number, goalGlasses: number) => {
+    if (!selectedUser) return
+
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayKey = today.toISOString().split('T')[0]
+      const now = new Date()
+
+      const existing = waterEntries?.find(e => {
+        const entryDate = e.date instanceof Date ? e.date : new Date(e.date)
+        return entryDate.toISOString().split('T')[0] === todayKey
+      })
+
+      if (existing) {
+        await db.ketoWaterEntries.update(existing.id!, {
+          glasses,
+          goalGlasses,
+          updatedAt: now
+        })
+      } else {
+        const newEntry: KetoWaterEntry = {
+          id: generateId('water'),
+          userId: selectedUser,
+          date: today,
+          glasses,
+          goalGlasses,
+          createdAt: now,
+          updatedAt: now
+        }
+        await db.ketoWaterEntries.add(newEntry)
+      }
+    } catch (error) {
+      logger.error('Error updating water:', error)
+      toast.error(t('messages.error'))
+    }
+  }
+
+  const handleAddSymptom = async (symptom: KetoSymptomType, severity: 1 | 2 | 3 | 4 | 5, notes?: string) => {
+    if (!selectedUser) return
+
+    try {
+      const now = new Date()
+      const newEntry: KetoSymptomEntry = {
+        id: generateId('symptom'),
+        userId: selectedUser,
+        date: now,
+        symptom,
+        severity,
+        notes,
+        createdAt: now,
+        updatedAt: now
+      }
+      await db.ketoSymptomEntries.add(newEntry)
+      toast.success(t('messages.symptomLogged'))
+    } catch (error) {
+      logger.error('Error adding symptom:', error)
+      toast.error(t('messages.error'))
+    }
+  }
+
+  const handleRemoveSymptom = async (id: string) => {
+    try {
+      await deleteWithSync(db.ketoSymptomEntries, 'ketoSymptomEntries', id)
+    } catch (error) {
+      logger.error('Error removing symptom:', error)
       toast.error(t('messages.error'))
     }
   }
@@ -442,6 +618,8 @@ export default function KetoPage() {
   }
 
   const currentUser = users?.find(u => u.id === selectedUser)
+  const isHouseholdView = selectedUser === 'all'
+  const hasMultipleUsers = users && users.length > 1
 
   if (!selectedUser) {
     return (
@@ -493,6 +671,7 @@ export default function KetoPage() {
               variant="outline"
               size="icon"
               onClick={() => setIsSettingsModalOpen(true)}
+              disabled={isHouseholdView}
               className="h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-auto md:px-6 shadow-modern hover:shadow-modern-lg transition-all duration-200 shrink-0"
             >
               <Settings className="h-4 w-4 md:h-5 md:w-5" />
@@ -500,59 +679,57 @@ export default function KetoPage() {
             </Button>
           </div>
 
-          {/* View Mode and User Selection */}
-          {users && users.length > 1 && (
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-              {/* View Mode Toggle */}
-              <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
-                <Button
-                  variant={viewMode === 'individual' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('individual')}
-                  className="gap-1.5"
+          {/* Unified User Selection - Icon-based */}
+          {hasMultipleUsers && (
+            <div className="flex items-center gap-2 p-1.5 bg-muted/50 rounded-xl w-fit">
+              {/* Individual users */}
+              {users.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => setSelectedUser(user.id!)}
+                  className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all ${
+                    selectedUser === user.id
+                      ? 'bg-background shadow-md ring-2 ring-primary'
+                      : 'hover:bg-background/50'
+                  }`}
+                  title={user.name}
                 >
-                  <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="text-xs sm:text-sm">{currentUser?.name || 'Individual'}</span>
-                </Button>
-                <Button
-                  variant={viewMode === 'household' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('household')}
-                  className="gap-1.5"
-                >
-                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="text-xs sm:text-sm">{t('household.viewAll')}</span>
-                </Button>
-              </div>
+                  <div
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-medium"
+                    style={{ backgroundColor: user.color }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  {selectedUser === user.id && (
+                    <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                  )}
+                </button>
+              ))}
 
-              {/* User Selection Tabs - Only show in individual mode */}
-              {viewMode === 'individual' && (
-                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide flex-1">
-                  <Tabs value={selectedUser || ''} onValueChange={setSelectedUser} className="w-full">
-                    <TabsList className="inline-flex w-auto min-w-full sm:w-full h-10 sm:h-11 p-1 bg-muted/50">
-                      {users.map((user) => (
-                        <TabsTrigger
-                          key={user.id}
-                          value={user.id!}
-                          className="flex-1 min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap gap-1.5 sm:gap-2"
-                        >
-                          <div
-                            className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
-                            style={{ backgroundColor: user.color }}
-                          />
-                          <span className="truncate max-w-[60px] sm:max-w-none">{user.name}</span>
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
-                </div>
-              )}
+              {/* Separator */}
+              <div className="w-px h-6 bg-border mx-1" />
+
+              {/* View All button */}
+              <button
+                onClick={() => setSelectedUser('all')}
+                className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all ${
+                  isHouseholdView
+                    ? 'bg-background shadow-md ring-2 ring-primary'
+                    : 'hover:bg-background/50'
+                }`}
+                title={t('household.viewAll')}
+              >
+                <Users className="h-5 w-5 text-muted-foreground" />
+                {isHouseholdView && (
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                )}
+              </button>
             </div>
           )}
         </div>
 
         {/* Household Overview Mode */}
-        {viewMode === 'household' && users && users.length > 1 && (
+        {isHouseholdView && users && users.length > 1 && (
           <HouseholdOverview
             users={users}
             allKetoSettings={allKetoSettings || []}
@@ -560,13 +737,12 @@ export default function KetoPage() {
             allWeightEntries={allWeightEntries || []}
             onSelectUser={(userId) => {
               setSelectedUser(userId)
-              setViewMode('individual')
             }}
           />
         )}
 
         {/* Individual User View */}
-        {viewMode === 'individual' && (
+        {!isHouseholdView && (
           <>
             {/* Stats Bar */}
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-6">
@@ -878,6 +1054,34 @@ export default function KetoPage() {
                 daysOnKeto={stats.daysOnKeto}
                 startDate={startDate}
                 fastingDays={stats.fastingDays}
+              />
+            </div>
+
+            {/* Third Row - Body Measurements and Water Tracking */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-8">
+              {/* Body Measurements */}
+              <BodyMeasurementsCard
+                measurements={bodyMeasurements || []}
+                measurementUnit={ketoSettings?.weightUnit === 'lb' ? 'in' : 'cm'}
+                onAddMeasurement={handleAddMeasurement}
+              />
+
+              {/* Water Tracking */}
+              <WaterTrackingCard
+                todayEntry={todayWaterEntry}
+                weekEntries={weekWaterEntries}
+                defaultGoal={8}
+                onUpdateWater={handleUpdateWater}
+              />
+            </div>
+
+            {/* Fourth Row - Symptom Journal */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-8">
+              <SymptomJournalCard
+                todayEntries={todaySymptoms}
+                weekEntries={weekSymptoms}
+                onAddSymptom={handleAddSymptom}
+                onRemoveSymptom={handleRemoveSymptom}
               />
             </div>
           </>

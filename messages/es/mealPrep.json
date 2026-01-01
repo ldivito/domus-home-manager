@@ -121,10 +121,10 @@
     "carbs": "Carbos",
     "fat": "Grasa",
     "container": {
-      "small": "Pequeño (~1 taza)",
-      "medium": "Mediano (~2 tazas)",
-      "large": "Grande (~4 tazas)",
-      "extra-large": "XL (~6+ tazas)"
+      "small": "Pequeño (~250ml)",
+      "medium": "Mediano (~500ml)",
+      "large": "Grande (~1L)",
+      "extra-large": "XL (~1.5L+)"
     },
     "storageType": {
       "refrigerator": "Refrigerar",

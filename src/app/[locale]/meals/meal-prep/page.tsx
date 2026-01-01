@@ -991,18 +991,69 @@ export default function MealPrepPage() {
     }
   }
 
-  // Create calendar meals from the prep plan
+  // Create calendar meals from the prep plan and save to savedMeals
   const createCalendarMeals = async () => {
     try {
       const now = new Date()
 
       for (const meal of selectedMeals) {
+        // Get meal instructions from AI calculations
+        const instruction = mealInstructions.find(i => i.mealName === meal.name)
+
+        // If this is a custom meal (AI-generated), save it to savedMeals first
+        if (meal.isCustom) {
+          // Find or create category
+          let categoryId = meal.category
+          if (meal.category) {
+            const existingCategory = mealCategories.find(
+              c => c.name.toLowerCase() === meal.category?.toLowerCase()
+            )
+            if (existingCategory) {
+              categoryId = existingCategory.id
+            } else {
+              // Create the category
+              const newCategoryId = generateId('mcat')
+              await db.mealCategories.add({
+                id: newCategoryId,
+                name: meal.category,
+                color: '#3B82F6',
+                isDefault: false,
+                createdAt: now
+              })
+              categoryId = newCategoryId
+            }
+          }
+
+          // Save the meal with AI-generated content
+          const savedMealId = generateId('smea')
+          await db.savedMeals.add({
+            id: savedMealId,
+            name: meal.name,
+            description: meal.description || instruction?.instructions?.substring(0, 200),
+            category: categoryId || 'General',
+            ingredients: meal.ingredients,
+            timesUsed: 1,
+            lastUsed: now,
+            createdAt: now
+          })
+
+          // Update meal with saved ID
+          meal.id = savedMealId
+          meal.isCustom = false
+        }
+
+        // Create calendar meals for each assigned day
         for (const day of meal.assignedDays) {
           for (const mealType of meal.mealTypes) {
+            // Build description with instructions if available
+            const mealDescription = instruction?.instructions
+              ? `${meal.description || ''}\n\n${instruction.instructions}`.trim()
+              : meal.description
+
             await db.meals.add({
               id: generateId('mea'),
               title: meal.name,
-              description: meal.description,
+              description: mealDescription,
               date: new Date(day),
               mealType,
               ingredients: meal.ingredients,

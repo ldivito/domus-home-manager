@@ -121,10 +121,10 @@
     "carbs": "Carbs",
     "fat": "Fat",
     "container": {
-      "small": "Small (~1 cup)",
-      "medium": "Medium (~2 cups)",
-      "large": "Large (~4 cups)",
-      "extra-large": "XL (~6+ cups)"
+      "small": "Small (~250ml)",
+      "medium": "Medium (~500ml)",
+      "large": "Large (~1L)",
+      "extra-large": "XL (~1.5L+)"
     },
     "storageType": {
       "refrigerator": "Refrigerate",

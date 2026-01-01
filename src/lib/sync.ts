@@ -47,6 +47,10 @@ const SYNC_TABLES = [
   // Keto module
   'ketoSettings',
   'ketoDays',
+  'ketoWeightEntries',
+  'ketoBodyMeasurements',
+  'ketoWaterEntries',
+  'ketoSymptomEntries',
   // Finance module
   'monthlyIncomes',
   'monthlyExchangeRates',

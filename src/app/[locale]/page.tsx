@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,10 +74,9 @@ export default function HomePage() {
     }
   }
 
-  // Run reset check on component mount and periodically
-  useLiveQuery(async () => {
-    await resetOverdueChores()
-    return db.chores.toArray() // Return something to trigger reactivity
+  // Run reset check on component mount
+  useEffect(() => {
+    resetOverdueChores()
   }, [])
 
   // Chore completion handlers
@@ -584,9 +583,9 @@ export default function HomePage() {
                 <Link href="/settings" className="flex flex-col items-center justify-center py-3 hover:bg-muted/30 active:bg-muted/50 transition-colors">
                   <div className="flex -space-x-1.5 mb-1">
                     {users.slice(0, 3).map((user) => (
-                      <Avatar key={user.id} className={`h-5 w-5 ${user.color} border-2 border-background`}>
+                      <Avatar key={user.id} className={`h-5 w-5 ${user.color || 'bg-gray-500'} border-2 border-background`}>
                         <AvatarFallback className="text-white text-[9px] font-bold">
-                          {user.name.charAt(0).toUpperCase()}
+                          {(user.name || 'U').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     ))}
@@ -691,9 +690,9 @@ export default function HomePage() {
                   <div className="flex-1">
                     <div className="flex -space-x-2 mb-2">
                       {users.slice(0, 3).map((user) => (
-                        <Avatar key={user.id} className={`h-7 w-7 ${user.color} border-2 border-background shadow-sm`}>
+                        <Avatar key={user.id} className={`h-7 w-7 ${user.color || 'bg-gray-500'} border-2 border-background shadow-sm`}>
                           <AvatarFallback className="text-white text-sm font-bold">
-                            {user.name.charAt(0).toUpperCase()}
+                            {(user.name || 'U').charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       ))}
@@ -704,7 +703,7 @@ export default function HomePage() {
                       )}
                     </div>
                     <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate">
-                      {users.slice(0, 2).map(u => u.name).join(', ')}
+                      {users.slice(0, 2).map(u => u.name || 'User').join(', ')}
                       {users.length > 2 && ` +${users.length - 2}`}
                     </p>
                   </div>

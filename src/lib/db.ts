@@ -295,6 +295,22 @@ export interface KetoSettings {
   householdId?: string
   userId: string // User who owns this keto plan
   startDate: Date // When they started the keto diet
+  // Goal tracking
+  goalWeight?: number // Target weight in kg or lb
+  weightUnit?: 'kg' | 'lb' // Weight unit preference
+  targetDate?: Date // Target date to reach goal weight
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface KetoWeightEntry {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this entry
+  date: Date // Date of the weight entry
+  weight: number // Weight value
+  unit: 'kg' | 'lb' // Unit of measurement
+  notes?: string // Optional notes
   createdAt: Date
   updatedAt: Date
 }
@@ -305,6 +321,48 @@ export interface KetoDay {
   userId: string // User who owns this keto plan
   date: Date // The date for this keto day (date component only)
   status: 'success' | 'fasting' | 'cheat' // ✓ for success, ✓🕐 for fasting, ✗ for cheat day
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface KetoBodyMeasurement {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this entry
+  date: Date // Date of the measurement
+  waist?: number // Waist circumference
+  hips?: number // Hip circumference
+  chest?: number // Chest circumference
+  arms?: number // Arm circumference
+  thighs?: number // Thigh circumference
+  neck?: number // Neck circumference
+  unit: 'cm' | 'in' // Measurement unit
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface KetoWaterEntry {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this entry
+  date: Date // Date of the water tracking
+  glasses: number // Number of glasses (250ml/8oz each)
+  goalGlasses: number // Daily goal in glasses
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type KetoSymptomType = 'energy' | 'mental_clarity' | 'hunger' | 'cravings' | 'sleep' | 'mood' | 'headache' | 'fatigue' | 'nausea' | 'other'
+
+export interface KetoSymptomEntry {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this entry
+  date: Date // Date of the symptom entry
+  symptom: KetoSymptomType
+  severity: 1 | 2 | 3 | 4 | 5 // 1 = very low, 5 = very high
+  notes?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -809,6 +867,10 @@ export class DomusDatabase extends Dexie {
   homeSettings!: Table<HomeSettings>
   ketoSettings!: Table<KetoSettings>
   ketoDays!: Table<KetoDay>
+  ketoWeightEntries!: Table<KetoWeightEntry>
+  ketoBodyMeasurements!: Table<KetoBodyMeasurement>
+  ketoWaterEntries!: Table<KetoWaterEntry>
+  ketoSymptomEntries!: Table<KetoSymptomEntry>
   // Finance tables
   monthlyIncomes!: Table<MonthlyIncome>
   monthlyExchangeRates!: Table<MonthlyExchangeRate>
@@ -911,6 +973,19 @@ export class DomusDatabase extends Dexie {
         }
       }
       dbLogger.debug('Database upgraded to v26 with income source field')
+    })
+
+    // v30: Add keto body measurements, water tracking, and symptom journal
+    this.version(30).stores({
+      ketoBodyMeasurements: 'id, householdId, userId, date, createdAt, updatedAt',
+      ketoWaterEntries: 'id, householdId, userId, date, createdAt, updatedAt',
+      ketoSymptomEntries: 'id, householdId, userId, date, symptom, createdAt, updatedAt'
+    })
+
+    // v29: Add keto weight tracking table and update keto settings
+    this.version(29).stores({
+      ketoSettings: 'id, householdId, userId, startDate, goalWeight, targetDate, createdAt, updatedAt',
+      ketoWeightEntries: 'id, householdId, userId, date, weight, unit, createdAt, updatedAt'
     })
 
     // v28: Add deletion log for sync support

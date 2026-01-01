@@ -30,7 +30,37 @@
     "endDate": "Last Day",
     "numberOfPeople": "People per Meal",
     "summary": "Summary",
-    "summaryText": "You're planning meals for {days} days, serving {people} people per meal."
+    "summaryText": "You're planning meals for {days} days, serving {people} people per meal.",
+    "dietaryRestrictions": "Dietary Restrictions",
+    "dietaryRestrictionsHint": "Select any dietary restrictions to filter meal suggestions",
+    "dietLabel": "Diet"
+  },
+
+  "dietaryRestrictions": {
+    "vegetarian": "Vegetarian",
+    "vegan": "Vegan",
+    "keto": "Keto",
+    "low-carb": "Low Carb",
+    "paleo": "Paleo",
+    "gluten-free": "Gluten Free",
+    "dairy-free": "Dairy Free",
+    "nut-free": "Nut Free",
+    "halal": "Halal",
+    "kosher": "Kosher",
+    "low-sodium": "Low Sodium",
+    "low-fat": "Low Fat",
+    "high-protein": "High Protein",
+    "pescatarian": "Pescatarian"
+  },
+
+  "templates": {
+    "title": "Templates",
+    "show": "Show Templates",
+    "hide": "Hide Templates",
+    "noTemplates": "No saved templates. Save a meal prep plan as a template to reuse it later.",
+    "meals": "meals",
+    "load": "Use",
+    "saveAsTemplate": "Save as Template"
   },
 
   "meals": {
@@ -55,6 +85,7 @@
     "ingredients": "Calculating ingredients...",
     "instructions": "Generating prep instructions...",
     "containers": "Planning container storage...",
+    "schedule": "Optimizing cooking schedule...",
     "complete": "Calculations complete!"
   },
 
@@ -74,9 +105,10 @@
   "prep": {
     "title": "Prep Guide",
     "description": "Follow this guide on cooking day for maximum efficiency",
-    "order": "Cooking Order",
+    "order": "Order",
+    "smartSchedule": "Schedule",
     "instructions": "Instructions",
-    "storage": "Storage & Containers",
+    "storage": "Storage",
     "orderDescription": "Follow this order for the most efficient meal prep session:",
     "time": "{time} min total",
     "tips": "Pro Tips",
@@ -104,14 +136,48 @@
     "containers": "Containers needed",
     "label": "Label",
     "reheating": "Reheating",
-    "organizationTips": "Organization Tips"
+    "organizationTips": "Organization Tips",
+    "minutes": "minutes",
+    "totalEstimatedTime": "Total Estimated Time",
+    "parallelTasks": "Parallel Tasks",
+    "group": "Group",
+    "timeline": "Timeline",
+    "equipmentNeeded": "Equipment Needed",
+    "efficiencyTips": "Efficiency Tips",
+    "noScheduleData": "No smart schedule data available. Try recalculating."
+  },
+
+  "timer": {
+    "title": "Timer Mode",
+    "description": "Interactive cooking session with step-by-step guidance",
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Reset",
+    "stepsCompleted": "steps completed",
+    "currentStep": "Current Step",
+    "markComplete": "Complete",
+    "skip": "Skip"
+  },
+
+  "portions": {
+    "title": "Portion Tracking",
+    "startTracking": "Start Tracking",
+    "remaining": "remaining",
+    "consumed": "Consumed",
+    "expiringToday": "Expiring Today",
+    "expired": "Expired",
+    "expiringWarning": "{count} container(s) expiring today! Use them soon.",
+    "expiresInDay": "Expires tomorrow",
+    "expiresInDays": "Expires in {count} days"
   },
 
   "notifications": {
     "addedToGrocery": "Ingredients added to grocery list",
     "planSaved": "Meal prep plan saved successfully",
     "mealsCreated": "Meals added to your calendar",
-    "apiKeySaved": "API key saved"
+    "apiKeySaved": "API key saved",
+    "templateLoaded": "Template loaded successfully",
+    "templateSaved": "Template saved successfully"
   },
 
   "errors": {
@@ -119,6 +185,8 @@
     "calculationFailed": "Failed to calculate meal prep. Please try again.",
     "saveFailed": "Failed to save meal prep plan",
     "addToGroceryFailed": "Failed to add ingredients to grocery list",
-    "createMealsFailed": "Failed to create calendar meals"
+    "createMealsFailed": "Failed to create calendar meals",
+    "templateNameRequired": "Please enter a plan name before saving as template",
+    "templateSaveFailed": "Failed to save template"
   }
 }

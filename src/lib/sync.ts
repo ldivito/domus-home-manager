@@ -82,7 +82,11 @@ const SYNC_TABLES = [
   'mealPrepPlans',
   'mealPrepItems',
   'mealPrepIngredients',
-  'mealPrepRecipes'
+  'mealPrepRecipes',
+  'mealPrepSessions',
+  'mealPrepSteps',
+  'mealPrepContainers',
+  'mealPrepSchedules'
 ] as const
 
 type SyncTable = typeof SYNC_TABLES[number]

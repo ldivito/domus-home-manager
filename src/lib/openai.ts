@@ -5,6 +5,11 @@
 
 import { logger } from './logger'
 
+export type DietaryRestriction =
+  | 'vegetarian' | 'vegan' | 'keto' | 'low-carb' | 'paleo'
+  | 'gluten-free' | 'dairy-free' | 'nut-free' | 'halal' | 'kosher'
+  | 'low-sodium' | 'low-fat' | 'high-protein' | 'pescatarian'
+
 export interface MealPrepRequest {
   meals: {
     name: string
@@ -19,6 +24,24 @@ export interface MealPrepRequest {
   totalServings: number
   numberOfPeople: number
   daysOfPrep: number
+  dietaryRestrictions?: DietaryRestriction[]
+}
+
+export interface SmartScheduleResult {
+  optimizedOrder: string[]
+  parallelTasks: {
+    group: number
+    meals: string[]
+    reason: string
+  }[]
+  equipmentNeeded: string[]
+  timelineSteps: {
+    time: string
+    action: string
+    meal: string
+  }[]
+  totalEstimatedTime: number
+  efficiencyTips: string[]
 }
 
 export interface IngredientCalculation {
@@ -114,17 +137,23 @@ export async function calculateMealPrepIngredients(
   config: OpenAIConfig,
   request: MealPrepRequest
 ): Promise<{ ingredients: IngredientCalculation[]; error?: string }> {
+  const dietaryNote = request.dietaryRestrictions?.length
+    ? `\n\nIMPORTANT DIETARY RESTRICTIONS: ${request.dietaryRestrictions.join(', ')}
+Ensure ALL ingredients comply with these restrictions. Substitute non-compliant ingredients with appropriate alternatives.`
+    : ''
+
   const systemPrompt = `You are a professional meal prep chef and nutritionist.
 Your task is to calculate ingredient amounts for meal prepping.
 You must respond ONLY with valid JSON, no additional text.
 Be precise with measurements and always consolidate same ingredients from different meals.
-Use standard cooking measurements (cups, tbsp, tsp, oz, lb, grams, etc.).`
+Use standard cooking measurements (cups, tbsp, tsp, oz, lb, grams, etc.).${dietaryNote}`
 
   const prompt = `Calculate the total ingredients needed for the following meal prep:
 
 Number of people: ${request.numberOfPeople}
 Days of meals: ${request.daysOfPrep}
 Total servings needed: ${request.totalServings}
+${request.dietaryRestrictions?.length ? `Dietary Restrictions: ${request.dietaryRestrictions.join(', ')}` : ''}
 
 Meals to prepare:
 ${request.meals.map((meal, i) => `
@@ -396,6 +425,185 @@ Respond with a JSON object in this exact format:
       containerPlan: [],
       organizationTips: [],
       error: error instanceof Error ? error.message : 'Failed to get container guidance'
+    }
+  }
+}
+
+/**
+ * Generate smart scheduling optimization for meal prep
+ */
+export async function generateSmartSchedule(
+  config: OpenAIConfig,
+  meals: { name: string; prepTime?: number; cookTime?: number; category?: string }[]
+): Promise<SmartScheduleResult & { error?: string }> {
+  const systemPrompt = `You are a professional meal prep efficiency expert.
+Your task is to create an optimized cooking schedule that maximizes efficiency.
+Consider parallel tasks, equipment reuse, and logical cooking order.
+You must respond ONLY with valid JSON, no additional text.`
+
+  const prompt = `Create an optimized meal prep schedule for these meals:
+
+${meals.map((meal, i) => `
+${i + 1}. ${meal.name}
+   Category: ${meal.category || 'General'}
+   ${meal.prepTime ? `Prep Time: ${meal.prepTime} min` : ''}
+   ${meal.cookTime ? `Cook Time: ${meal.cookTime} min` : ''}
+`).join('\n')}
+
+Provide:
+1. Optimal order to prepare meals
+2. Tasks that can run in parallel (e.g., while one dish bakes, prep another)
+3. Required equipment list
+4. A timeline showing what to do at each time point
+5. Total estimated time
+6. Efficiency tips
+
+Respond with a JSON object in this exact format:
+{
+  "optimizedOrder": ["meal names in optimal preparation order"],
+  "parallelTasks": [
+    {
+      "group": 1,
+      "meals": ["meals that can be done simultaneously"],
+      "reason": "why these can run in parallel"
+    }
+  ],
+  "equipmentNeeded": ["list of all equipment needed"],
+  "timelineSteps": [
+    {
+      "time": "0:00",
+      "action": "what to do",
+      "meal": "which meal this is for"
+    }
+  ],
+  "totalEstimatedTime": number (minutes),
+  "efficiencyTips": ["tips for maximum efficiency"]
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return {
+      optimizedOrder: parsed.optimizedOrder,
+      parallelTasks: parsed.parallelTasks,
+      equipmentNeeded: parsed.equipmentNeeded,
+      timelineSteps: parsed.timelineSteps,
+      totalEstimatedTime: parsed.totalEstimatedTime,
+      efficiencyTips: parsed.efficiencyTips
+    }
+  } catch (error) {
+    logger.error('Error generating smart schedule:', error)
+    return {
+      optimizedOrder: [],
+      parallelTasks: [],
+      equipmentNeeded: [],
+      timelineSteps: [],
+      totalEstimatedTime: 0,
+      efficiencyTips: [],
+      error: error instanceof Error ? error.message : 'Failed to generate schedule'
+    }
+  }
+}
+
+/**
+ * Generate meal suggestions based on dietary restrictions
+ */
+export async function suggestMealsForDiet(
+  config: OpenAIConfig,
+  dietaryRestrictions: DietaryRestriction[],
+  numberOfMeals: number = 5
+): Promise<{ meals: { name: string; description: string; category: string }[]; error?: string }> {
+  const systemPrompt = `You are a professional nutritionist and chef.
+Your task is to suggest meals that strictly comply with dietary restrictions.
+You must respond ONLY with valid JSON, no additional text.`
+
+  const prompt = `Suggest ${numberOfMeals} meal prep friendly meals that comply with these dietary restrictions: ${dietaryRestrictions.join(', ')}
+
+Each meal should be:
+1. Easy to batch cook
+2. Stores well for 3-5 days
+3. Reheats well
+4. Nutritionally balanced
+
+Respond with a JSON object in this exact format:
+{
+  "meals": [
+    {
+      "name": "meal name",
+      "description": "brief description",
+      "category": "Meat|Vegetarian|Seafood|Pasta|Salad|Soup|Healthy|Comfort Food|International"
+    }
+  ]
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return { meals: parsed.meals }
+  } catch (error) {
+    logger.error('Error suggesting meals:', error)
+    return {
+      meals: [],
+      error: error instanceof Error ? error.message : 'Failed to suggest meals'
+    }
+  }
+}
+
+/**
+ * Parse instructions into individual steps for checklist
+ */
+export async function parseInstructionsToSteps(
+  config: OpenAIConfig,
+  mealName: string,
+  instructions: string
+): Promise<{ steps: { instruction: string; estimatedTime: number }[]; error?: string }> {
+  const systemPrompt = `You are a cooking instruction parser.
+Your task is to break down cooking instructions into clear, actionable steps.
+You must respond ONLY with valid JSON, no additional text.`
+
+  const prompt = `Break down these cooking instructions for "${mealName}" into individual steps:
+
+${instructions}
+
+Create clear, actionable steps with time estimates in minutes.
+
+Respond with a JSON object in this exact format:
+{
+  "steps": [
+    {
+      "instruction": "clear action step",
+      "estimatedTime": number (minutes, can be 0 for quick steps)
+    }
+  ]
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return { steps: parsed.steps }
+  } catch (error) {
+    logger.error('Error parsing instructions:', error)
+    return {
+      steps: [],
+      error: error instanceof Error ? error.message : 'Failed to parse instructions'
     }
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import {
   ChefHat,
   Calendar,
@@ -33,15 +35,42 @@ import {
   Loader2,
   Settings,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Play,
+  Pause,
+  SkipForward,
+  Timer,
+  Copy,
+  AlertTriangle,
+  Utensils,
+  Layers,
+  Bookmark,
+  BookmarkPlus,
+  CircleCheckBig
 } from "lucide-react"
-import { db, SavedMeal, MealIngredient, MealPrepPlan, MealPrepItem, MealPrepIngredient } from '@/lib/db'
+import {
+  db,
+  SavedMeal,
+  MealIngredient,
+  MealPrepPlan,
+  MealPrepItem,
+  MealPrepIngredient,
+  DietaryRestriction,
+  PrepStepStatus
+} from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { generateId, toDate } from '@/lib/utils'
+import { generateId } from '@/lib/utils'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 
 type WizardStep = 'setup' | 'meals' | 'calculate' | 'review' | 'prep'
+
+// All dietary restrictions available
+const ALL_DIETARY_RESTRICTIONS: DietaryRestriction[] = [
+  'vegetarian', 'vegan', 'keto', 'low-carb', 'paleo',
+  'gluten-free', 'dairy-free', 'nut-free', 'halal', 'kosher',
+  'low-sodium', 'low-fat', 'high-protein', 'pescatarian'
+]
 
 interface SelectedMeal {
   id: string
@@ -94,6 +123,38 @@ interface ContainerPlan {
   labelSuggestion: string
 }
 
+interface SmartScheduleData {
+  optimizedOrder: string[]
+  parallelTasks?: { group: number; meals: string[]; reason: string }[]
+  equipmentNeeded?: string[]
+  timelineSteps?: { time: string; action: string; meal: string }[]
+  totalEstimatedTime: number
+  efficiencyTips: string[]
+}
+
+interface PrepStep {
+  id: string
+  mealName: string
+  stepNumber: number
+  instruction: string
+  estimatedTime?: number
+  status: PrepStepStatus
+  startedAt?: Date
+  completedAt?: Date
+}
+
+interface TrackedContainer {
+  id: string
+  mealName: string
+  containerNumber: number
+  label: string
+  storageType: 'refrigerator' | 'freezer' | 'pantry'
+  storedAt: Date
+  expiresAt: Date
+  isConsumed: boolean
+  isExpired: boolean
+}
+
 export default function MealPrepPage() {
   const t = useTranslations('mealPrep')
   const tMeals = useTranslations('meals')
@@ -131,6 +192,28 @@ export default function MealPrepPage() {
   // Saved plan ID (for editing)
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null)
 
+  // Dietary restrictions
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<DietaryRestriction[]>([])
+
+  // Templates
+  const [showTemplates, setShowTemplates] = useState(false)
+
+  // Smart scheduling data
+  const [smartSchedule, setSmartSchedule] = useState<SmartScheduleData | null>(null)
+
+  // Timer/Checklist mode
+  const [isTimerMode, setIsTimerMode] = useState(false)
+  const [prepSteps, setPrepSteps] = useState<PrepStep[]>([])
+  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [elapsedTime, setElapsedTime] = useState(0)
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Portion tracking
+  const [trackedContainers, setTrackedContainers] = useState<TrackedContainer[]>([])
+  const [showPortionTracking, setShowPortionTracking] = useState(false)
+
   // Load saved meals and grocery items
   const savedMeals = useLiveQuery(
     () => db.savedMeals.orderBy('timesUsed').reverse().toArray(),
@@ -144,6 +227,23 @@ export default function MealPrepPage() {
 
   const mealCategories = useLiveQuery(
     () => db.mealCategories.orderBy('name').toArray(),
+    []
+  ) || []
+
+  // Load saved templates (meal prep plans marked as templates)
+  const savedTemplates = useLiveQuery(
+    () => db.mealPrepPlans.filter(p => p.isTemplate === true).toArray(),
+    []
+  ) || []
+
+  // Load meal prep items for templates
+  const templateItems = useLiveQuery(
+    async () => {
+      const templates = await db.mealPrepPlans.filter(p => p.isTemplate === true).toArray()
+      const templateIds = templates.map(t => t.id).filter(Boolean) as string[]
+      if (templateIds.length === 0) return []
+      return db.mealPrepItems.filter(i => templateIds.includes(i.mealPrepPlanId)).toArray()
+    },
     []
   ) || []
 
@@ -184,6 +284,259 @@ export default function MealPrepPage() {
   const daysOfPrep = startDate && endDate
     ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
     : 7
+
+  // Timer effect for prep mode
+  useEffect(() => {
+    if (timerRunning) {
+      timerRef.current = setInterval(() => {
+        setElapsedTime(prev => prev + 1)
+      }, 1000)
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [timerRunning])
+
+  // Format time display (seconds to MM:SS)
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Toggle dietary restriction
+  const toggleDietaryRestriction = (restriction: DietaryRestriction) => {
+    setDietaryRestrictions(prev =>
+      prev.includes(restriction)
+        ? prev.filter(r => r !== restriction)
+        : [...prev, restriction]
+    )
+  }
+
+  // Load template
+  const loadTemplate = async (template: MealPrepPlan) => {
+    const items = templateItems.filter(i => i.mealPrepPlanId === template.id)
+
+    // Set dietary restrictions from template
+    if (template.dietaryRestrictions) {
+      setDietaryRestrictions(template.dietaryRestrictions)
+    }
+
+    // Load meals from template
+    const loadedMeals: SelectedMeal[] = []
+    for (const item of items) {
+      const savedMeal = item.savedMealId
+        ? await db.savedMeals.get(item.savedMealId)
+        : null
+
+      loadedMeals.push({
+        id: item.savedMealId || generateId('custom'),
+        name: item.mealName,
+        description: item.mealDescription,
+        category: item.category,
+        servings: item.quantity,
+        ingredients: savedMeal?.ingredients || [],
+        isCustom: !item.savedMealId,
+        assignedDays: item.assignedDays || [],
+        mealTypes: item.mealTypes || ['dinner']
+      })
+    }
+
+    setSelectedMeals(loadedMeals)
+    setPlanName(`${template.templateName || template.name} - ${new Date().toLocaleDateString()}`)
+    setShowTemplates(false)
+    toast.success(t('notifications.templateLoaded'))
+  }
+
+  // Save current plan as template
+  const saveAsTemplate = async () => {
+    if (!planName) {
+      toast.error(t('errors.templateNameRequired'))
+      return
+    }
+
+    try {
+      const now = new Date()
+      const templateId = generateId('mpp')
+
+      const template: MealPrepPlan = {
+        id: templateId,
+        name: planName,
+        templateName: planName,
+        cookingDate: new Date(cookingDate),
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        servingsPerMeal: numberOfPeople,
+        numberOfMeals: selectedMeals.length,
+        status: 'planning',
+        dietaryRestrictions,
+        isTemplate: true,
+        createdAt: now,
+        updatedAt: now
+      }
+
+      await db.mealPrepPlans.add(template)
+
+      // Save template items
+      for (const meal of selectedMeals) {
+        await db.mealPrepItems.add({
+          id: generateId('mpi'),
+          mealPrepPlanId: templateId,
+          savedMealId: meal.isCustom ? undefined : meal.id,
+          mealName: meal.name,
+          mealDescription: meal.description,
+          category: meal.category,
+          quantity: meal.servings,
+          assignedDays: meal.assignedDays,
+          mealTypes: meal.mealTypes,
+          createdAt: now,
+          updatedAt: now
+        })
+      }
+
+      toast.success(t('notifications.templateSaved'))
+    } catch (error) {
+      logger.error('Error saving template:', error)
+      toast.error(t('errors.templateSaveFailed'))
+    }
+  }
+
+  // Timer controls
+  const startTimer = () => {
+    if (!sessionStartTime) {
+      setSessionStartTime(new Date())
+    }
+    setTimerRunning(true)
+  }
+
+  const pauseTimer = () => {
+    setTimerRunning(false)
+  }
+
+  const resetTimer = () => {
+    setTimerRunning(false)
+    setElapsedTime(0)
+    setSessionStartTime(null)
+    setCurrentStepIndex(0)
+    setPrepSteps(prev => prev.map(s => ({ ...s, status: 'pending' as PrepStepStatus, startedAt: undefined, completedAt: undefined })))
+  }
+
+  // Step management
+  const markStepComplete = (stepId: string) => {
+    setPrepSteps(prev => prev.map(s =>
+      s.id === stepId
+        ? { ...s, status: 'completed' as PrepStepStatus, completedAt: new Date() }
+        : s
+    ))
+
+    // Auto-advance to next step
+    const nextIndex = prepSteps.findIndex(s => s.id === stepId) + 1
+    if (nextIndex < prepSteps.length) {
+      setCurrentStepIndex(nextIndex)
+      setPrepSteps(prev => prev.map((s, i) =>
+        i === nextIndex
+          ? { ...s, status: 'in_progress' as PrepStepStatus, startedAt: new Date() }
+          : s
+      ))
+    }
+  }
+
+  const skipStep = (stepId: string) => {
+    setPrepSteps(prev => prev.map(s =>
+      s.id === stepId
+        ? { ...s, status: 'skipped' as PrepStepStatus }
+        : s
+    ))
+
+    const nextIndex = prepSteps.findIndex(s => s.id === stepId) + 1
+    if (nextIndex < prepSteps.length) {
+      setCurrentStepIndex(nextIndex)
+    }
+  }
+
+  // Initialize prep steps when entering timer mode
+  const initializePrepSteps = async () => {
+    const steps: PrepStep[] = []
+    let stepNum = 0
+
+    for (const instruction of mealInstructions) {
+      // Parse instructions into individual steps
+      const instructionLines = instruction.instructions.split('\n').filter(l => l.trim())
+
+      for (const line of instructionLines) {
+        stepNum++
+        steps.push({
+          id: generateId('step'),
+          mealName: instruction.mealName,
+          stepNumber: stepNum,
+          instruction: line.trim().replace(/^\d+[\.\)]\s*/, ''), // Remove leading numbers
+          estimatedTime: Math.round(instruction.totalTime / Math.max(instructionLines.length, 1)),
+          status: stepNum === 1 ? 'in_progress' : 'pending'
+        })
+      }
+    }
+
+    setPrepSteps(steps)
+    setCurrentStepIndex(0)
+  }
+
+  // Container/portion tracking
+  const initializeContainers = () => {
+    const containers: TrackedContainer[] = []
+    const now = new Date()
+
+    for (const instruction of mealInstructions) {
+      const container = containerPlan.find(c => c.mealName === instruction.mealName)
+      const containerCount = container?.containerCount || instruction.containerCount || 1
+
+      for (let i = 0; i < containerCount; i++) {
+        const expiresAt = new Date(now)
+        expiresAt.setDate(expiresAt.getDate() + instruction.storageDays)
+
+        containers.push({
+          id: generateId('cont'),
+          mealName: instruction.mealName,
+          containerNumber: i + 1,
+          label: container?.labelSuggestion || `${instruction.mealName} #${i + 1}`,
+          storageType: instruction.storageType,
+          storedAt: now,
+          expiresAt,
+          isConsumed: false,
+          isExpired: expiresAt < now
+        })
+      }
+    }
+
+    setTrackedContainers(containers)
+    setShowPortionTracking(true)
+  }
+
+  const markContainerConsumed = (containerId: string) => {
+    setTrackedContainers(prev => prev.map(c =>
+      c.id === containerId
+        ? { ...c, isConsumed: true }
+        : c
+    ))
+  }
+
+  const getContainerStats = () => {
+    const total = trackedContainers.length
+    const consumed = trackedContainers.filter(c => c.isConsumed).length
+    const expired = trackedContainers.filter(c => c.isExpired && !c.isConsumed).length
+    const remaining = total - consumed - expired
+    const expiringToday = trackedContainers.filter(c => {
+      if (c.isConsumed) return false
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      return c.expiresAt >= today && c.expiresAt < tomorrow
+    }).length
+
+    return { total, consumed, expired, remaining, expiringToday }
+  }
 
   // Filter saved meals by search
   const filteredSavedMeals = savedMeals.filter(meal =>
@@ -422,6 +775,41 @@ export default function MealPrepPage() {
       setContainerPlan(containerData.containerPlan)
       setOrganizationTips(containerData.organizationTips)
 
+      // Step 4: Generate smart schedule
+      toast.loading(t('calculating.schedule'))
+      const scheduleResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'smart-schedule',
+          apiKey: openAIKey,
+          data: {
+            meals: mealsData.map(m => ({
+              name: m.name,
+              prepTime: instructionsData.instructions.find((i: MealInstruction) => i.mealName === m.name)?.prepTime,
+              cookTime: instructionsData.instructions.find((i: MealInstruction) => i.mealName === m.name)?.cookTime,
+              category: m.category
+            }))
+          }
+        })
+      })
+
+      if (scheduleResponse.ok) {
+        const scheduleData = await scheduleResponse.json()
+        setSmartSchedule({
+          optimizedOrder: scheduleData.optimizedOrder || [],
+          parallelTasks: scheduleData.parallelTasks,
+          equipmentNeeded: scheduleData.equipmentNeeded,
+          timelineSteps: scheduleData.timelineSteps,
+          totalEstimatedTime: scheduleData.totalEstimatedTime || 0,
+          efficiencyTips: scheduleData.efficiencyTips || []
+        })
+        // Update prep order with optimized order
+        if (scheduleData.optimizedOrder?.length > 0) {
+          setPrepOrder(scheduleData.optimizedOrder)
+        }
+      }
+
       toast.dismiss()
       toast.success(t('calculating.complete'))
       setCurrentStep('review')
@@ -497,6 +885,7 @@ export default function MealPrepPage() {
         servingsPerMeal: numberOfPeople,
         numberOfMeals: selectedMeals.length,
         status: 'planning',
+        dietaryRestrictions: dietaryRestrictions.length > 0 ? dietaryRestrictions : undefined,
         createdAt: now,
         updatedAt: now
       }
@@ -848,11 +1237,86 @@ export default function MealPrepPage() {
                   </div>
                 </div>
 
+                {/* Dietary Restrictions */}
+                <div>
+                  <Label className="mb-2 block">{t('setup.dietaryRestrictions')}</Label>
+                  <p className="text-xs text-gray-500 mb-3">{t('setup.dietaryRestrictionsHint')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_DIETARY_RESTRICTIONS.map(restriction => (
+                      <Badge
+                        key={restriction}
+                        variant={dietaryRestrictions.includes(restriction) ? 'default' : 'outline'}
+                        className="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                        onClick={() => toggleDietaryRestriction(restriction)}
+                      >
+                        {t(`dietaryRestrictions.${restriction}`)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Templates Section */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label>{t('templates.title')}</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowTemplates(!showTemplates)}
+                    >
+                      <Bookmark className="h-4 w-4 mr-2" />
+                      {showTemplates ? t('templates.hide') : t('templates.show')}
+                    </Button>
+                  </div>
+
+                  {showTemplates && (
+                    <div className="space-y-2">
+                      {savedTemplates.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-4">
+                          {t('templates.noTemplates')}
+                        </p>
+                      ) : (
+                        savedTemplates.map(template => (
+                          <div
+                            key={template.id}
+                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                          >
+                            <div>
+                              <p className="font-medium">{template.templateName || template.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {template.numberOfMeals} {t('templates.meals')} • {template.servingsPerMeal} {t('setup.numberOfPeople').toLowerCase()}
+                                {template.dietaryRestrictions?.length ? (
+                                  <span className="ml-2">
+                                    ({template.dietaryRestrictions.slice(0, 2).map(r => t(`dietaryRestrictions.${r}`)).join(', ')})
+                                  </span>
+                                ) : null}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => loadTemplate(template)}
+                            >
+                              <Copy className="h-4 w-4 mr-1" />
+                              {t('templates.load')}
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                   <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">{t('setup.summary')}</h4>
                   <p className="text-sm text-blue-600 dark:text-blue-300">
                     {t('setup.summaryText', { days: daysOfPrep, people: numberOfPeople })}
                   </p>
+                  {dietaryRestrictions.length > 0 && (
+                    <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+                      {t('setup.dietLabel')}: {dietaryRestrictions.map(r => t(`dietaryRestrictions.${r}`)).join(', ')}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </>
@@ -1135,50 +1599,270 @@ export default function MealPrepPage() {
                 <CardDescription>{t('prep.description')}</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="order" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 mb-4">
-                    <TabsTrigger value="order">{t('prep.order')}</TabsTrigger>
-                    <TabsTrigger value="instructions">{t('prep.instructions')}</TabsTrigger>
-                    <TabsTrigger value="storage">{t('prep.storage')}</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="order">
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-500 mb-4">{t('prep.orderDescription')}</p>
-                      {prepOrder.map((mealName, idx) => {
-                        const instruction = mealInstructions.find(i => i.mealName === mealName)
-                        return (
-                          <div key={idx} className="flex items-center gap-3 p-3 border rounded-lg">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center font-bold text-blue-600 dark:text-blue-400">
-                              {idx + 1}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium">{mealName}</p>
-                              {instruction && (
-                                <p className="text-sm text-gray-500">
-                                  <Clock className="h-3 w-3 inline mr-1" />
-                                  {t('prep.time', { time: instruction.totalTime })}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-
-                      {generalTips.length > 0 && (
-                        <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                          <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
-                            {t('prep.tips')}
-                          </h4>
-                          <ul className="list-disc list-inside text-sm text-green-600 dark:text-green-300 space-y-1">
-                            {generalTips.map((tip, idx) => (
-                              <li key={idx}>{tip}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                {/* Timer Mode Toggle */}
+                <div className="flex items-center justify-between mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Timer className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <div>
+                      <p className="font-medium text-purple-800 dark:text-purple-200">{t('timer.title')}</p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400">{t('timer.description')}</p>
                     </div>
-                  </TabsContent>
+                  </div>
+                  <Switch
+                    checked={isTimerMode}
+                    onCheckedChange={(checked) => {
+                      setIsTimerMode(checked)
+                      if (checked && prepSteps.length === 0) {
+                        initializePrepSteps()
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Timer Mode View */}
+                {isTimerMode ? (
+                  <div className="space-y-4">
+                    {/* Timer Display */}
+                    <div className="text-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                      <p className="text-5xl font-mono font-bold mb-4">{formatTime(elapsedTime)}</p>
+                      <div className="flex justify-center gap-2">
+                        {!timerRunning ? (
+                          <Button onClick={startTimer} className="gap-2">
+                            <Play className="h-4 w-4" />
+                            {t('timer.start')}
+                          </Button>
+                        ) : (
+                          <Button onClick={pauseTimer} variant="outline" className="gap-2">
+                            <Pause className="h-4 w-4" />
+                            {t('timer.pause')}
+                          </Button>
+                        )}
+                        <Button onClick={resetTimer} variant="outline" className="gap-2">
+                          <RefreshCw className="h-4 w-4" />
+                          {t('timer.reset')}
+                        </Button>
+                      </div>
+                      <div className="mt-4 text-sm text-gray-500">
+                        <Progress value={(prepSteps.filter(s => s.status === 'completed').length / Math.max(prepSteps.length, 1)) * 100} className="h-2" />
+                        <p className="mt-2">
+                          {prepSteps.filter(s => s.status === 'completed').length} / {prepSteps.length} {t('timer.stepsCompleted')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Current Step */}
+                    {prepSteps[currentStepIndex] && (
+                      <div className="p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="default" className="bg-blue-500">
+                            {t('timer.currentStep')}
+                          </Badge>
+                          <span className="text-sm text-gray-500">
+                            {prepSteps[currentStepIndex].mealName}
+                          </span>
+                        </div>
+                        <p className="text-lg font-medium mb-4">
+                          {prepSteps[currentStepIndex].instruction}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => markStepComplete(prepSteps[currentStepIndex].id)}
+                            className="flex-1 gap-2"
+                          >
+                            <Check className="h-4 w-4" />
+                            {t('timer.markComplete')}
+                          </Button>
+                          <Button
+                            onClick={() => skipStep(prepSteps[currentStepIndex].id)}
+                            variant="outline"
+                            className="gap-2"
+                          >
+                            <SkipForward className="h-4 w-4" />
+                            {t('timer.skip')}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Steps Checklist */}
+                    <ScrollArea className="h-64">
+                      <div className="space-y-2 pr-4">
+                        {prepSteps.map((step, idx) => (
+                          <div
+                            key={step.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                              idx === currentStepIndex
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : step.status === 'completed'
+                                ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
+                                : step.status === 'skipped'
+                                ? 'border-gray-300 bg-gray-50 dark:bg-gray-900/20 opacity-50'
+                                : 'border-gray-200'
+                            }`}
+                          >
+                            <Checkbox
+                              checked={step.status === 'completed'}
+                              onCheckedChange={() => {
+                                if (step.status !== 'completed') {
+                                  markStepComplete(step.id)
+                                }
+                              }}
+                            />
+                            <div className="flex-1">
+                              <p className={`text-sm ${step.status === 'completed' ? 'line-through text-gray-500' : ''}`}>
+                                {step.instruction}
+                              </p>
+                              <p className="text-xs text-gray-400">{step.mealName}</p>
+                            </div>
+                            {step.status === 'completed' && (
+                              <CircleCheckBig className="h-4 w-4 text-green-500" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                ) : (
+                  /* Normal View */
+                  <Tabs defaultValue="order" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 mb-4">
+                      <TabsTrigger value="order">{t('prep.order')}</TabsTrigger>
+                      <TabsTrigger value="schedule">{t('prep.smartSchedule')}</TabsTrigger>
+                      <TabsTrigger value="instructions">{t('prep.instructions')}</TabsTrigger>
+                      <TabsTrigger value="storage">{t('prep.storage')}</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="order">
+                      <div className="space-y-3">
+                        <p className="text-sm text-gray-500 mb-4">{t('prep.orderDescription')}</p>
+                        {prepOrder.map((mealName, idx) => {
+                          const instruction = mealInstructions.find(i => i.mealName === mealName)
+                          return (
+                            <div key={idx} className="flex items-center gap-3 p-3 border rounded-lg">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center font-bold text-blue-600 dark:text-blue-400">
+                                {idx + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium">{mealName}</p>
+                                {instruction && (
+                                  <p className="text-sm text-gray-500">
+                                    <Clock className="h-3 w-3 inline mr-1" />
+                                    {t('prep.time', { time: instruction.totalTime })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {generalTips.length > 0 && (
+                          <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
+                              {t('prep.tips')}
+                            </h4>
+                            <ul className="list-disc list-inside text-sm text-green-600 dark:text-green-300 space-y-1">
+                              {generalTips.map((tip, idx) => (
+                                <li key={idx}>{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    {/* Smart Schedule Tab */}
+                    <TabsContent value="schedule">
+                      {smartSchedule ? (
+                        <div className="space-y-4">
+                          {/* Total Time */}
+                          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                            <Clock className="h-6 w-6 mx-auto text-blue-500 mb-2" />
+                            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                              {smartSchedule.totalEstimatedTime} {t('prep.minutes')}
+                            </p>
+                            <p className="text-sm text-blue-600 dark:text-blue-400">{t('prep.totalEstimatedTime')}</p>
+                          </div>
+
+                          {/* Parallel Tasks */}
+                          {smartSchedule.parallelTasks && smartSchedule.parallelTasks.length > 0 && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <Layers className="h-4 w-4" />
+                                {t('prep.parallelTasks')}
+                              </h4>
+                              <div className="space-y-2">
+                                {smartSchedule.parallelTasks.map((group, idx) => (
+                                  <div key={idx} className="p-3 border rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Badge variant="secondary">{t('prep.group')} {group.group}</Badge>
+                                      <span className="text-sm text-gray-500">{group.reason}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {group.meals.map((meal, i) => (
+                                        <Badge key={i} variant="outline">{meal}</Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Timeline */}
+                          {smartSchedule.timelineSteps && smartSchedule.timelineSteps.length > 0 && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                {t('prep.timeline')}
+                              </h4>
+                              <div className="relative pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-4">
+                                {smartSchedule.timelineSteps.map((step, idx) => (
+                                  <div key={idx} className="relative">
+                                    <div className="absolute -left-[21px] w-4 h-4 rounded-full bg-blue-500 border-2 border-white dark:border-gray-900" />
+                                    <div className="ml-4">
+                                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">{step.time}</p>
+                                      <p className="font-medium">{step.action}</p>
+                                      <p className="text-sm text-gray-500">{step.meal}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Equipment Needed */}
+                          {smartSchedule.equipmentNeeded && smartSchedule.equipmentNeeded.length > 0 && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <Utensils className="h-4 w-4" />
+                                {t('prep.equipmentNeeded')}
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {smartSchedule.equipmentNeeded.map((equip, idx) => (
+                                  <Badge key={idx} variant="outline">{equip}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Efficiency Tips */}
+                          {smartSchedule.efficiencyTips.length > 0 && (
+                            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
+                                {t('prep.efficiencyTips')}
+                              </h4>
+                              <ul className="list-disc list-inside text-sm text-green-600 dark:text-green-300 space-y-1">
+                                {smartSchedule.efficiencyTips.map((tip, idx) => (
+                                  <li key={idx}>{tip}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-500 py-8">{t('prep.noScheduleData')}</p>
+                      )}
+                    </TabsContent>
 
                   <TabsContent value="instructions">
                     <ScrollArea className="h-96">
@@ -1326,9 +2010,135 @@ export default function MealPrepPage() {
                           </ul>
                         </div>
                       )}
+
+                      {/* Portion Tracking Section */}
+                      <div className="mt-6 border-t pt-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            {t('portions.title')}
+                          </h4>
+                          {!showPortionTracking ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={initializeContainers}
+                            >
+                              {t('portions.startTracking')}
+                            </Button>
+                          ) : (
+                            <Badge variant="secondary">
+                              {getContainerStats().remaining} {t('portions.remaining')}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {showPortionTracking && (
+                          <div className="space-y-4">
+                            {/* Stats Overview */}
+                            <div className="grid grid-cols-4 gap-2">
+                              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded text-center">
+                                <p className="text-xl font-bold text-green-700 dark:text-green-300">
+                                  {getContainerStats().consumed}
+                                </p>
+                                <p className="text-xs text-green-600 dark:text-green-400">{t('portions.consumed')}</p>
+                              </div>
+                              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded text-center">
+                                <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                                  {getContainerStats().remaining}
+                                </p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400">{t('portions.remaining')}</p>
+                              </div>
+                              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-center">
+                                <p className="text-xl font-bold text-orange-700 dark:text-orange-300">
+                                  {getContainerStats().expiringToday}
+                                </p>
+                                <p className="text-xs text-orange-600 dark:text-orange-400">{t('portions.expiringToday')}</p>
+                              </div>
+                              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded text-center">
+                                <p className="text-xl font-bold text-red-700 dark:text-red-300">
+                                  {getContainerStats().expired}
+                                </p>
+                                <p className="text-xs text-red-600 dark:text-red-400">{t('portions.expired')}</p>
+                              </div>
+                            </div>
+
+                            {/* Expiring Soon Warning */}
+                            {getContainerStats().expiringToday > 0 && (
+                              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                                <p className="text-sm text-orange-700 dark:text-orange-300">
+                                  {t('portions.expiringWarning', { count: getContainerStats().expiringToday })}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Container List */}
+                            <ScrollArea className="h-48">
+                              <div className="space-y-2 pr-4">
+                                {trackedContainers
+                                  .filter(c => !c.isConsumed)
+                                  .sort((a, b) => a.expiresAt.getTime() - b.expiresAt.getTime())
+                                  .map(container => {
+                                    const daysUntilExpiry = Math.ceil(
+                                      (container.expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                                    )
+                                    return (
+                                      <div
+                                        key={container.id}
+                                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                                          daysUntilExpiry <= 0
+                                            ? 'border-red-300 bg-red-50 dark:bg-red-900/20'
+                                            : daysUntilExpiry <= 1
+                                            ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20'
+                                            : 'border-gray-200'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <Package className={`h-5 w-5 ${
+                                            daysUntilExpiry <= 0 ? 'text-red-500' :
+                                            daysUntilExpiry <= 1 ? 'text-orange-500' : 'text-gray-400'
+                                          }`} />
+                                          <div>
+                                            <p className="font-medium">{container.label}</p>
+                                            <p className="text-xs text-gray-500">
+                                              {container.mealName} • {t(`prep.storageType.${container.storageType}`)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <div className="text-right">
+                                            <p className={`text-sm font-medium ${
+                                              daysUntilExpiry <= 0 ? 'text-red-600' :
+                                              daysUntilExpiry <= 1 ? 'text-orange-600' : 'text-gray-600'
+                                            }`}>
+                                              {daysUntilExpiry <= 0
+                                                ? t('portions.expired')
+                                                : daysUntilExpiry === 1
+                                                ? t('portions.expiresInDay', { count: 1 })
+                                                : t('portions.expiresInDays', { count: daysUntilExpiry })}
+                                            </p>
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => markContainerConsumed(container.id)}
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
+                )}
               </CardContent>
             </>
           )}
@@ -1347,10 +2157,16 @@ export default function MealPrepPage() {
 
           <div className="flex gap-2">
             {currentStep === 'prep' && (
-              <Button onClick={savePlan} variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                {t('savePlan')}
-              </Button>
+              <>
+                <Button onClick={saveAsTemplate} variant="outline">
+                  <BookmarkPlus className="h-4 w-4 mr-2" />
+                  {t('templates.saveAsTemplate')}
+                </Button>
+                <Button onClick={savePlan} variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('savePlan')}
+                </Button>
+              </>
             )}
 
             {currentStep !== 'prep' && (

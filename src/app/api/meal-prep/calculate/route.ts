@@ -4,11 +4,22 @@ import {
   generateMealPrepInstructions,
   generateMealDetails,
   getContainerGuidance,
-  type MealPrepRequest
+  generateSmartSchedule,
+  suggestMealsForDiet,
+  parseInstructionsToSteps,
+  type MealPrepRequest,
+  type DietaryRestriction
 } from '@/lib/openai'
 import { logger } from '@/lib/logger'
 
-type ActionType = 'calculate-ingredients' | 'generate-instructions' | 'generate-meal' | 'container-guidance'
+type ActionType =
+  | 'calculate-ingredients'
+  | 'generate-instructions'
+  | 'generate-meal'
+  | 'container-guidance'
+  | 'smart-schedule'
+  | 'suggest-meals'
+  | 'parse-steps'
 
 interface CalculateIngredientsBody {
   action: 'calculate-ingredients'
@@ -43,7 +54,40 @@ interface ContainerGuidanceBody {
   }
 }
 
-type RequestBody = CalculateIngredientsBody | GenerateInstructionsBody | GenerateMealBody | ContainerGuidanceBody
+interface SmartScheduleBody {
+  action: 'smart-schedule'
+  apiKey: string
+  data: {
+    meals: { name: string; prepTime?: number; cookTime?: number; category?: string }[]
+  }
+}
+
+interface SuggestMealsBody {
+  action: 'suggest-meals'
+  apiKey: string
+  data: {
+    dietaryRestrictions: DietaryRestriction[]
+    numberOfMeals?: number
+  }
+}
+
+interface ParseStepsBody {
+  action: 'parse-steps'
+  apiKey: string
+  data: {
+    mealName: string
+    instructions: string
+  }
+}
+
+type RequestBody =
+  | CalculateIngredientsBody
+  | GenerateInstructionsBody
+  | GenerateMealBody
+  | ContainerGuidanceBody
+  | SmartScheduleBody
+  | SuggestMealsBody
+  | ParseStepsBody
 
 export async function POST(request: Request) {
   try {
@@ -112,6 +156,48 @@ export async function POST(request: Request) {
           containerPlan: result.containerPlan,
           organizationTips: result.organizationTips
         })
+      }
+
+      case 'smart-schedule': {
+        const scheduleData = data as SmartScheduleBody['data']
+        const result = await generateSmartSchedule(config, scheduleData.meals)
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json({
+          optimizedOrder: result.optimizedOrder,
+          parallelTasks: result.parallelTasks,
+          equipmentNeeded: result.equipmentNeeded,
+          timelineSteps: result.timelineSteps,
+          totalEstimatedTime: result.totalEstimatedTime,
+          efficiencyTips: result.efficiencyTips
+        })
+      }
+
+      case 'suggest-meals': {
+        const suggestData = data as SuggestMealsBody['data']
+        const result = await suggestMealsForDiet(
+          config,
+          suggestData.dietaryRestrictions,
+          suggestData.numberOfMeals
+        )
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json({ meals: result.meals })
+      }
+
+      case 'parse-steps': {
+        const stepsData = data as ParseStepsBody['data']
+        const result = await parseInstructionsToSteps(
+          config,
+          stepsData.mealName,
+          stepsData.instructions
+        )
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json({ steps: result.steps })
       }
 
       default:

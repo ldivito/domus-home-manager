@@ -722,6 +722,11 @@ export interface PetVaccination {
 export type MealPrepStatus = 'planning' | 'shopping' | 'cooking' | 'completed'
 export type StorageType = 'refrigerator' | 'freezer' | 'pantry'
 export type ContainerSize = 'small' | 'medium' | 'large' | 'extra-large'
+export type DietaryRestriction =
+  | 'vegetarian' | 'vegan' | 'keto' | 'low-carb' | 'paleo'
+  | 'gluten-free' | 'dairy-free' | 'nut-free' | 'halal' | 'kosher'
+  | 'low-sodium' | 'low-fat' | 'high-protein' | 'pescatarian'
+export type PrepStepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
 
 export interface MealPrepPlan {
   id?: string
@@ -733,6 +738,9 @@ export interface MealPrepPlan {
   servingsPerMeal: number              // How many people per meal
   numberOfMeals: number                // Total meals to prep
   status: MealPrepStatus
+  dietaryRestrictions?: DietaryRestriction[]  // Diet filters
+  isTemplate?: boolean                 // If this is saved as a template
+  templateName?: string                // Template display name
   householdId?: string
   createdByUserId?: string
   createdAt: Date
@@ -797,6 +805,78 @@ export interface MealPrepRecipe {
   householdId?: string
   createdAt: Date
   updatedAt?: Date
+}
+
+// Prep Session for timer/checklist mode
+export interface MealPrepSession {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  startedAt: Date                      // When cooking session started
+  completedAt?: Date                   // When session finished
+  isActive: boolean                    // Currently in progress
+  currentMealIndex: number             // Which meal they're working on
+  totalElapsedTime: number             // Total time spent (seconds)
+  pausedAt?: Date                      // If session is paused
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Individual prep steps with checklist tracking
+export interface MealPrepStep {
+  id?: string
+  mealPrepPlanId: string
+  mealPrepItemId: string               // Which meal this step belongs to
+  stepNumber: number                   // Order of steps
+  instruction: string                  // Step description
+  estimatedTime?: number               // Expected time in minutes
+  status: PrepStepStatus
+  startedAt?: Date
+  completedAt?: Date
+  notes?: string                       // User notes
+  householdId?: string
+  createdAt: Date
+}
+
+// Individual container/portion tracking
+export interface MealPrepContainer {
+  id?: string
+  mealPrepPlanId: string
+  mealPrepItemId: string               // Which meal is in this container
+  containerNumber: number              // Container 1, 2, 3, etc.
+  label: string                        // What to write on container
+  storageType: StorageType
+  storedAt: Date                       // When it was stored
+  expiresAt: Date                      // When it expires
+  consumedAt?: Date                    // When it was eaten
+  isConsumed: boolean                  // Has it been eaten
+  isExpired: boolean                   // Has it expired
+  notes?: string                       // Storage notes
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Smart scheduling optimization data from AI
+export interface MealPrepSchedule {
+  id?: string
+  mealPrepPlanId: string
+  optimizedOrder: string[]             // Meal names in optimal order
+  parallelTasks?: {                    // Tasks that can run simultaneously
+    group: number
+    meals: string[]
+    reason: string
+  }[]
+  equipmentNeeded?: string[]           // List of required equipment
+  timelineSteps?: {
+    time: string                       // e.g., "0:00", "0:30"
+    action: string
+    meal: string
+  }[]
+  totalEstimatedTime: number           // Total prep time in minutes
+  efficiencyTips: string[]
+  householdId?: string
+  createdAt: Date
 }
 
 // Savings Module interfaces
@@ -926,6 +1006,10 @@ export class DomusDatabase extends Dexie {
   mealPrepItems!: Table<MealPrepItem>
   mealPrepIngredients!: Table<MealPrepIngredient>
   mealPrepRecipes!: Table<MealPrepRecipe>
+  mealPrepSessions!: Table<MealPrepSession>
+  mealPrepSteps!: Table<MealPrepStep>
+  mealPrepContainers!: Table<MealPrepContainer>
+  mealPrepSchedules!: Table<MealPrepSchedule>
   // Sync support
   deletionLog!: Table<DeletionLog>
   private legacyMealIngredientMigrationComplete = false
@@ -1010,6 +1094,14 @@ export class DomusDatabase extends Dexie {
       mealPrepItems: 'id, mealPrepPlanId, savedMealId, mealName, householdId, createdAt',
       mealPrepIngredients: 'id, mealPrepPlanId, mealPrepItemId, savedGroceryItemId, name, householdId, createdAt',
       mealPrepRecipes: 'id, savedMealId, householdId, createdAt'
+    })
+
+    // v30: Add Meal Prep enhanced features - sessions, steps, containers, schedules
+    this.version(30).stores({
+      mealPrepSessions: 'id, mealPrepPlanId, isActive, householdId, createdAt',
+      mealPrepSteps: 'id, mealPrepPlanId, mealPrepItemId, stepNumber, status, householdId, createdAt',
+      mealPrepContainers: 'id, mealPrepPlanId, mealPrepItemId, isConsumed, isExpired, expiresAt, householdId, createdAt',
+      mealPrepSchedules: 'id, mealPrepPlanId, householdId, createdAt'
     })
 
     // v27: Add Savings module tables

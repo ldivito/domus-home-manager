@@ -30,7 +30,37 @@
     "endDate": "Último Día",
     "numberOfPeople": "Personas por Comida",
     "summary": "Resumen",
-    "summaryText": "Estás planificando comidas para {days} días, sirviendo {people} personas por comida."
+    "summaryText": "Estás planificando comidas para {days} días, sirviendo {people} personas por comida.",
+    "dietaryRestrictions": "Restricciones Dietéticas",
+    "dietaryRestrictionsHint": "Selecciona restricciones dietéticas para filtrar sugerencias de comidas",
+    "dietLabel": "Dieta"
+  },
+
+  "dietaryRestrictions": {
+    "vegetarian": "Vegetariano",
+    "vegan": "Vegano",
+    "keto": "Keto",
+    "low-carb": "Bajo en Carbos",
+    "paleo": "Paleo",
+    "gluten-free": "Sin Gluten",
+    "dairy-free": "Sin Lácteos",
+    "nut-free": "Sin Frutos Secos",
+    "halal": "Halal",
+    "kosher": "Kosher",
+    "low-sodium": "Bajo en Sodio",
+    "low-fat": "Bajo en Grasa",
+    "high-protein": "Alto en Proteína",
+    "pescatarian": "Pescatariano"
+  },
+
+  "templates": {
+    "title": "Plantillas",
+    "show": "Mostrar Plantillas",
+    "hide": "Ocultar Plantillas",
+    "noTemplates": "Sin plantillas guardadas. Guarda un plan de meal prep como plantilla para reutilizarlo.",
+    "meals": "comidas",
+    "load": "Usar",
+    "saveAsTemplate": "Guardar como Plantilla"
   },
 
   "meals": {
@@ -55,6 +85,7 @@
     "ingredients": "Calculando ingredientes...",
     "instructions": "Generando instrucciones de prep...",
     "containers": "Planificando almacenamiento de contenedores...",
+    "schedule": "Optimizando horario de cocina...",
     "complete": "¡Cálculos completos!"
   },
 
@@ -74,9 +105,10 @@
   "prep": {
     "title": "Guía de Prep",
     "description": "Sigue esta guía el día de cocina para máxima eficiencia",
-    "order": "Orden de Cocción",
+    "order": "Orden",
+    "smartSchedule": "Horario",
     "instructions": "Instrucciones",
-    "storage": "Almacenamiento y Contenedores",
+    "storage": "Almacenamiento",
     "orderDescription": "Sigue este orden para la sesión de meal prep más eficiente:",
     "time": "{time} min total",
     "tips": "Consejos Pro",
@@ -104,14 +136,48 @@
     "containers": "Contenedores necesarios",
     "label": "Etiqueta",
     "reheating": "Recalentamiento",
-    "organizationTips": "Consejos de Organización"
+    "organizationTips": "Consejos de Organización",
+    "minutes": "minutos",
+    "totalEstimatedTime": "Tiempo Total Estimado",
+    "parallelTasks": "Tareas Paralelas",
+    "group": "Grupo",
+    "timeline": "Cronograma",
+    "equipmentNeeded": "Equipo Necesario",
+    "efficiencyTips": "Consejos de Eficiencia",
+    "noScheduleData": "Sin datos de horario inteligente. Intenta recalcular."
+  },
+
+  "timer": {
+    "title": "Modo Temporizador",
+    "description": "Sesión de cocina interactiva con guía paso a paso",
+    "start": "Iniciar",
+    "pause": "Pausar",
+    "reset": "Reiniciar",
+    "stepsCompleted": "pasos completados",
+    "currentStep": "Paso Actual",
+    "markComplete": "Completar",
+    "skip": "Saltar"
+  },
+
+  "portions": {
+    "title": "Seguimiento de Porciones",
+    "startTracking": "Iniciar Seguimiento",
+    "remaining": "restantes",
+    "consumed": "Consumidas",
+    "expiringToday": "Expiran Hoy",
+    "expired": "Expiradas",
+    "expiringWarning": "{count} contenedor(es) expiran hoy! Úsalos pronto.",
+    "expiresInDay": "Expira mañana",
+    "expiresInDays": "Expira en {count} días"
   },
 
   "notifications": {
     "addedToGrocery": "Ingredientes agregados a la lista de compras",
     "planSaved": "Plan de meal prep guardado exitosamente",
     "mealsCreated": "Comidas agregadas a tu calendario",
-    "apiKeySaved": "API key guardada"
+    "apiKeySaved": "API key guardada",
+    "templateLoaded": "Plantilla cargada exitosamente",
+    "templateSaved": "Plantilla guardada exitosamente"
   },
 
   "errors": {
@@ -119,6 +185,8 @@
     "calculationFailed": "Error al calcular meal prep. Por favor intenta de nuevo.",
     "saveFailed": "Error al guardar plan de meal prep",
     "addToGroceryFailed": "Error al agregar ingredientes a la lista de compras",
-    "createMealsFailed": "Error al crear comidas en el calendario"
+    "createMealsFailed": "Error al crear comidas en el calendario",
+    "templateNameRequired": "Por favor ingresa un nombre de plan antes de guardar como plantilla",
+    "templateSaveFailed": "Error al guardar plantilla"
   }
 }

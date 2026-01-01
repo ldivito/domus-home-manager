@@ -3,9 +3,10 @@
  * Uses ChatGPT to calculate ingredients, generate prep instructions, and storage guidance
  * All responses in Spanish with metric system (grams, kilograms, liters)
  *
- * Latest models as of 2025:
- * - gpt-4.1 (April 2025) - Most capable
- * - gpt-4o - Multimodal, excellent for most tasks
+ * Latest models as of December 2025:
+ * - gpt-5.2 (GPT-5.2 Thinking) - Most capable, reasoning model
+ * - gpt-5.2-pro - Highest quality for complex tasks
+ * - gpt-4o - Fallback for compatibility
  */
 
 import { logger } from './logger'
@@ -15,8 +16,31 @@ export type DietaryRestriction =
   | 'gluten-free' | 'dairy-free' | 'nut-free' | 'halal' | 'kosher'
   | 'low-sodium' | 'low-fat' | 'high-protein' | 'pescatarian'
 
+// Meal component types for modular meal prep
+export type MealComponentType = 'protein' | 'carb' | 'vegetable'
+
+export interface MealComponent {
+  id: string
+  name: string
+  type: MealComponentType
+  description?: string
+  servings: number
+  ingredients?: { name: string; amount?: string }[]
+  isCustom?: boolean
+}
+
+export interface MealCombination {
+  id: string
+  dayIndex: number
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  protein?: MealComponent
+  carb?: MealComponent
+  vegetable?: MealComponent
+}
+
 export interface MealPrepRequest {
-  meals: {
+  // Legacy support for complete meals
+  meals?: {
     name: string
     description?: string
     category?: string
@@ -26,6 +50,9 @@ export interface MealPrepRequest {
       amount?: string
     }[]
   }[]
+  // New component-based system
+  components?: MealComponent[]
+  combinations?: MealCombination[]
   totalServings: number
   numberOfPeople: number
   daysOfPrep: number
@@ -100,10 +127,11 @@ export interface OpenAIConfig {
   language?: 'es' | 'en'
 }
 
-// Latest models - GPT-4.1 released April 2025
-// Fallback chain: gpt-4.1 -> gpt-4o -> gpt-4o-mini
-const DEFAULT_MODEL = 'gpt-4o'
-const FALLBACK_MODEL = 'gpt-4o-mini'
+// Latest models - GPT-5.2 released December 2025
+// Fallback chain: gpt-5.2 -> gpt-4o -> gpt-4o-mini
+const DEFAULT_MODEL = 'gpt-5.2'
+const FALLBACK_MODEL = 'gpt-4o'
+const LEGACY_FALLBACK = 'gpt-4o-mini'
 
 // Spanish category translations for ingredients
 const CATEGORY_TRANSLATIONS: Record<string, string> = {
@@ -148,7 +176,17 @@ const DIETARY_TRANSLATIONS: Record<DietaryRestriction, string> = {
 }
 
 /**
+ * Get the next fallback model in the chain
+ */
+function getNextFallback(currentModel: string): string | null {
+  if (currentModel === DEFAULT_MODEL) return FALLBACK_MODEL
+  if (currentModel === FALLBACK_MODEL) return LEGACY_FALLBACK
+  return null
+}
+
+/**
  * Call OpenAI API with a prompt
+ * Uses GPT-5.2 Thinking as default with automatic fallback chain
  */
 async function callOpenAI(
   apiKey: string,
@@ -170,15 +208,15 @@ async function callOpenAI(
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 8000 // Increased for GPT-5.2's larger context
       })
     })
 
     if (!response.ok) {
-      // Try fallback model if primary fails
-      if (model !== FALLBACK_MODEL) {
-        logger.warn(`Model ${model} failed, trying fallback ${FALLBACK_MODEL}`)
-        return callOpenAI(apiKey, prompt, systemPrompt, FALLBACK_MODEL)
+      const nextModel = getNextFallback(model)
+      if (nextModel) {
+        logger.warn(`Model ${model} failed, trying fallback ${nextModel}`)
+        return callOpenAI(apiKey, prompt, systemPrompt, nextModel)
       }
       const error = await response.text()
       throw new Error(`Error de API OpenAI: ${response.status} - ${error}`)
@@ -187,9 +225,10 @@ async function callOpenAI(
     const data = await response.json()
     return data.choices[0]?.message?.content || ''
   } catch (error) {
-    if (model !== FALLBACK_MODEL) {
-      logger.warn(`Error with ${model}, trying fallback`, error)
-      return callOpenAI(apiKey, prompt, systemPrompt, FALLBACK_MODEL)
+    const nextModel = getNextFallback(model)
+    if (nextModel) {
+      logger.warn(`Error with ${model}, trying fallback ${nextModel}`, error)
+      return callOpenAI(apiKey, prompt, systemPrompt, nextModel)
     }
     throw error
   }
@@ -225,6 +264,16 @@ IMPORTANTE: Usa SIEMPRE el sistema métrico decimal:
 Sé preciso con las medidas y siempre consolida ingredientes iguales de diferentes comidas.
 Responde SIEMPRE en español.${dietaryNote}`
 
+  const mealsSection = request.meals?.length
+    ? `Comidas a preparar:
+${request.meals.map((meal, i) => `
+${i + 1}. ${meal.name}${meal.description ? ` - ${meal.description}` : ''}
+   Categoría: ${meal.category || 'General'}
+   Porciones necesarias: ${meal.servings}
+   ${meal.existingIngredients?.length ? `Ingredientes conocidos: ${meal.existingIngredients.map(ing => `${ing.name}${ing.amount ? ` (${ing.amount})` : ''}`).join(', ')}` : ''}
+`).join('\n')}`
+    : 'Sin comidas especificadas'
+
   const prompt = `Calcula el total de ingredientes necesarios para este meal prep:
 
 Número de personas: ${request.numberOfPeople}
@@ -232,13 +281,7 @@ Días de comidas: ${request.daysOfPrep}
 Porciones totales necesarias: ${request.totalServings}
 ${request.dietaryRestrictions?.length ? `Restricciones dietéticas: ${translateDietaryRestrictions(request.dietaryRestrictions)}` : ''}
 
-Comidas a preparar:
-${request.meals.map((meal, i) => `
-${i + 1}. ${meal.name}${meal.description ? ` - ${meal.description}` : ''}
-   Categoría: ${meal.category || 'General'}
-   Porciones necesarias: ${meal.servings}
-   ${meal.existingIngredients?.length ? `Ingredientes conocidos: ${meal.existingIngredients.map(ing => `${ing.name}${ing.amount ? ` (${ing.amount})` : ''}`).join(', ')}` : ''}
-`).join('\n')}
+${mealsSection}
 
 Responde con un objeto JSON en este formato exacto:
 {
@@ -687,6 +730,338 @@ Responde con un objeto JSON en este formato exacto:
     return {
       steps: [],
       error: error instanceof Error ? error.message : 'Error al analizar instrucciones'
+    }
+  }
+}
+
+/**
+ * Calculate ingredients for component-based meal prep
+ * Handles proteins, carbs, and vegetables separately then combines
+ */
+export async function calculateComponentIngredients(
+  config: OpenAIConfig,
+  components: MealComponent[],
+  numberOfPeople: number,
+  daysOfPrep: number,
+  dietaryRestrictions?: DietaryRestriction[]
+): Promise<{ ingredients: IngredientCalculation[]; error?: string }> {
+  const dietaryNote = dietaryRestrictions?.length
+    ? `\n\nRESTRICCIONES DIETÉTICAS: ${translateDietaryRestrictions(dietaryRestrictions)}`
+    : ''
+
+  const componentTypeNames: Record<MealComponentType, string> = {
+    'protein': 'Proteína',
+    'carb': 'Carbohidrato/Acompañamiento',
+    'vegetable': 'Vegetales/Verduras'
+  }
+
+  const systemPrompt = `Eres un chef profesional de meal prep y nutricionista experto.
+Tu tarea es calcular ingredientes para componentes de comida individuales que se combinarán.
+DEBES responder ÚNICAMENTE con JSON válido, sin texto adicional.
+IMPORTANTE: Usa SIEMPRE el sistema métrico decimal (g, kg, ml, L).
+Responde SIEMPRE en español.${dietaryNote}`
+
+  const prompt = `Calcula el total de ingredientes para estos componentes de meal prep:
+
+Número de personas por porción: ${numberOfPeople}
+Días de comidas: ${daysOfPrep}
+
+COMPONENTES:
+${components.map((comp, i) => `
+${i + 1}. ${comp.name} (${componentTypeNames[comp.type]})
+   ${comp.description ? `Descripción: ${comp.description}` : ''}
+   Porciones necesarias: ${comp.servings}
+   ${comp.ingredients?.length ? `Ingredientes conocidos: ${comp.ingredients.map(ing => `${ing.name}${ing.amount ? ` (${ing.amount})` : ''}`).join(', ')}` : ''}
+`).join('\n')}
+
+Responde con un objeto JSON en este formato exacto:
+{
+  "ingredients": [
+    {
+      "name": "nombre del ingrediente en español",
+      "category": "Frutas y Verduras|Lácteos|Carnes y Pescados|Panadería|Despensa|Congelados|Especias|Granos y Cereales",
+      "amount": "cantidad total (ej: '500g', '1kg', '250ml')",
+      "unit": "la unidad (ej: 'g', 'kg', 'ml', 'L', 'piezas')",
+      "originalAmount": "cantidad por porción",
+      "isConsolidated": true/false
+    }
+  ]
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return { ingredients: parsed.ingredients }
+  } catch (error) {
+    logger.error('Error calculando ingredientes de componentes:', error)
+    return {
+      ingredients: [],
+      error: error instanceof Error ? error.message : 'Error al calcular ingredientes'
+    }
+  }
+}
+
+/**
+ * Generate prep instructions for individual components
+ */
+export async function generateComponentInstructions(
+  config: OpenAIConfig,
+  components: MealComponent[]
+): Promise<{
+  instructions: MealPrepInstructions[]
+  prepOrder: string[]
+  generalTips: string[]
+  error?: string
+}> {
+  const componentTypeNames: Record<MealComponentType, string> = {
+    'protein': 'Proteína',
+    'carb': 'Carbohidrato',
+    'vegetable': 'Vegetales'
+  }
+
+  const systemPrompt = `Eres un chef profesional experto en meal prep.
+Tu tarea es proporcionar instrucciones de preparación para cada componente individual.
+Los componentes se preparan por separado y se combinarán después.
+DEBES responder ÚNICAMENTE con JSON válido, sin texto adicional.
+Usa SIEMPRE el sistema métrico (gramos, kilogramos, litros, mililitros).
+Responde SIEMPRE en español.`
+
+  const prompt = `Genera instrucciones de meal prep para estos componentes individuales:
+
+${components.map((comp, i) => `
+${i + 1}. ${comp.name} (${componentTypeNames[comp.type]})
+   ${comp.description ? `Descripción: ${comp.description}` : ''}
+   Porciones a preparar: ${comp.servings}
+`).join('\n')}
+
+Cada componente se prepara POR SEPARADO para ser combinado con otros.
+Por ejemplo: la proteína (pollo) se prepara aparte, los carbohidratos (arroz) aparte, y las verduras aparte.
+
+Para cada componente, proporciona:
+1. Tiempos de preparación y cocción
+2. Instrucciones paso a paso para preparación en lote
+3. Cómo almacenar (refrigerador/congelador)
+4. Cuánto tiempo se conserva
+5. Cómo recalentar
+6. Contenedores necesarios
+
+También sugiere el orden óptimo para preparar estos componentes.
+
+Responde con un objeto JSON en este formato exacto:
+{
+  "mealInstructions": [
+    {
+      "mealName": "nombre del componente",
+      "prepTime": número (minutos),
+      "cookTime": número (minutos),
+      "totalTime": número (minutos),
+      "instructions": "Instrucciones paso a paso para preparación en lote",
+      "tips": "Consejos específicos para este componente",
+      "storageType": "refrigerator" | "freezer" | "pantry",
+      "storageDays": número,
+      "storageInstructions": "Cómo almacenar correctamente",
+      "reheatingInstructions": "Cómo recalentar",
+      "containerSize": "small" | "medium" | "large" | "extra-large",
+      "containerCount": número,
+      "nutritionEstimate": {
+        "calories": número,
+        "protein": número (gramos),
+        "carbs": número (gramos),
+        "fat": número (gramos)
+      }
+    }
+  ],
+  "prepOrder": ["nombre de componente en orden de preparación"],
+  "generalTips": ["consejos generales de meal prep"]
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return {
+      instructions: parsed.mealInstructions,
+      prepOrder: parsed.prepOrder,
+      generalTips: parsed.generalTips
+    }
+  } catch (error) {
+    logger.error('Error generando instrucciones de componentes:', error)
+    return {
+      instructions: [],
+      prepOrder: [],
+      generalTips: [],
+      error: error instanceof Error ? error.message : 'Error al generar instrucciones'
+    }
+  }
+}
+
+/**
+ * Suggest component combinations for meal prep
+ */
+export async function suggestComponentCombinations(
+  config: OpenAIConfig,
+  proteins: MealComponent[],
+  carbs: MealComponent[],
+  vegetables: MealComponent[],
+  daysOfPrep: number,
+  mealsPerDay: number = 2,
+  dietaryRestrictions?: DietaryRestriction[]
+): Promise<{
+  combinations: {
+    day: number
+    mealType: string
+    protein: string
+    carb: string
+    vegetable: string
+    description: string
+  }[]
+  error?: string
+}> {
+  const dietaryNote = dietaryRestrictions?.length
+    ? `\nRestricciones dietéticas: ${translateDietaryRestrictions(dietaryRestrictions)}`
+    : ''
+
+  const systemPrompt = `Eres un nutricionista y chef experto en meal prep.
+Tu tarea es crear combinaciones variadas y balanceadas de componentes de comida.
+DEBES responder ÚNICAMENTE con JSON válido, sin texto adicional.
+Responde SIEMPRE en español.`
+
+  const prompt = `Crea combinaciones de comidas para ${daysOfPrep} días con ${mealsPerDay} comidas principales por día.
+${dietaryNote}
+
+PROTEÍNAS DISPONIBLES:
+${proteins.map(p => `- ${p.name}`).join('\n')}
+
+CARBOHIDRATOS/ACOMPAÑAMIENTOS DISPONIBLES:
+${carbs.map(c => `- ${c.name}`).join('\n')}
+
+VEGETALES/VERDURAS DISPONIBLES:
+${vegetables.map(v => `- ${v.name}`).join('\n')}
+
+Crea combinaciones variadas que:
+1. No repitan la misma proteína en el mismo día
+2. Varíen los carbohidratos a lo largo de la semana
+3. Incluyan diferentes verduras para variedad nutricional
+4. Sean combinaciones que funcionen bien juntas en sabor
+
+Responde con un objeto JSON en este formato exacto:
+{
+  "combinations": [
+    {
+      "day": 1,
+      "mealType": "almuerzo" | "cena",
+      "protein": "nombre de la proteína",
+      "carb": "nombre del carbohidrato",
+      "vegetable": "nombre del vegetal",
+      "description": "breve descripción de por qué esta combinación funciona"
+    }
+  ]
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return { combinations: parsed.combinations }
+  } catch (error) {
+    logger.error('Error sugiriendo combinaciones:', error)
+    return {
+      combinations: [],
+      error: error instanceof Error ? error.message : 'Error al sugerir combinaciones'
+    }
+  }
+}
+
+/**
+ * Generate details for a single component
+ */
+export async function generateComponentDetails(
+  config: OpenAIConfig,
+  componentName: string,
+  componentType: MealComponentType,
+  servings: number
+): Promise<{
+  description: string
+  ingredients: { name: string; amount: string; category: string }[]
+  instructions: string
+  prepTime: number
+  cookTime: number
+  error?: string
+}> {
+  const componentTypeNames: Record<MealComponentType, string> = {
+    'protein': 'proteína (carne, pollo, pescado, huevos, legumbres)',
+    'carb': 'carbohidrato/acompañamiento (arroz, pasta, patatas, pan)',
+    'vegetable': 'vegetales/verduras (ensalada, brócoli, espinacas)'
+  }
+
+  const systemPrompt = `Eres un chef profesional y desarrollador de recetas.
+Tu tarea es crear información detallada para un componente de comida.
+DEBES responder ÚNICAMENTE con JSON válido, sin texto adicional.
+Usa SIEMPRE el sistema métrico (gramos, kilogramos, litros, mililitros).
+Responde SIEMPRE en español.`
+
+  const prompt = `Crea una receta completa para el componente: "${componentName}"
+Tipo de componente: ${componentTypeNames[componentType]}
+Porciones: ${servings}
+
+Este componente se preparará por separado para meal prep y se combinará con otros componentes.
+
+Proporciona:
+1. Una breve descripción
+2. Lista completa de ingredientes con cantidades en sistema métrico
+3. Instrucciones de preparación
+4. Tiempos de preparación y cocción
+
+Responde con un objeto JSON en este formato exacto:
+{
+  "description": "Breve descripción del componente en español",
+  "ingredients": [
+    {
+      "name": "nombre del ingrediente en español",
+      "amount": "cantidad para ${servings} porciones (ej: '500g', '1kg', '250ml')",
+      "category": "Frutas y Verduras|Lácteos|Carnes y Pescados|Despensa|Especias"
+    }
+  ],
+  "instructions": "Instrucciones de preparación paso a paso en español",
+  "prepTime": número (minutos),
+  "cookTime": número (minutos)
+}`
+
+  try {
+    const response = await callOpenAI(config.apiKey, prompt, systemPrompt, config.model)
+
+    let jsonStr = response.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return parsed
+  } catch (error) {
+    logger.error('Error generando detalles de componente:', error)
+    return {
+      description: '',
+      ingredients: [],
+      instructions: '',
+      prepTime: 0,
+      cookTime: 0,
+      error: error instanceof Error ? error.message : 'Error al generar detalles'
     }
   }
 }

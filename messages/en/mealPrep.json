@@ -78,6 +78,32 @@
     "ai": "AI"
   },
 
+  "components": {
+    "title": "Build Your Meals",
+    "description": "Select proteins, carbs, and vegetables to create your meal combinations",
+    "modeToggle": "Component Mode",
+    "modeDescription": "Build meals from individual components (protein + carb + vegetable)",
+    "proteins": "Proteins",
+    "carbs": "Carbs & Sides",
+    "vegetables": "Vegetables & Greens",
+    "proteinExamples": "Chicken, beef, fish, eggs, legumes...",
+    "carbExamples": "Rice, potatoes, pasta, quinoa...",
+    "vegetableExamples": "Broccoli, spinach, salad, carrots...",
+    "addProtein": "Add Protein",
+    "addCarb": "Add Carb/Side",
+    "addVegetable": "Add Vegetable",
+    "customPlaceholder": "Enter component name...",
+    "selectedComponents": "Selected Components",
+    "combinations": "Meal Combinations",
+    "suggestCombinations": "Suggest Combinations",
+    "combinationDescription": "AI will suggest how to combine your components for each day",
+    "noComponents": "Add at least one component from each category to start",
+    "servingsPerComponent": "{count} servings",
+    "proteinLabel": "Protein",
+    "carbLabel": "Carb",
+    "vegetableLabel": "Vegetable"
+  },
+
   "calculating": {
     "title": "Calculating Your Meal Prep",
     "description": "AI is calculating ingredients, instructions, and storage guidance...",

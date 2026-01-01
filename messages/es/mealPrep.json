@@ -78,6 +78,32 @@
     "ai": "IA"
   },
 
+  "components": {
+    "title": "Arma tus Comidas",
+    "description": "Selecciona proteínas, carbohidratos y vegetales para crear tus combinaciones de comidas",
+    "modeToggle": "Modo Componentes",
+    "modeDescription": "Arma comidas desde componentes individuales (proteína + carbo + vegetal)",
+    "proteins": "Proteínas",
+    "carbs": "Carbos y Acompañamientos",
+    "vegetables": "Vegetales y Verduras",
+    "proteinExamples": "Pollo, carne, pescado, huevos, legumbres...",
+    "carbExamples": "Arroz, papas, pasta, quinoa...",
+    "vegetableExamples": "Brócoli, espinaca, ensalada, zanahorias...",
+    "addProtein": "Agregar Proteína",
+    "addCarb": "Agregar Carbo/Acompañamiento",
+    "addVegetable": "Agregar Vegetal",
+    "customPlaceholder": "Ingresa nombre del componente...",
+    "selectedComponents": "Componentes Seleccionados",
+    "combinations": "Combinaciones de Comidas",
+    "suggestCombinations": "Sugerir Combinaciones",
+    "combinationDescription": "La IA sugerirá cómo combinar tus componentes para cada día",
+    "noComponents": "Agrega al menos un componente de cada categoría para comenzar",
+    "servingsPerComponent": "{count} porciones",
+    "proteinLabel": "Proteína",
+    "carbLabel": "Carbo",
+    "vegetableLabel": "Vegetal"
+  },
+
   "calculating": {
     "title": "Calculando tu Meal Prep",
     "description": "La IA está calculando ingredientes, instrucciones y guía de almacenamiento...",

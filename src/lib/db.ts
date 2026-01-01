@@ -727,6 +727,52 @@ export type DietaryRestriction =
   | 'gluten-free' | 'dairy-free' | 'nut-free' | 'halal' | 'kosher'
   | 'low-sodium' | 'low-fat' | 'high-protein' | 'pescatarian'
 export type PrepStepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+// Component types for modular meal prep
+export type MealComponentType = 'protein' | 'carb' | 'vegetable'
+
+// Meal component for modular meal prep (protein + carb + vegetable)
+export interface MealPrepComponent {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  name: string                         // Component name (e.g., "Pollo a la plancha")
+  type: MealComponentType              // protein, carb, or vegetable
+  description?: string
+  servings: number                     // Number of portions to prepare
+  // AI-generated fields
+  prepInstructions?: string
+  cookingTime?: number                 // Minutes
+  storageInstructions?: string
+  storageType?: StorageType
+  storageDays?: number
+  containerSize?: ContainerSize
+  containerCount?: number
+  reheatingInstructions?: string
+  nutritionEstimate?: {
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+  }
+  isCustom?: boolean                   // If created by AI
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Combination of components for a meal
+export interface MealPrepCombination {
+  id?: string
+  mealPrepPlanId: string
+  dayIndex: number                     // Day number (0-based)
+  date: Date                           // Actual date
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  proteinComponentId?: string          // Reference to MealPrepComponent
+  carbComponentId?: string             // Reference to MealPrepComponent
+  vegetableComponentId?: string        // Reference to MealPrepComponent
+  description?: string                 // AI suggestion for why this combination works
+  householdId?: string
+  createdAt: Date
+}
 
 export interface MealPrepPlan {
   id?: string
@@ -741,6 +787,7 @@ export interface MealPrepPlan {
   dietaryRestrictions?: DietaryRestriction[]  // Diet filters
   isTemplate?: boolean                 // If this is saved as a template
   templateName?: string                // Template display name
+  useComponents?: boolean              // If using component-based system (protein+carb+veg)
   householdId?: string
   createdByUserId?: string
   createdAt: Date
@@ -1010,6 +1057,9 @@ export class DomusDatabase extends Dexie {
   mealPrepSteps!: Table<MealPrepStep>
   mealPrepContainers!: Table<MealPrepContainer>
   mealPrepSchedules!: Table<MealPrepSchedule>
+  // Component-based meal prep tables
+  mealPrepComponents!: Table<MealPrepComponent>
+  mealPrepCombinations!: Table<MealPrepCombination>
   // Sync support
   deletionLog!: Table<DeletionLog>
   private legacyMealIngredientMigrationComplete = false
@@ -1102,6 +1152,12 @@ export class DomusDatabase extends Dexie {
       mealPrepSteps: 'id, mealPrepPlanId, mealPrepItemId, stepNumber, status, householdId, createdAt',
       mealPrepContainers: 'id, mealPrepPlanId, mealPrepItemId, isConsumed, isExpired, expiresAt, householdId, createdAt',
       mealPrepSchedules: 'id, mealPrepPlanId, householdId, createdAt'
+    })
+
+    // v31: Add component-based meal prep (protein + carb + vegetable)
+    this.version(31).stores({
+      mealPrepComponents: 'id, mealPrepPlanId, name, type, householdId, createdAt',
+      mealPrepCombinations: 'id, mealPrepPlanId, dayIndex, date, mealType, proteinComponentId, carbComponentId, vegetableComponentId, householdId, createdAt'
     })
 
     // v27: Add Savings module tables

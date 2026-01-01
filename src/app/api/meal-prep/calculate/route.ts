@@ -7,8 +7,15 @@ import {
   generateSmartSchedule,
   suggestMealsForDiet,
   parseInstructionsToSteps,
+  // Component-based functions
+  calculateComponentIngredients,
+  generateComponentInstructions,
+  suggestComponentCombinations,
+  generateComponentDetails,
   type MealPrepRequest,
-  type DietaryRestriction
+  type DietaryRestriction,
+  type MealComponent,
+  type MealComponentType
 } from '@/lib/openai'
 import { logger } from '@/lib/logger'
 
@@ -20,6 +27,11 @@ type ActionType =
   | 'smart-schedule'
   | 'suggest-meals'
   | 'parse-steps'
+  // Component-based actions
+  | 'calculate-component-ingredients'
+  | 'generate-component-instructions'
+  | 'suggest-component-combinations'
+  | 'generate-component-details'
 
 interface CalculateIngredientsBody {
   action: 'calculate-ingredients'
@@ -80,6 +92,48 @@ interface ParseStepsBody {
   }
 }
 
+// Component-based request body interfaces
+interface CalculateComponentIngredientsBody {
+  action: 'calculate-component-ingredients'
+  apiKey: string
+  data: {
+    components: MealComponent[]
+    servingsPerMeal: number
+    numberOfMeals: number
+  }
+}
+
+interface GenerateComponentInstructionsBody {
+  action: 'generate-component-instructions'
+  apiKey: string
+  data: {
+    components: MealComponent[]
+  }
+}
+
+interface SuggestComponentCombinationsBody {
+  action: 'suggest-component-combinations'
+  apiKey: string
+  data: {
+    proteins: MealComponent[]
+    carbs: MealComponent[]
+    vegetables: MealComponent[]
+    daysOfPrep: number
+    mealsPerDay?: number
+    dietaryRestrictions?: DietaryRestriction[]
+  }
+}
+
+interface GenerateComponentDetailsBody {
+  action: 'generate-component-details'
+  apiKey: string
+  data: {
+    componentName: string
+    componentType: MealComponentType
+    servings: number
+  }
+}
+
 type RequestBody =
   | CalculateIngredientsBody
   | GenerateInstructionsBody
@@ -88,6 +142,11 @@ type RequestBody =
   | SmartScheduleBody
   | SuggestMealsBody
   | ParseStepsBody
+  // Component-based
+  | CalculateComponentIngredientsBody
+  | GenerateComponentInstructionsBody
+  | SuggestComponentCombinationsBody
+  | GenerateComponentDetailsBody
 
 export async function POST(request: Request) {
   try {
@@ -198,6 +257,65 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: result.error }, { status: 500 })
         }
         return NextResponse.json({ steps: result.steps })
+      }
+
+      // Component-based actions
+      case 'calculate-component-ingredients': {
+        const componentData = data as CalculateComponentIngredientsBody['data']
+        const result = await calculateComponentIngredients(
+          config,
+          componentData.components,
+          componentData.servingsPerMeal,
+          componentData.numberOfMeals
+        )
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json({ ingredients: result.ingredients })
+      }
+
+      case 'generate-component-instructions': {
+        const componentData = data as GenerateComponentInstructionsBody['data']
+        const result = await generateComponentInstructions(config, componentData.components)
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json({
+          instructions: result.instructions,
+          prepOrder: result.prepOrder,
+          generalTips: result.generalTips
+        })
+      }
+
+      case 'suggest-component-combinations': {
+        const componentData = data as SuggestComponentCombinationsBody['data']
+        const result = await suggestComponentCombinations(
+          config,
+          componentData.proteins,
+          componentData.carbs,
+          componentData.vegetables,
+          componentData.daysOfPrep,
+          componentData.mealsPerDay,
+          componentData.dietaryRestrictions
+        )
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json({ combinations: result.combinations })
+      }
+
+      case 'generate-component-details': {
+        const componentData = data as GenerateComponentDetailsBody['data']
+        const result = await generateComponentDetails(
+          config,
+          componentData.componentName,
+          componentData.componentType,
+          componentData.servings
+        )
+        if (result.error) {
+          return NextResponse.json({ error: result.error }, { status: 500 })
+        }
+        return NextResponse.json(result)
       }
 
       default:

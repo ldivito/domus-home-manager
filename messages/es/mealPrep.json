@@ -1,0 +1,124 @@
+{
+  "title": "Planificador de Meal Prep",
+  "subtitle": "Planifica tu meal prep semanal con cálculos potenciados por IA",
+  "settings": "Configuración",
+  "defaultPlanName": "Meal Prep - {date}",
+  "apiKeyRequired": "API Key de OpenAI Requerida",
+  "apiKeyDescription": "Ingresa tu API key de OpenAI para habilitar cálculos de ingredientes e instrucciones de meal prep con IA. Tu clave se almacena localmente y nunca se envía a nuestros servidores.",
+  "saveApiKey": "Guardar Clave",
+  "back": "Atrás",
+  "next": "Siguiente",
+  "savePlan": "Guardar Plan",
+  "calculateWithAI": "Calcular con IA",
+
+  "steps": {
+    "setup": "Configuración",
+    "meals": "Comidas",
+    "calculate": "Calcular",
+    "review": "Revisar",
+    "prep": "Guía de Prep"
+  },
+
+  "setup": {
+    "title": "Configura tu Meal Prep",
+    "description": "Establece el día de cocina, rango de fechas y número de personas",
+    "planName": "Nombre del Plan",
+    "planNamePlaceholder": "ej., Meal Prep Semana 1",
+    "cookingDate": "Día de Cocina",
+    "cookingDateHint": "El día que prepararás todas las comidas",
+    "startDate": "Primer Día",
+    "endDate": "Último Día",
+    "numberOfPeople": "Personas por Comida",
+    "summary": "Resumen",
+    "summaryText": "Estás planificando comidas para {days} días, sirviendo {people} personas por comida."
+  },
+
+  "meals": {
+    "title": "Selecciona tus Comidas",
+    "description": "Elige comidas de tus recetas guardadas o agrega personalizadas",
+    "savedMeals": "Comidas Guardadas",
+    "customMeal": "Comida Personalizada",
+    "searchPlaceholder": "Buscar comidas guardadas...",
+    "noSavedMeals": "No se encontraron comidas guardadas. Agrega una comida personalizada o guarda algunas comidas primero.",
+    "customPlaceholder": "Ingresa nombre de comida (ej., Pollo Salteado)",
+    "add": "Agregar",
+    "aiWillGenerate": "La IA generará ingredientes e instrucciones para comidas personalizadas",
+    "selected": "Comidas Seleccionadas",
+    "totalServings": "{count} porciones totales",
+    "ai": "IA"
+  },
+
+  "calculating": {
+    "title": "Calculando tu Meal Prep",
+    "description": "La IA está calculando ingredientes, instrucciones y guía de almacenamiento...",
+    "button": "Calculando...",
+    "ingredients": "Calculando ingredientes...",
+    "instructions": "Generando instrucciones de prep...",
+    "containers": "Planificando almacenamiento de contenedores...",
+    "complete": "¡Cálculos completos!"
+  },
+
+  "review": {
+    "title": "Revisa tu Plan",
+    "description": "Verifica ingredientes y horario de comidas",
+    "ingredients": "Lista de Compras",
+    "schedule": "Horario de Comidas",
+    "consolidated": "Combinado",
+    "addToGrocery": "Agregar Todo a Lista de Compras",
+    "allAdded": "Todo Agregado a Compras",
+    "servings": "porciones",
+    "assignedDays": "Programado para",
+    "addToCalendar": "Agregar Comidas al Calendario"
+  },
+
+  "prep": {
+    "title": "Guía de Prep",
+    "description": "Sigue esta guía el día de cocina para máxima eficiencia",
+    "order": "Orden de Cocción",
+    "instructions": "Instrucciones",
+    "storage": "Almacenamiento y Contenedores",
+    "orderDescription": "Sigue este orden para la sesión de meal prep más eficiente:",
+    "time": "{time} min total",
+    "tips": "Consejos Pro",
+    "prepTime": "Prep: {time}min",
+    "cookTime": "Cocción: {time}min",
+    "steps": "Pasos",
+    "mealTips": "Consejos",
+    "calories": "Calorías",
+    "protein": "Proteína",
+    "carbs": "Carbos",
+    "fat": "Grasa",
+    "container": {
+      "small": "Pequeño (~1 taza)",
+      "medium": "Mediano (~2 tazas)",
+      "large": "Grande (~4 tazas)",
+      "extra-large": "XL (~6+ tazas)"
+    },
+    "storageType": {
+      "refrigerator": "Refrigerar",
+      "freezer": "Congelar",
+      "pantry": "Despensa"
+    },
+    "storageDuration": "Se conserva por",
+    "days": "{count} días",
+    "containers": "Contenedores necesarios",
+    "label": "Etiqueta",
+    "reheating": "Recalentamiento",
+    "organizationTips": "Consejos de Organización"
+  },
+
+  "notifications": {
+    "addedToGrocery": "Ingredientes agregados a la lista de compras",
+    "planSaved": "Plan de meal prep guardado exitosamente",
+    "mealsCreated": "Comidas agregadas a tu calendario",
+    "apiKeySaved": "API key guardada"
+  },
+
+  "errors": {
+    "noApiKey": "Por favor agrega tu API key de OpenAI para usar funciones de IA",
+    "calculationFailed": "Error al calcular meal prep. Por favor intenta de nuevo.",
+    "saveFailed": "Error al guardar plan de meal prep",
+    "addToGroceryFailed": "Error al agregar ingredientes a la lista de compras",
+    "createMealsFailed": "Error al crear comidas en el calendario"
+  }
+}

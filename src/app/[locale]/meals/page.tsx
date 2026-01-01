@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UtensilsCrossed, Plus, Settings2, Calendar, List, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react"
+import { UtensilsCrossed, Plus, Settings2, Calendar, List, ChevronLeft, ChevronRight, ShoppingCart, ChefHat } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -20,7 +21,9 @@ type ViewType = 'day' | 'week' | 'month'
 
 export default function MealsPage() {
   const t = useTranslations('meals')
+  const tPrep = useTranslations('mealPrep')
   const plannerT = useTranslations('planner')
+  const router = useRouter()
   const { startOfWeek } = useCalendarSettings()
   
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -807,6 +810,17 @@ export default function MealsPage() {
             </p>
           </div>
           <div className="grid grid-cols-2 md:flex gap-2 md:gap-4">
+            <Button
+              onClick={() => router.push('/meals/meal-prep')}
+              variant="outline"
+              size="default"
+              className="h-11 md:h-14 px-3 md:px-6 text-sm md:text-lg bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-900/30 dark:hover:to-amber-900/30"
+            >
+              <ChefHat className="mr-1.5 md:mr-2 h-4 w-4 md:h-5 md:w-5 text-orange-600 dark:text-orange-400" />
+              <span className="hidden sm:inline text-orange-700 dark:text-orange-300">{tPrep('title')}</span>
+              <span className="sm:hidden text-orange-700 dark:text-orange-300">Meal Prep</span>
+            </Button>
+
             <Button
               onClick={() => setShowSavedMealsDialog(true)}
               variant="outline"

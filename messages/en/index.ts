@@ -24,6 +24,7 @@ import subscriptions from './subscriptions.json';
 import pets from './pets.json';
 import savings from './savings.json';
 import pwa from './pwa.json';
+import mealPrep from './mealPrep.json';
 
 const messages = {
   common,
@@ -52,6 +53,7 @@ const messages = {
   pets,
   savings,
   pwa,
+  mealPrep,
 };
 
 export default messages;

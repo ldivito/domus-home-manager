@@ -718,6 +718,87 @@ export interface PetVaccination {
   updatedAt?: Date
 }
 
+// Meal Prep Planner Module interfaces
+export type MealPrepStatus = 'planning' | 'shopping' | 'cooking' | 'completed'
+export type StorageType = 'refrigerator' | 'freezer' | 'pantry'
+export type ContainerSize = 'small' | 'medium' | 'large' | 'extra-large'
+
+export interface MealPrepPlan {
+  id?: string
+  name: string
+  description?: string
+  cookingDate: Date                    // The day they plan to cook
+  startDate: Date                      // First day meals are for
+  endDate: Date                        // Last day meals are for
+  servingsPerMeal: number              // How many people per meal
+  numberOfMeals: number                // Total meals to prep
+  status: MealPrepStatus
+  householdId?: string
+  createdByUserId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MealPrepItem {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  savedMealId?: string                 // Reference to SavedMeal (optional, can be new meal)
+  mealName: string
+  mealDescription?: string
+  category?: string                    // Meal category
+  quantity: number                     // How many servings of this meal
+  assignedDays: string[]               // Array of dates in ISO format
+  mealTypes: ('breakfast' | 'lunch' | 'dinner' | 'snack')[]  // Which meal slots
+  // AI-generated fields
+  prepInstructions?: string            // How to prepare this meal
+  cookingTime?: number                 // Minutes
+  storageInstructions?: string         // How to store
+  storageType?: StorageType
+  storageDays?: number                 // How many days it keeps
+  containerSize?: ContainerSize
+  containerCount?: number              // How many containers needed
+  reheatingInstructions?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MealPrepIngredient {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  mealPrepItemId?: string              // Reference to MealPrepItem (optional)
+  savedGroceryItemId?: string          // Reference to SavedGroceryItem (if exists)
+  name: string                         // Ingredient name
+  category?: string                    // Grocery category
+  amount: string                       // Calculated amount for prep
+  originalAmount?: string              // Original recipe amount (per serving)
+  unit?: string                        // Unit of measurement
+  isNewIngredient: boolean             // If this was created by AI
+  addedToGroceryList: boolean          // If already added to shopping list
+  householdId?: string
+  createdAt: Date
+}
+
+export interface MealPrepRecipe {
+  id?: string
+  savedMealId: string                  // Reference to SavedMeal
+  servings: number                     // Base servings for recipe
+  prepTime?: number                    // Minutes
+  cookTime?: number                    // Minutes
+  totalTime?: number                   // Minutes
+  instructions: string                 // Step-by-step instructions (from AI or user)
+  tips?: string                        // Meal prep tips
+  nutritionInfo?: {
+    calories?: number
+    protein?: number
+    carbs?: number
+    fat?: number
+  }
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
 // Savings Module interfaces
 export type SavingMethod = '52_week_challenge' | 'envelope_method' | 'round_up' | 'fixed_monthly' | 'bi_weekly' | 'custom'
 export type DistributionMethod = 'equal' | 'percentage'
@@ -840,6 +921,11 @@ export class DomusDatabase extends Dexie {
   savingsMilestones!: Table<SavingsMilestone>
   savingsParticipants!: Table<SavingsParticipant>
   savingsContributions!: Table<SavingsContribution>
+  // Meal Prep Planner tables
+  mealPrepPlans!: Table<MealPrepPlan>
+  mealPrepItems!: Table<MealPrepItem>
+  mealPrepIngredients!: Table<MealPrepIngredient>
+  mealPrepRecipes!: Table<MealPrepRecipe>
   // Sync support
   deletionLog!: Table<DeletionLog>
   private legacyMealIngredientMigrationComplete = false
@@ -916,6 +1002,14 @@ export class DomusDatabase extends Dexie {
     // v28: Add deletion log for sync support
     this.version(28).stores({
       deletionLog: 'id, tableName, recordId, householdId, deletedAt'
+    })
+
+    // v29: Add Meal Prep Planner module tables
+    this.version(29).stores({
+      mealPrepPlans: 'id, name, cookingDate, startDate, endDate, status, householdId, createdByUserId, createdAt',
+      mealPrepItems: 'id, mealPrepPlanId, savedMealId, mealName, householdId, createdAt',
+      mealPrepIngredients: 'id, mealPrepPlanId, mealPrepItemId, savedGroceryItemId, name, householdId, createdAt',
+      mealPrepRecipes: 'id, savedMealId, householdId, createdAt'
     })
 
     // v27: Add Savings module tables

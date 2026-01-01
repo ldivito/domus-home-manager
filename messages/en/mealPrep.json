@@ -1,0 +1,124 @@
+{
+  "title": "Meal Prep Planner",
+  "subtitle": "Plan your weekly meal prep with AI-powered calculations",
+  "settings": "Settings",
+  "defaultPlanName": "Meal Prep - {date}",
+  "apiKeyRequired": "OpenAI API Key Required",
+  "apiKeyDescription": "Enter your OpenAI API key to enable AI-powered ingredient calculations and meal prep instructions. Your key is stored locally and never sent to our servers.",
+  "saveApiKey": "Save Key",
+  "back": "Back",
+  "next": "Next",
+  "savePlan": "Save Plan",
+  "calculateWithAI": "Calculate with AI",
+
+  "steps": {
+    "setup": "Setup",
+    "meals": "Meals",
+    "calculate": "Calculate",
+    "review": "Review",
+    "prep": "Prep Guide"
+  },
+
+  "setup": {
+    "title": "Setup Your Meal Prep",
+    "description": "Set the cooking day, date range, and number of people",
+    "planName": "Plan Name",
+    "planNamePlaceholder": "e.g., Week 1 Meal Prep",
+    "cookingDate": "Cooking Day",
+    "cookingDateHint": "The day you'll prepare all meals",
+    "startDate": "First Day",
+    "endDate": "Last Day",
+    "numberOfPeople": "People per Meal",
+    "summary": "Summary",
+    "summaryText": "You're planning meals for {days} days, serving {people} people per meal."
+  },
+
+  "meals": {
+    "title": "Select Your Meals",
+    "description": "Choose meals to prep from your saved recipes or add custom ones",
+    "savedMeals": "Saved Meals",
+    "customMeal": "Custom Meal",
+    "searchPlaceholder": "Search saved meals...",
+    "noSavedMeals": "No saved meals found. Add a custom meal or save some meals first.",
+    "customPlaceholder": "Enter meal name (e.g., Chicken Stir Fry)",
+    "add": "Add",
+    "aiWillGenerate": "AI will generate ingredients and instructions for custom meals",
+    "selected": "Selected Meals",
+    "totalServings": "{count} total servings",
+    "ai": "AI"
+  },
+
+  "calculating": {
+    "title": "Calculating Your Meal Prep",
+    "description": "AI is calculating ingredients, instructions, and storage guidance...",
+    "button": "Calculating...",
+    "ingredients": "Calculating ingredients...",
+    "instructions": "Generating prep instructions...",
+    "containers": "Planning container storage...",
+    "complete": "Calculations complete!"
+  },
+
+  "review": {
+    "title": "Review Your Plan",
+    "description": "Check ingredients and meal schedule",
+    "ingredients": "Shopping List",
+    "schedule": "Meal Schedule",
+    "consolidated": "Combined",
+    "addToGrocery": "Add All to Grocery List",
+    "allAdded": "All Added to Grocery",
+    "servings": "servings",
+    "assignedDays": "Scheduled for",
+    "addToCalendar": "Add Meals to Calendar"
+  },
+
+  "prep": {
+    "title": "Prep Guide",
+    "description": "Follow this guide on cooking day for maximum efficiency",
+    "order": "Cooking Order",
+    "instructions": "Instructions",
+    "storage": "Storage & Containers",
+    "orderDescription": "Follow this order for the most efficient meal prep session:",
+    "time": "{time} min total",
+    "tips": "Pro Tips",
+    "prepTime": "Prep: {time}min",
+    "cookTime": "Cook: {time}min",
+    "steps": "Steps",
+    "mealTips": "Tips",
+    "calories": "Calories",
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat",
+    "container": {
+      "small": "Small (~1 cup)",
+      "medium": "Medium (~2 cups)",
+      "large": "Large (~4 cups)",
+      "extra-large": "XL (~6+ cups)"
+    },
+    "storageType": {
+      "refrigerator": "Refrigerate",
+      "freezer": "Freeze",
+      "pantry": "Pantry"
+    },
+    "storageDuration": "Keeps for",
+    "days": "{count} days",
+    "containers": "Containers needed",
+    "label": "Label",
+    "reheating": "Reheating",
+    "organizationTips": "Organization Tips"
+  },
+
+  "notifications": {
+    "addedToGrocery": "Ingredients added to grocery list",
+    "planSaved": "Meal prep plan saved successfully",
+    "mealsCreated": "Meals added to your calendar",
+    "apiKeySaved": "API key saved"
+  },
+
+  "errors": {
+    "noApiKey": "Please add your OpenAI API key to use AI features",
+    "calculationFailed": "Failed to calculate meal prep. Please try again.",
+    "saveFailed": "Failed to save meal prep plan",
+    "addToGroceryFailed": "Failed to add ingredients to grocery list",
+    "createMealsFailed": "Failed to create calendar meals"
+  }
+}

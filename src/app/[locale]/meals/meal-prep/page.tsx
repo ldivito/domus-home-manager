@@ -1,0 +1,1384 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  ChefHat,
+  Calendar,
+  Users,
+  ShoppingCart,
+  UtensilsCrossed,
+  Package,
+  Clock,
+  Thermometer,
+  AlertCircle,
+  Check,
+  Plus,
+  Minus,
+  Trash2,
+  Sparkles,
+  ArrowLeft,
+  ArrowRight,
+  RefreshCw,
+  Download,
+  Loader2,
+  Settings,
+  ChevronDown,
+  ChevronUp
+} from "lucide-react"
+import { db, SavedMeal, MealIngredient, MealPrepPlan, MealPrepItem, MealPrepIngredient } from '@/lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { generateId, toDate } from '@/lib/utils'
+import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
+
+type WizardStep = 'setup' | 'meals' | 'calculate' | 'review' | 'prep'
+
+interface SelectedMeal {
+  id: string
+  name: string
+  description?: string
+  category?: string
+  servings: number
+  ingredients: MealIngredient[]
+  isCustom?: boolean
+  assignedDays: string[]
+  mealTypes: ('breakfast' | 'lunch' | 'dinner' | 'snack')[]
+}
+
+interface CalculatedIngredient {
+  name: string
+  category: string
+  amount: string
+  unit: string
+  originalAmount: string
+  isConsolidated: boolean
+  addedToGrocery: boolean
+}
+
+interface MealInstruction {
+  mealName: string
+  prepTime: number
+  cookTime: number
+  totalTime: number
+  instructions: string
+  tips: string
+  storageType: 'refrigerator' | 'freezer' | 'pantry'
+  storageDays: number
+  storageInstructions: string
+  reheatingInstructions: string
+  containerSize: string
+  containerCount: number
+  nutritionEstimate?: {
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+  }
+}
+
+interface ContainerPlan {
+  mealName: string
+  containerSize: string
+  containerCount: number
+  portionSize: string
+  labelSuggestion: string
+}
+
+export default function MealPrepPage() {
+  const t = useTranslations('mealPrep')
+  const tMeals = useTranslations('meals')
+  const router = useRouter()
+
+  // Wizard state
+  const [currentStep, setCurrentStep] = useState<WizardStep>('setup')
+  const [isCalculating, setIsCalculating] = useState(false)
+
+  // Setup state
+  const [planName, setPlanName] = useState('')
+  const [cookingDate, setCookingDate] = useState<string>('')
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
+  const [numberOfPeople, setNumberOfPeople] = useState(2)
+  const [openAIKey, setOpenAIKey] = useState('')
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false)
+
+  // Meals state
+  const [selectedMeals, setSelectedMeals] = useState<SelectedMeal[]>([])
+  const [customMealName, setCustomMealName] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Calculated results state
+  const [calculatedIngredients, setCalculatedIngredients] = useState<CalculatedIngredient[]>([])
+  const [mealInstructions, setMealInstructions] = useState<MealInstruction[]>([])
+  const [prepOrder, setPrepOrder] = useState<string[]>([])
+  const [generalTips, setGeneralTips] = useState<string[]>([])
+  const [containerPlan, setContainerPlan] = useState<ContainerPlan[]>([])
+  const [organizationTips, setOrganizationTips] = useState<string[]>([])
+
+  // Expanded sections in prep view
+  const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set())
+
+  // Saved plan ID (for editing)
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(null)
+
+  // Load saved meals and grocery items
+  const savedMeals = useLiveQuery(
+    () => db.savedMeals.orderBy('timesUsed').reverse().toArray(),
+    []
+  ) || []
+
+  const savedGroceryItems = useLiveQuery(
+    () => db.savedGroceryItems.toArray(),
+    []
+  ) || []
+
+  const mealCategories = useLiveQuery(
+    () => db.mealCategories.orderBy('name').toArray(),
+    []
+  ) || []
+
+  // Load API key from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedKey = localStorage.getItem('openai_api_key')
+      if (savedKey) {
+        setOpenAIKey(savedKey)
+      }
+    }
+  }, [])
+
+  // Set default dates
+  useEffect(() => {
+    const today = new Date()
+    const nextSunday = new Date(today)
+    nextSunday.setDate(today.getDate() + (7 - today.getDay()))
+
+    // Default cooking date is next Sunday
+    setCookingDate(nextSunday.toISOString().split('T')[0])
+
+    // Start date is the day after cooking
+    const start = new Date(nextSunday)
+    start.setDate(start.getDate() + 1)
+    setStartDate(start.toISOString().split('T')[0])
+
+    // End date is 6 days after start (full week)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 6)
+    setEndDate(end.toISOString().split('T')[0])
+
+    // Default plan name
+    setPlanName(t('defaultPlanName', { date: nextSunday.toLocaleDateString() }))
+  }, [t])
+
+  // Calculate number of days
+  const daysOfPrep = startDate && endDate
+    ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    : 7
+
+  // Filter saved meals by search
+  const filteredSavedMeals = savedMeals.filter(meal =>
+    meal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (meal.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+
+  // Get category name
+  const getCategoryName = (categoryId: string) => {
+    const category = mealCategories.find(c => c.id === categoryId)
+    if (!category) return categoryId
+
+    // Handle translation keys
+    if (category.name.startsWith('defaultMealCategories.')) {
+      return tMeals(category.name as Parameters<typeof tMeals>[0])
+    }
+    return category.name
+  }
+
+  // Add a saved meal to selection
+  const addSavedMeal = (meal: SavedMeal) => {
+    if (!meal.id) return
+
+    const existingIndex = selectedMeals.findIndex(m => m.id === meal.id)
+    if (existingIndex >= 0) {
+      // Increase servings
+      setSelectedMeals(prev => prev.map((m, i) =>
+        i === existingIndex ? { ...m, servings: m.servings + numberOfPeople } : m
+      ))
+    } else {
+      setSelectedMeals(prev => [...prev, {
+        id: meal.id!,
+        name: meal.name,
+        description: meal.description,
+        category: meal.category,
+        servings: numberOfPeople,
+        ingredients: meal.ingredients || [],
+        assignedDays: [],
+        mealTypes: ['dinner']
+      }])
+    }
+  }
+
+  // Add a custom meal (will be generated by AI)
+  const addCustomMeal = () => {
+    if (!customMealName.trim()) return
+
+    setSelectedMeals(prev => [...prev, {
+      id: generateId('custom'),
+      name: customMealName.trim(),
+      servings: numberOfPeople,
+      ingredients: [],
+      isCustom: true,
+      assignedDays: [],
+      mealTypes: ['dinner']
+    }])
+    setCustomMealName('')
+  }
+
+  // Update meal servings
+  const updateMealServings = (mealId: string, delta: number) => {
+    setSelectedMeals(prev => prev.map(m =>
+      m.id === mealId
+        ? { ...m, servings: Math.max(1, m.servings + delta) }
+        : m
+    ))
+  }
+
+  // Remove meal from selection
+  const removeMeal = (mealId: string) => {
+    setSelectedMeals(prev => prev.filter(m => m.id !== mealId))
+  }
+
+  // Toggle meal type for a selected meal
+  const toggleMealType = (mealId: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
+    setSelectedMeals(prev => prev.map(m => {
+      if (m.id !== mealId) return m
+      const types = m.mealTypes.includes(mealType)
+        ? m.mealTypes.filter(t => t !== mealType)
+        : [...m.mealTypes, mealType]
+      return { ...m, mealTypes: types.length > 0 ? types : ['dinner'] }
+    }))
+  }
+
+  // Calculate total servings
+  const totalServings = selectedMeals.reduce((sum, m) => sum + m.servings, 0)
+
+  // Distribute meals across days
+  const distributeMeals = useCallback(() => {
+    if (!startDate || !endDate || selectedMeals.length === 0) return
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const days: string[] = []
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      days.push(d.toISOString().split('T')[0])
+    }
+
+    // Distribute meals evenly across days
+    const mealsPerDay: { [day: string]: { [type: string]: string[] } } = {}
+    days.forEach(day => {
+      mealsPerDay[day] = { breakfast: [], lunch: [], dinner: [], snack: [] }
+    })
+
+    // Sort meals by number of servings (more servings = more frequent)
+    const sortedMeals = [...selectedMeals].sort((a, b) => b.servings - a.servings)
+
+    sortedMeals.forEach(meal => {
+      const servingsNeeded = meal.servings
+      let assigned = 0
+      let dayIndex = 0
+
+      while (assigned < servingsNeeded && dayIndex < days.length * 2) {
+        const day = days[dayIndex % days.length]
+        const mealType = meal.mealTypes[0] || 'dinner'
+
+        // Check if this day/type slot is available
+        if (mealsPerDay[day][mealType].length < 2) { // Allow up to 2 meals per type per day
+          mealsPerDay[day][mealType].push(meal.id)
+          assigned += numberOfPeople
+        }
+        dayIndex++
+      }
+    })
+
+    // Update selected meals with assigned days
+    setSelectedMeals(prev => prev.map(meal => {
+      const assignedDays: string[] = []
+      Object.entries(mealsPerDay).forEach(([day, types]) => {
+        Object.values(types).forEach(mealIds => {
+          if (mealIds.includes(meal.id)) {
+            assignedDays.push(day)
+          }
+        })
+      })
+      return { ...meal, assignedDays: [...new Set(assignedDays)] }
+    }))
+  }, [startDate, endDate, selectedMeals, numberOfPeople])
+
+  // Call AI to calculate ingredients and instructions
+  const calculateWithAI = async () => {
+    if (!openAIKey) {
+      toast.error(t('errors.noApiKey'))
+      setShowApiKeyInput(true)
+      return
+    }
+
+    setIsCalculating(true)
+
+    try {
+      // Prepare meals data for API
+      const mealsData = selectedMeals.map(meal => ({
+        name: meal.name,
+        description: meal.description,
+        category: meal.category ? getCategoryName(meal.category) : undefined,
+        servings: meal.servings,
+        existingIngredients: meal.ingredients.map(ing => {
+          const item = savedGroceryItems.find(i => i.id === ing.savedGroceryItemId)
+          return item ? { name: item.name, amount: ing.amount } : null
+        }).filter(Boolean) as { name: string; amount?: string }[]
+      }))
+
+      // Step 1: Calculate ingredients
+      toast.loading(t('calculating.ingredients'))
+      const ingredientsResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'calculate-ingredients',
+          apiKey: openAIKey,
+          data: {
+            meals: mealsData,
+            totalServings,
+            numberOfPeople,
+            daysOfPrep
+          }
+        })
+      })
+
+      if (!ingredientsResponse.ok) {
+        const error = await ingredientsResponse.json()
+        throw new Error(error.error || 'Failed to calculate ingredients')
+      }
+
+      const ingredientsData = await ingredientsResponse.json()
+      setCalculatedIngredients(ingredientsData.ingredients.map((ing: CalculatedIngredient) => ({
+        ...ing,
+        addedToGrocery: false
+      })))
+
+      // Step 2: Generate instructions
+      toast.loading(t('calculating.instructions'))
+      const instructionsResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate-instructions',
+          apiKey: openAIKey,
+          data: { meals: mealsData }
+        })
+      })
+
+      if (!instructionsResponse.ok) {
+        const error = await instructionsResponse.json()
+        throw new Error(error.error || 'Failed to generate instructions')
+      }
+
+      const instructionsData = await instructionsResponse.json()
+      setMealInstructions(instructionsData.instructions)
+      setPrepOrder(instructionsData.prepOrder)
+      setGeneralTips(instructionsData.generalTips)
+
+      // Step 3: Get container guidance
+      toast.loading(t('calculating.containers'))
+      const containerResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'container-guidance',
+          apiKey: openAIKey,
+          data: {
+            meals: mealsData,
+            numberOfPeople,
+            daysOfPrep
+          }
+        })
+      })
+
+      if (!containerResponse.ok) {
+        const error = await containerResponse.json()
+        throw new Error(error.error || 'Failed to get container guidance')
+      }
+
+      const containerData = await containerResponse.json()
+      setContainerPlan(containerData.containerPlan)
+      setOrganizationTips(containerData.organizationTips)
+
+      toast.dismiss()
+      toast.success(t('calculating.complete'))
+      setCurrentStep('review')
+
+    } catch (error) {
+      toast.dismiss()
+      logger.error('Error calculating meal prep:', error)
+      toast.error(error instanceof Error ? error.message : t('errors.calculationFailed'))
+    } finally {
+      setIsCalculating(false)
+    }
+  }
+
+  // Add ingredients to grocery list
+  const addIngredientsToGrocery = async () => {
+    try {
+      for (const ingredient of calculatedIngredients) {
+        if (ingredient.addedToGrocery) continue
+
+        // Check if ingredient exists in saved items
+        let savedItem = savedGroceryItems.find(
+          i => i.name.toLowerCase() === ingredient.name.toLowerCase()
+        )
+
+        // Create new saved item if not exists
+        if (!savedItem) {
+          const newItemId = generateId('sgi')
+          await db.savedGroceryItems.add({
+            id: newItemId,
+            name: ingredient.name,
+            category: ingredient.category || 'Pantry',
+            amount: ingredient.amount,
+            importance: 'medium',
+            timesUsed: 0,
+            createdAt: new Date()
+          })
+          savedItem = await db.savedGroceryItems.get(newItemId)
+        }
+
+        // Add to grocery list
+        await db.groceryItems.add({
+          id: generateId('gi'),
+          name: ingredient.name,
+          category: ingredient.category || 'Pantry',
+          amount: ingredient.amount,
+          importance: 'medium',
+          createdAt: new Date()
+        })
+      }
+
+      // Mark all as added
+      setCalculatedIngredients(prev => prev.map(ing => ({ ...ing, addedToGrocery: true })))
+      toast.success(t('notifications.addedToGrocery'))
+    } catch (error) {
+      logger.error('Error adding ingredients to grocery:', error)
+      toast.error(t('errors.addToGroceryFailed'))
+    }
+  }
+
+  // Save the meal prep plan
+  const savePlan = async () => {
+    try {
+      const now = new Date()
+      const planId = savedPlanId || generateId('mpp')
+
+      // Save the plan
+      const plan: MealPrepPlan = {
+        id: planId,
+        name: planName || t('defaultPlanName', { date: cookingDate }),
+        cookingDate: new Date(cookingDate),
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        servingsPerMeal: numberOfPeople,
+        numberOfMeals: selectedMeals.length,
+        status: 'planning',
+        createdAt: now,
+        updatedAt: now
+      }
+
+      if (savedPlanId) {
+        await db.mealPrepPlans.update(savedPlanId, plan)
+      } else {
+        await db.mealPrepPlans.add(plan)
+      }
+
+      // Save meal items
+      for (const meal of selectedMeals) {
+        const instruction = mealInstructions.find(i => i.mealName === meal.name)
+        const container = containerPlan.find(c => c.mealName === meal.name)
+
+        const itemId = generateId('mpi')
+        const item: MealPrepItem = {
+          id: itemId,
+          mealPrepPlanId: planId,
+          savedMealId: meal.isCustom ? undefined : meal.id,
+          mealName: meal.name,
+          mealDescription: meal.description,
+          category: meal.category,
+          quantity: meal.servings,
+          assignedDays: meal.assignedDays,
+          mealTypes: meal.mealTypes,
+          prepInstructions: instruction?.instructions,
+          cookingTime: instruction?.cookTime,
+          storageInstructions: instruction?.storageInstructions,
+          storageType: instruction?.storageType,
+          storageDays: instruction?.storageDays,
+          containerSize: container?.containerSize as 'small' | 'medium' | 'large' | 'extra-large',
+          containerCount: container?.containerCount,
+          reheatingInstructions: instruction?.reheatingInstructions,
+          createdAt: now,
+          updatedAt: now
+        }
+
+        await db.mealPrepItems.add(item)
+
+        // If it's a custom meal, create a saved meal for future use
+        if (meal.isCustom) {
+          const savedMealId = generateId('smea')
+          await db.savedMeals.add({
+            id: savedMealId,
+            name: meal.name,
+            description: meal.description,
+            category: meal.category || 'defaultMealCategories.comfort',
+            ingredients: [],
+            timesUsed: 1,
+            lastUsed: now,
+            createdAt: now
+          })
+        }
+      }
+
+      // Save ingredients
+      for (const ingredient of calculatedIngredients) {
+        const ingredientId = generateId('mpig')
+
+        // Check if ingredient exists in saved items
+        const savedItem = savedGroceryItems.find(
+          i => i.name.toLowerCase() === ingredient.name.toLowerCase()
+        )
+
+        const prepIngredient: MealPrepIngredient = {
+          id: ingredientId,
+          mealPrepPlanId: planId,
+          savedGroceryItemId: savedItem?.id,
+          name: ingredient.name,
+          category: ingredient.category,
+          amount: ingredient.amount,
+          originalAmount: ingredient.originalAmount,
+          unit: ingredient.unit,
+          isNewIngredient: !savedItem,
+          addedToGroceryList: ingredient.addedToGrocery,
+          createdAt: now
+        }
+
+        await db.mealPrepIngredients.add(prepIngredient)
+
+        // Create saved grocery item if new
+        if (!savedItem) {
+          await db.savedGroceryItems.add({
+            id: generateId('sgi'),
+            name: ingredient.name,
+            category: ingredient.category || 'Pantry',
+            amount: ingredient.amount,
+            importance: 'medium',
+            timesUsed: 1,
+            lastUsed: now,
+            createdAt: now
+          })
+        }
+      }
+
+      setSavedPlanId(planId)
+      toast.success(t('notifications.planSaved'))
+
+    } catch (error) {
+      logger.error('Error saving meal prep plan:', error)
+      toast.error(t('errors.saveFailed'))
+    }
+  }
+
+  // Create calendar meals from the prep plan
+  const createCalendarMeals = async () => {
+    try {
+      const now = new Date()
+
+      for (const meal of selectedMeals) {
+        for (const day of meal.assignedDays) {
+          for (const mealType of meal.mealTypes) {
+            await db.meals.add({
+              id: generateId('mea'),
+              title: meal.name,
+              description: meal.description,
+              date: new Date(day),
+              mealType,
+              ingredients: meal.ingredients,
+              createdAt: now
+            })
+          }
+        }
+      }
+
+      toast.success(t('notifications.mealsCreated'))
+    } catch (error) {
+      logger.error('Error creating calendar meals:', error)
+      toast.error(t('errors.createMealsFailed'))
+    }
+  }
+
+  // Save API key
+  const saveApiKey = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('openai_api_key', openAIKey)
+      toast.success(t('notifications.apiKeySaved'))
+      setShowApiKeyInput(false)
+    }
+  }
+
+  // Toggle expanded meal in prep view
+  const toggleMealExpanded = (mealName: string) => {
+    setExpandedMeals(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(mealName)) {
+        newSet.delete(mealName)
+      } else {
+        newSet.add(mealName)
+      }
+      return newSet
+    })
+  }
+
+  // Navigation
+  const canProceed = () => {
+    switch (currentStep) {
+      case 'setup':
+        return cookingDate && startDate && endDate && numberOfPeople > 0
+      case 'meals':
+        return selectedMeals.length > 0
+      case 'calculate':
+        return calculatedIngredients.length > 0
+      case 'review':
+        return true
+      default:
+        return true
+    }
+  }
+
+  const goBack = () => {
+    const steps: WizardStep[] = ['setup', 'meals', 'calculate', 'review', 'prep']
+    const currentIndex = steps.indexOf(currentStep)
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1])
+    }
+  }
+
+  const goNext = () => {
+    const steps: WizardStep[] = ['setup', 'meals', 'calculate', 'review', 'prep']
+    const currentIndex = steps.indexOf(currentStep)
+    if (currentStep === 'meals') {
+      distributeMeals()
+      calculateWithAI()
+    } else if (currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1])
+    }
+  }
+
+  const stepProgress = () => {
+    const steps: WizardStep[] = ['setup', 'meals', 'calculate', 'review', 'prep']
+    return ((steps.indexOf(currentStep) + 1) / steps.length) * 100
+  }
+
+  return (
+    <div className="p-4 md:p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/meals')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <ChefHat className="h-7 w-7" />
+                {t('title')}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            {t('settings')}
+          </Button>
+        </div>
+
+        {/* API Key Input */}
+        {showApiKeyInput && (
+          <Card className="mb-6 border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    {t('apiKeyRequired')}
+                  </p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                    {t('apiKeyDescription')}
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Input
+                      type="password"
+                      placeholder="sk-..."
+                      value={openAIKey}
+                      onChange={(e) => setOpenAIKey(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button size="sm" onClick={saveApiKey}>
+                      {t('saveApiKey')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Progress Bar */}
+        <div className="mb-6">
+          <Progress value={stepProgress()} className="h-2" />
+          <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <span className={currentStep === 'setup' ? 'text-blue-600 font-medium' : ''}>{t('steps.setup')}</span>
+            <span className={currentStep === 'meals' ? 'text-blue-600 font-medium' : ''}>{t('steps.meals')}</span>
+            <span className={currentStep === 'calculate' ? 'text-blue-600 font-medium' : ''}>{t('steps.calculate')}</span>
+            <span className={currentStep === 'review' ? 'text-blue-600 font-medium' : ''}>{t('steps.review')}</span>
+            <span className={currentStep === 'prep' ? 'text-blue-600 font-medium' : ''}>{t('steps.prep')}</span>
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <Card className="mb-6">
+          {/* SETUP STEP */}
+          {currentStep === 'setup' && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  {t('setup.title')}
+                </CardTitle>
+                <CardDescription>{t('setup.description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="planName">{t('setup.planName')}</Label>
+                  <Input
+                    id="planName"
+                    value={planName}
+                    onChange={(e) => setPlanName(e.target.value)}
+                    placeholder={t('setup.planNamePlaceholder')}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="cookingDate">{t('setup.cookingDate')}</Label>
+                    <Input
+                      id="cookingDate"
+                      type="date"
+                      value={cookingDate}
+                      onChange={(e) => setCookingDate(e.target.value)}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{t('setup.cookingDateHint')}</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="startDate">{t('setup.startDate')}</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="endDate">{t('setup.endDate')}</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>{t('setup.numberOfPeople')}</Label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-gray-500" />
+                      <span className="text-2xl font-bold w-12 text-center">{numberOfPeople}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setNumberOfPeople(numberOfPeople + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">{t('setup.summary')}</h4>
+                  <p className="text-sm text-blue-600 dark:text-blue-300">
+                    {t('setup.summaryText', { days: daysOfPrep, people: numberOfPeople })}
+                  </p>
+                </div>
+              </CardContent>
+            </>
+          )}
+
+          {/* MEALS STEP */}
+          {currentStep === 'meals' && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UtensilsCrossed className="h-5 w-5" />
+                  {t('meals.title')}
+                </CardTitle>
+                <CardDescription>{t('meals.description')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="saved" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="saved">{t('meals.savedMeals')}</TabsTrigger>
+                    <TabsTrigger value="custom">{t('meals.customMeal')}</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="saved">
+                    <Input
+                      placeholder={t('meals.searchPlaceholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="mb-4"
+                    />
+                    <ScrollArea className="h-64">
+                      <div className="space-y-2">
+                        {filteredSavedMeals.length === 0 ? (
+                          <p className="text-center text-gray-500 py-4">
+                            {t('meals.noSavedMeals')}
+                          </p>
+                        ) : (
+                          filteredSavedMeals.map(meal => (
+                            <div
+                              key={meal.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                              onClick={() => addSavedMeal(meal)}
+                            >
+                              <div>
+                                <p className="font-medium">{meal.name}</p>
+                                {meal.description && (
+                                  <p className="text-sm text-gray-500 truncate max-w-xs">{meal.description}</p>
+                                )}
+                                <Badge variant="outline" className="mt-1">
+                                  {getCategoryName(meal.category)}
+                                </Badge>
+                              </div>
+                              <Button variant="ghost" size="icon">
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="custom">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder={t('meals.customPlaceholder')}
+                        value={customMealName}
+                        onChange={(e) => setCustomMealName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addCustomMeal()}
+                      />
+                      <Button onClick={addCustomMeal}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t('meals.add')}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      {t('meals.aiWillGenerate')}
+                    </p>
+                  </TabsContent>
+                </Tabs>
+
+                {/* Selected Meals */}
+                {selectedMeals.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-medium mb-3 flex items-center justify-between">
+                      <span>{t('meals.selected')} ({selectedMeals.length})</span>
+                      <span className="text-sm text-gray-500">
+                        {t('meals.totalServings', { count: totalServings })}
+                      </span>
+                    </h4>
+                    <div className="space-y-3">
+                      {selectedMeals.map(meal => (
+                        <div
+                          key={meal.id}
+                          className="flex items-center justify-between p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{meal.name}</p>
+                              {meal.isCustom && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Sparkles className="h-3 w-3 mr-1" />
+                                  {t('meals.ai')}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1 mt-1">
+                              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(type => (
+                                <Badge
+                                  key={type}
+                                  variant={meal.mealTypes.includes(type) ? 'default' : 'outline'}
+                                  className="text-xs cursor-pointer"
+                                  onClick={() => toggleMealType(meal.id, type)}
+                                >
+                                  {tMeals(`mealTypes.${type}`)}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateMealServings(meal.id, -numberOfPeople)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-12 text-center font-medium">
+                              {meal.servings}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateMealServings(meal.id, numberOfPeople)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500"
+                              onClick={() => removeMeal(meal.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </>
+          )}
+
+          {/* CALCULATE STEP (Loading State) */}
+          {currentStep === 'calculate' && isCalculating && (
+            <CardContent className="py-16 text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">{t('calculating.title')}</h3>
+              <p className="text-gray-500">{t('calculating.description')}</p>
+            </CardContent>
+          )}
+
+          {/* REVIEW STEP */}
+          {currentStep === 'review' && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5" />
+                  {t('review.title')}
+                </CardTitle>
+                <CardDescription>{t('review.description')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="ingredients" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="ingredients">{t('review.ingredients')}</TabsTrigger>
+                    <TabsTrigger value="schedule">{t('review.schedule')}</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="ingredients">
+                    <div className="space-y-4">
+                      {/* Group ingredients by category */}
+                      {Object.entries(
+                        calculatedIngredients.reduce((acc, ing) => {
+                          const cat = ing.category || 'Other'
+                          if (!acc[cat]) acc[cat] = []
+                          acc[cat].push(ing)
+                          return acc
+                        }, {} as Record<string, CalculatedIngredient[]>)
+                      ).map(([category, items]) => (
+                        <div key={category}>
+                          <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            {category}
+                          </h4>
+                          <div className="space-y-1">
+                            {items.map((ing, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {ing.addedToGrocery && (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  )}
+                                  <span>{ing.name}</span>
+                                  {ing.isConsolidated && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {t('review.consolidated')}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="font-medium">{ing.amount}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      <Button
+                        onClick={addIngredientsToGrocery}
+                        className="w-full mt-4"
+                        disabled={calculatedIngredients.every(i => i.addedToGrocery)}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        {calculatedIngredients.every(i => i.addedToGrocery)
+                          ? t('review.allAdded')
+                          : t('review.addToGrocery')}
+                      </Button>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="schedule">
+                    <div className="space-y-4">
+                      {selectedMeals.map(meal => (
+                        <div key={meal.id} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium">{meal.name}</h4>
+                            <Badge>{meal.servings} {t('review.servings')}</Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {meal.mealTypes.map(type => (
+                              <Badge key={type} variant="outline">
+                                {tMeals(`mealTypes.${type}`)}
+                              </Badge>
+                            ))}
+                          </div>
+                          {meal.assignedDays.length > 0 && (
+                            <div className="mt-2 text-sm text-gray-500">
+                              {t('review.assignedDays')}: {meal.assignedDays.map(d =>
+                                new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                              ).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      <Button onClick={createCalendarMeals} variant="outline" className="w-full">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {t('review.addToCalendar')}
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </>
+          )}
+
+          {/* PREP STEP */}
+          {currentStep === 'prep' && (
+            <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ChefHat className="h-5 w-5" />
+                  {t('prep.title')}
+                </CardTitle>
+                <CardDescription>{t('prep.description')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="order" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 mb-4">
+                    <TabsTrigger value="order">{t('prep.order')}</TabsTrigger>
+                    <TabsTrigger value="instructions">{t('prep.instructions')}</TabsTrigger>
+                    <TabsTrigger value="storage">{t('prep.storage')}</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="order">
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-500 mb-4">{t('prep.orderDescription')}</p>
+                      {prepOrder.map((mealName, idx) => {
+                        const instruction = mealInstructions.find(i => i.mealName === mealName)
+                        return (
+                          <div key={idx} className="flex items-center gap-3 p-3 border rounded-lg">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center font-bold text-blue-600 dark:text-blue-400">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{mealName}</p>
+                              {instruction && (
+                                <p className="text-sm text-gray-500">
+                                  <Clock className="h-3 w-3 inline mr-1" />
+                                  {t('prep.time', { time: instruction.totalTime })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {generalTips.length > 0 && (
+                        <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                          <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
+                            {t('prep.tips')}
+                          </h4>
+                          <ul className="list-disc list-inside text-sm text-green-600 dark:text-green-300 space-y-1">
+                            {generalTips.map((tip, idx) => (
+                              <li key={idx}>{tip}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="instructions">
+                    <ScrollArea className="h-96">
+                      <div className="space-y-4 pr-4">
+                        {mealInstructions.map((instruction, idx) => (
+                          <div key={idx} className="border rounded-lg">
+                            <button
+                              className="w-full p-4 flex items-center justify-between text-left"
+                              onClick={() => toggleMealExpanded(instruction.mealName)}
+                            >
+                              <div>
+                                <h4 className="font-medium">{instruction.mealName}</h4>
+                                <p className="text-sm text-gray-500">
+                                  <Clock className="h-3 w-3 inline mr-1" />
+                                  {t('prep.prepTime', { time: instruction.prepTime })} |
+                                  {t('prep.cookTime', { time: instruction.cookTime })}
+                                </p>
+                              </div>
+                              {expandedMeals.has(instruction.mealName) ? (
+                                <ChevronUp className="h-5 w-5" />
+                              ) : (
+                                <ChevronDown className="h-5 w-5" />
+                              )}
+                            </button>
+                            {expandedMeals.has(instruction.mealName) && (
+                              <div className="p-4 pt-0 border-t">
+                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                  <h5 className="text-sm font-medium mt-2">{t('prep.steps')}</h5>
+                                  <p className="whitespace-pre-wrap text-sm">{instruction.instructions}</p>
+
+                                  {instruction.tips && (
+                                    <>
+                                      <h5 className="text-sm font-medium mt-4">{t('prep.mealTips')}</h5>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">{instruction.tips}</p>
+                                    </>
+                                  )}
+
+                                  {instruction.nutritionEstimate && (
+                                    <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                                      <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                                        <p className="text-xs text-gray-500">{t('prep.calories')}</p>
+                                        <p className="font-medium">{instruction.nutritionEstimate.calories}</p>
+                                      </div>
+                                      <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                                        <p className="text-xs text-gray-500">{t('prep.protein')}</p>
+                                        <p className="font-medium">{instruction.nutritionEstimate.protein}g</p>
+                                      </div>
+                                      <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                                        <p className="text-xs text-gray-500">{t('prep.carbs')}</p>
+                                        <p className="font-medium">{instruction.nutritionEstimate.carbs}g</p>
+                                      </div>
+                                      <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                                        <p className="text-xs text-gray-500">{t('prep.fat')}</p>
+                                        <p className="font-medium">{instruction.nutritionEstimate.fat}g</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="storage">
+                    <div className="space-y-4">
+                      {/* Container Summary */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {['small', 'medium', 'large', 'extra-large'].map(size => {
+                          const count = containerPlan
+                            .filter(c => c.containerSize === size)
+                            .reduce((sum, c) => sum + c.containerCount, 0)
+                          return count > 0 ? (
+                            <div key={size} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
+                              <Package className="h-6 w-6 mx-auto text-gray-500 mb-1" />
+                              <p className="text-2xl font-bold">{count}</p>
+                              <p className="text-xs text-gray-500">{t(`prep.container.${size}`)}</p>
+                            </div>
+                          ) : null
+                        })}
+                      </div>
+
+                      {/* Detailed Container Plan */}
+                      <div className="space-y-3">
+                        {mealInstructions.map((instruction, idx) => {
+                          const container = containerPlan.find(c => c.mealName === instruction.mealName)
+                          return (
+                            <div key={idx} className="border rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium">{instruction.mealName}</h4>
+                                <div className="flex items-center gap-2">
+                                  <Thermometer className="h-4 w-4" />
+                                  <Badge variant={
+                                    instruction.storageType === 'freezer' ? 'destructive' :
+                                    instruction.storageType === 'refrigerator' ? 'default' : 'secondary'
+                                  }>
+                                    {t(`prep.storageType.${instruction.storageType}`)}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-500">{t('prep.storageDuration')}</p>
+                                  <p className="font-medium">{t('prep.days', { count: instruction.storageDays })}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500">{t('prep.containers')}</p>
+                                  <p className="font-medium">
+                                    {container?.containerCount || instruction.containerCount} x {container?.containerSize || instruction.containerSize}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {container?.labelSuggestion && (
+                                <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-sm">
+                                  <span className="text-yellow-600 dark:text-yellow-400 font-medium">
+                                    {t('prep.label')}:
+                                  </span> {container.labelSuggestion}
+                                </div>
+                              )}
+
+                              {instruction.reheatingInstructions && (
+                                <div className="mt-2">
+                                  <p className="text-xs text-gray-500">{t('prep.reheating')}</p>
+                                  <p className="text-sm">{instruction.reheatingInstructions}</p>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {organizationTips.length > 0 && (
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                            {t('prep.organizationTips')}
+                          </h4>
+                          <ul className="list-disc list-inside text-sm text-blue-600 dark:text-blue-300 space-y-1">
+                            {organizationTips.map((tip, idx) => (
+                              <li key={idx}>{tip}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </>
+          )}
+        </Card>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={goBack}
+            disabled={currentStep === 'setup'}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {t('back')}
+          </Button>
+
+          <div className="flex gap-2">
+            {currentStep === 'prep' && (
+              <Button onClick={savePlan} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                {t('savePlan')}
+              </Button>
+            )}
+
+            {currentStep !== 'prep' && (
+              <Button
+                onClick={goNext}
+                disabled={!canProceed() || isCalculating}
+              >
+                {isCalculating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t('calculating.button')}
+                  </>
+                ) : currentStep === 'meals' ? (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {t('calculateWithAI')}
+                  </>
+                ) : (
+                  <>
+                    {t('next')}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

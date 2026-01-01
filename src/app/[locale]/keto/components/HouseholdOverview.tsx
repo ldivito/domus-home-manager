@@ -168,7 +168,7 @@ export default function HouseholdOverview({
                   {t('household.leaderTitle')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {bestStreak.user.name} - {t('household.streakDays', { days: bestStreak.currentStreak })}
+                  {bestStreak.user.name || 'User'} - {t('household.streakDays', { days: bestStreak.currentStreak })}
                 </p>
               </div>
             </div>
@@ -189,13 +189,13 @@ export default function HouseholdOverview({
                   <div className="flex items-center gap-3">
                     <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-medium text-sm"
-                      style={{ backgroundColor: stat.user.color }}
+                      style={{ backgroundColor: stat.user.color || '#888' }}
                     >
-                      {stat.user.name.charAt(0).toUpperCase()}
+                      {(stat.user.name || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <p className="font-medium text-sm sm:text-base text-foreground">
-                        {stat.user.name}
+                        {stat.user.name || 'User'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {stat.hasStarted

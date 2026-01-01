@@ -1,10 +1,26 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, TrendingDown, TrendingUp, Minus, Scale, Target, Calendar } from "lucide-react"
+import { Plus, TrendingDown, TrendingUp, Minus, Scale, Target, Calendar, Pencil, Trash2, MoreHorizontal } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { KetoWeightEntry } from "@/lib/db"
 
 interface WeightProgressChartProps {
@@ -13,6 +29,8 @@ interface WeightProgressChartProps {
   targetDate?: Date
   weightUnit: 'kg' | 'lb'
   onAddWeight: () => void
+  onEditWeight?: (entry: KetoWeightEntry) => void
+  onDeleteWeight?: (id: string) => void
 }
 
 export default function WeightProgressChart({
@@ -21,8 +39,12 @@ export default function WeightProgressChart({
   targetDate,
   weightUnit,
   onAddWeight,
+  onEditWeight,
+  onDeleteWeight,
 }: WeightProgressChartProps) {
   const t = useTranslations('keto')
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const entryToDelete = weightEntries.find(e => e.id === deleteConfirmId)
 
   const stats = useMemo(() => {
     if (!weightEntries.length) {
@@ -303,6 +325,9 @@ export default function WeightProgressChart({
                   <th className="text-left p-2 font-medium">{t('weight.date')}</th>
                   <th className="text-right p-2 font-medium">{t('weight.weight')}</th>
                   <th className="text-right p-2 font-medium hidden sm:table-cell">{t('weight.change')}</th>
+                  {(onEditWeight || onDeleteWeight) && (
+                    <th className="text-right p-2 font-medium w-12">{t('weight.actions')}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -319,7 +344,7 @@ export default function WeightProgressChart({
                     const date = entry.date instanceof Date ? entry.date : new Date(entry.date)
 
                     return (
-                      <tr key={entry.id} className="border-t hover:bg-muted/30">
+                      <tr key={entry.id} className="border-t hover:bg-muted/30 group">
                         <td className="p-2">{formatDate(date)}</td>
                         <td className="p-2 text-right font-medium">{entry.weight.toFixed(1)} {weightUnit}</td>
                         <td className={`p-2 text-right hidden sm:table-cell ${
@@ -327,6 +352,38 @@ export default function WeightProgressChart({
                         }`}>
                           {change !== 0 && (change > 0 ? '+' : '')}{change.toFixed(1)}
                         </td>
+                        {(onEditWeight || onDeleteWeight) && (
+                          <td className="p-1.5 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <MoreHorizontal className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {onEditWeight && (
+                                  <DropdownMenuItem onClick={() => onEditWeight(entry)}>
+                                    <Pencil className="h-3.5 w-3.5 mr-2" />
+                                    {t('weight.edit')}
+                                  </DropdownMenuItem>
+                                )}
+                                {onDeleteWeight && (
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteConfirmId(entry.id!)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                    {t('weight.delete')}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -335,6 +392,36 @@ export default function WeightProgressChart({
           </div>
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('weight.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('weight.deleteConfirmDescription', {
+                weight: entryToDelete?.weight.toFixed(1) || '',
+                unit: weightUnit,
+                date: entryToDelete ? formatDate(entryToDelete.date instanceof Date ? entryToDelete.date : new Date(entryToDelete.date)) : ''
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('settings.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmId && onDeleteWeight) {
+                  onDeleteWeight(deleteConfirmId)
+                  setDeleteConfirmId(null)
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t('weight.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

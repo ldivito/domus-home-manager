@@ -4,7 +4,13 @@ import { useState, useEffect, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Settings, Check, X, CalendarDays, Clock, Users } from "lucide-react"
+import { Settings, Check, X, CalendarDays, Clock, Users, Flame, TrendingDown, Droplets } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useLiveQuery } from "dexie-react-hooks"
 import {
   db,
@@ -41,6 +47,7 @@ export default function KetoPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isWeightDialogOpen, setIsWeightDialogOpen] = useState(false)
+  const [editingWeightEntry, setEditingWeightEntry] = useState<KetoWeightEntry | null>(null)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
 
   // Get calendar settings (start of week preference)
@@ -462,21 +469,48 @@ export default function KetoPage() {
       const weightUnit = ketoSettings?.weightUnit || 'kg'
       const now = new Date()
 
-      const newEntry: KetoWeightEntry = {
-        id: generateId('weight'),
-        userId: selectedUser,
-        date: date,
-        weight: weight,
-        unit: weightUnit,
-        notes: notes,
-        createdAt: now,
-        updatedAt: now
+      if (editingWeightEntry) {
+        // Update existing entry
+        await db.ketoWeightEntries.update(editingWeightEntry.id!, {
+          weight: weight,
+          date: date,
+          notes: notes,
+          updatedAt: now
+        })
+        toast.success(t('messages.weightUpdated'))
+        setEditingWeightEntry(null)
+      } else {
+        // Add new entry
+        const newEntry: KetoWeightEntry = {
+          id: generateId('weight'),
+          userId: selectedUser,
+          date: date,
+          weight: weight,
+          unit: weightUnit,
+          notes: notes,
+          createdAt: now,
+          updatedAt: now
+        }
+        await db.ketoWeightEntries.add(newEntry)
+        toast.success(t('messages.weightAdded'))
       }
-
-      await db.ketoWeightEntries.add(newEntry)
-      toast.success(t('messages.weightAdded'))
     } catch (error) {
-      logger.error('Error adding weight entry:', error)
+      logger.error('Error saving weight entry:', error)
+      toast.error(t('messages.error'))
+    }
+  }
+
+  const handleEditWeight = (entry: KetoWeightEntry) => {
+    setEditingWeightEntry(entry)
+    setIsWeightDialogOpen(true)
+  }
+
+  const handleDeleteWeight = async (id: string) => {
+    try {
+      await deleteWithSync(db.ketoWeightEntries, 'ketoWeightEntries', id)
+      toast.success(t('messages.weightDeleted'))
+    } catch (error) {
+      logger.error('Error deleting weight entry:', error)
       toast.error(t('messages.error'))
     }
   }
@@ -679,52 +713,124 @@ export default function KetoPage() {
             </Button>
           </div>
 
-          {/* Unified User Selection - Icon-based */}
+          {/* Unified User Selection - Icon-based with Tooltips */}
           {hasMultipleUsers && (
-            <div className="flex items-center gap-2 p-1.5 bg-muted/50 rounded-xl w-fit">
-              {/* Individual users */}
-              {users.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => setSelectedUser(user.id!)}
-                  className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all ${
-                    selectedUser === user.id
-                      ? 'bg-background shadow-md ring-2 ring-primary'
-                      : 'hover:bg-background/50'
-                  }`}
-                  title={user.name || 'User'}
-                >
-                  <div
-                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-medium"
-                    style={{ backgroundColor: user.color || '#888' }}
-                  >
-                    {(user.name || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  {selectedUser === user.id && (
-                    <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                  )}
-                </button>
-              ))}
+            <TooltipProvider delayDuration={200}>
+              <div className="flex items-center gap-1.5 p-1.5 bg-muted/50 rounded-xl w-fit">
+                {/* Individual users */}
+                {users.map((user) => {
+                  // Get user-specific stats for tooltip
+                  const userSettings = allKetoSettings?.find(s => s.userId === user.id)
+                  const userDays = allKetoDays?.filter(d => d.userId === user.id) || []
+                  const userSuccessDays = userDays.filter(d => d.status === 'success' || d.status === 'fasting').length
+                  const userWeights = allWeightEntries?.filter(w => w.userId === user.id) || []
+                  const latestWeight = userWeights.length > 0
+                    ? [...userWeights].sort((a, b) => {
+                        const dateA = a.date instanceof Date ? a.date : new Date(a.date)
+                        const dateB = b.date instanceof Date ? b.date : new Date(b.date)
+                        return dateB.getTime() - dateA.getTime()
+                      })[0]
+                    : null
 
-              {/* Separator */}
-              <div className="w-px h-6 bg-border mx-1" />
+                  // Calculate user streak
+                  let userStreak = 0
+                  const sortedUserDays = [...userDays]
+                    .map(day => ({
+                      ...day,
+                      date: day.date instanceof Date ? day.date : new Date(day.date)
+                    }))
+                    .sort((a, b) => b.date.getTime() - a.date.getTime())
+                  for (const day of sortedUserDays) {
+                    if (day.status === 'success' || day.status === 'fasting') {
+                      userStreak++
+                    } else if (day.status === 'cheat') {
+                      break
+                    }
+                  }
 
-              {/* View All button */}
-              <button
-                onClick={() => setSelectedUser('all')}
-                className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all ${
-                  isHouseholdView
-                    ? 'bg-background shadow-md ring-2 ring-primary'
-                    : 'hover:bg-background/50'
-                }`}
-                title={t('household.viewAll')}
-              >
-                <Users className="h-5 w-5 text-muted-foreground" />
-                {isHouseholdView && (
-                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                )}
-              </button>
-            </div>
+                  return (
+                    <Tooltip key={user.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setSelectedUser(user.id!)}
+                          className={`relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl transition-all ${
+                            selectedUser === user.id
+                              ? 'bg-background shadow-lg ring-2 ring-primary scale-105'
+                              : 'hover:bg-background/70 hover:scale-105'
+                          }`}
+                        >
+                          <div
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold shadow-sm"
+                            style={{ backgroundColor: user.color || '#888' }}
+                          >
+                            {(user.name || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          {selectedUser === user.id && (
+                            <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary rounded-full" />
+                          )}
+                          {userStreak >= 3 && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                              <Flame className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="p-3 max-w-[200px]">
+                        <div className="space-y-2">
+                          <p className="font-bold text-sm">{user.name || 'User'}</p>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Check className="h-3 w-3 text-green-500" />
+                              <span>{userSuccessDays} {t('stats.days')}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Flame className="h-3 w-3 text-orange-500" />
+                              <span>{userStreak} {t('progress.dayStreak').toLowerCase()}</span>
+                            </div>
+                            {latestWeight && (
+                              <div className="flex items-center gap-1 text-muted-foreground col-span-2">
+                                <TrendingDown className="h-3 w-3 text-blue-500" />
+                                <span>{latestWeight.weight} {latestWeight.unit}</span>
+                              </div>
+                            )}
+                            {!userSettings && (
+                              <div className="text-yellow-600 col-span-2 text-[10px]">
+                                {t('household.notStarted')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+
+                {/* Separator */}
+                <div className="w-px h-7 bg-border mx-1" />
+
+                {/* View All button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setSelectedUser('all')}
+                      className={`relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl transition-all ${
+                        isHouseholdView
+                          ? 'bg-background shadow-lg ring-2 ring-primary scale-105'
+                          : 'hover:bg-background/70 hover:scale-105'
+                      }`}
+                    >
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      {isHouseholdView && (
+                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary rounded-full" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs">{t('household.viewAll')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           )}
         </div>
 
@@ -744,34 +850,75 @@ export default function KetoPage() {
         {/* Individual User View */}
         {!isHouseholdView && (
           <>
-            {/* Stats Bar */}
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-6">
-              <Card className="glass-card shadow-modern">
-                <CardContent className="p-2 sm:p-3 md:p-6">
-                  <div className="text-center">
-                    <div className="text-lg sm:text-xl md:text-3xl font-bold text-primary mb-0.5 sm:mb-1 md:mb-2">{stats.daysOnKeto}</div>
-                    <div className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground leading-tight">{t('stats.daysOnKeto')}</div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Stats Bar - Compact with Icons */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-1.5">
+              {/* Days on Keto */}
+              <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="p-1 sm:p-1.5 bg-primary/20 rounded-md">
+                  <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm sm:text-lg font-bold text-primary leading-none">{stats.daysOnKeto}</div>
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate">{t('stats.daysOnKeto')}</div>
+                </div>
+              </div>
 
-              <Card className="glass-card shadow-modern">
-                <CardContent className="p-2 sm:p-3 md:p-6">
-                  <div className="text-center">
-                    <div className="text-lg sm:text-xl md:text-3xl font-bold text-green-600 mb-0.5 sm:mb-1 md:mb-2">{stats.successfulDays}</div>
-                    <div className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground leading-tight">{t('stats.successfulDays')}</div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Successful Days */}
+              <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 bg-green-500/10 rounded-lg border border-green-500/20">
+                <div className="p-1 sm:p-1.5 bg-green-500/20 rounded-md">
+                  <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm sm:text-lg font-bold text-green-600 leading-none">{stats.successfulDays}</div>
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate">{t('stats.successfulDays')}</div>
+                </div>
+              </div>
 
-              <Card className="glass-card shadow-modern">
-                <CardContent className="p-2 sm:p-3 md:p-6">
-                  <div className="text-center">
-                    <div className="text-lg sm:text-xl md:text-3xl font-bold text-blue-600 mb-0.5 sm:mb-1 md:mb-2">{stats.fastingDays}</div>
-                    <div className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground leading-tight">{t('stats.fastingDays')}</div>
+              {/* Fasting Days */}
+              <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <div className="p-1 sm:p-1.5 bg-blue-500/20 rounded-md">
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm sm:text-lg font-bold text-blue-600 leading-none">{stats.fastingDays}</div>
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate">{t('stats.fastingDays')}</div>
+                </div>
+              </div>
+
+              {/* Current Streak */}
+              <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                <div className="p-1 sm:p-1.5 bg-orange-500/20 rounded-md">
+                  <Flame className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm sm:text-lg font-bold text-orange-600 leading-none">{stats.currentStreak}</div>
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate">{t('stats.currentStreak')}</div>
+                </div>
+              </div>
+
+              {/* Cheat Days */}
+              <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 bg-red-500/10 rounded-lg border border-red-500/20">
+                <div className="p-1 sm:p-1.5 bg-red-500/20 rounded-md">
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm sm:text-lg font-bold text-red-600 leading-none">{stats.cheatDays}</div>
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate">{t('progress.cheatDays')}</div>
+                </div>
+              </div>
+
+              {/* Water Today */}
+              <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                <div className="p-1 sm:p-1.5 bg-cyan-500/20 rounded-md">
+                  <Droplets className="h-3 w-3 sm:h-4 sm:w-4 text-cyan-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm sm:text-lg font-bold text-cyan-600 leading-none">
+                    {todayWaterEntry?.glasses || 0}/{todayWaterEntry?.goalGlasses || 8}
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate">{t('water.title')}</div>
+                </div>
+              </div>
             </div>
 
             {/* Main Content Grid */}
@@ -1046,7 +1193,12 @@ export default function KetoPage() {
                 goalWeight={ketoSettings?.goalWeight}
                 targetDate={ketoSettings?.targetDate}
                 weightUnit={ketoSettings?.weightUnit || 'kg'}
-                onAddWeight={() => setIsWeightDialogOpen(true)}
+                onAddWeight={() => {
+                  setEditingWeightEntry(null)
+                  setIsWeightDialogOpen(true)
+                }}
+                onEditWeight={handleEditWeight}
+                onDeleteWeight={handleDeleteWeight}
               />
 
               {/* Keto Stages */}
@@ -1103,8 +1255,14 @@ export default function KetoPage() {
         {/* Weight Entry Dialog */}
         <WeightEntryDialog
           open={isWeightDialogOpen}
-          onOpenChange={setIsWeightDialogOpen}
+          onOpenChange={(open) => {
+            setIsWeightDialogOpen(open)
+            if (!open) setEditingWeightEntry(null)
+          }}
           weightUnit={ketoSettings?.weightUnit || 'kg'}
+          currentWeight={editingWeightEntry?.weight}
+          currentNotes={editingWeightEntry?.notes}
+          currentDate={editingWeightEntry?.date instanceof Date ? editingWeightEntry.date : editingWeightEntry?.date ? new Date(editingWeightEntry.date) : undefined}
           onSave={handleAddWeight}
         />
       </div>

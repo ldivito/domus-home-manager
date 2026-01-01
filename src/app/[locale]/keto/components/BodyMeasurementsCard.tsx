@@ -38,6 +38,17 @@ export default function BodyMeasurementsCard({
   const t = useTranslations('keto')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Get the latest measurement to use as default values
+  const latestMeasurement = useMemo(() => {
+    if (!measurements.length) return null
+    return [...measurements].sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date(a.date)
+      const dateB = b.date instanceof Date ? b.date : new Date(b.date)
+      return dateB.getTime() - dateA.getTime()
+    })[0]
+  }, [measurements])
+
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     waist: '',
@@ -49,6 +60,36 @@ export default function BodyMeasurementsCard({
     unit: measurementUnit,
     notes: '',
   })
+
+  // Pre-populate form with previous values when opening dialog
+  const openDialog = () => {
+    if (latestMeasurement) {
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        waist: latestMeasurement.waist?.toString() || '',
+        hips: latestMeasurement.hips?.toString() || '',
+        chest: latestMeasurement.chest?.toString() || '',
+        arms: latestMeasurement.arms?.toString() || '',
+        thighs: latestMeasurement.thighs?.toString() || '',
+        neck: latestMeasurement.neck?.toString() || '',
+        unit: latestMeasurement.unit || measurementUnit,
+        notes: '',
+      })
+    } else {
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        waist: '',
+        hips: '',
+        chest: '',
+        arms: '',
+        thighs: '',
+        neck: '',
+        unit: measurementUnit,
+        notes: '',
+      })
+    }
+    setIsDialogOpen(true)
+  }
 
   const stats = useMemo(() => {
     if (!measurements.length) {
@@ -154,7 +195,7 @@ export default function BodyMeasurementsCard({
                 {t('measurements.description')}
               </CardDescription>
             </div>
-            <Button onClick={() => setIsDialogOpen(true)} size="sm" variant="outline">
+            <Button onClick={openDialog} size="sm" variant="outline">
               <Plus className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">{t('measurements.add')}</span>
             </Button>
@@ -167,7 +208,7 @@ export default function BodyMeasurementsCard({
               <p className="text-sm text-muted-foreground mb-4">
                 {t('measurements.noEntries')}
               </p>
-              <Button onClick={() => setIsDialogOpen(true)} size="sm">
+              <Button onClick={openDialog} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 {t('measurements.addFirst')}
               </Button>
@@ -321,20 +362,36 @@ export default function BodyMeasurementsCard({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {measurementFields.map(({ key, label }) => (
-                <div key={key} className="space-y-2">
-                  <Label htmlFor={`measurement-${key}`}>{label} ({formData.unit})</Label>
-                  <Input
-                    id={`measurement-${key}`}
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={formData[key]}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder="0.0"
-                  />
-                </div>
-              ))}
+              {measurementFields.map(({ key, label }) => {
+                const prevValue = latestMeasurement?.[key as keyof typeof latestMeasurement] as number | undefined
+                return (
+                  <div key={key} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`measurement-${key}`}>{label} ({formData.unit})</Label>
+                      {prevValue && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {t('measurements.previousValue', { value: prevValue.toFixed(1) })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id={`measurement-${key}`}
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={formData[key]}
+                        onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={prevValue ? prevValue.toFixed(1) : '0.0'}
+                        className="text-lg font-medium pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        {formData.unit}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="space-y-2">

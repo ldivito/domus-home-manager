@@ -46,7 +46,10 @@ import {
   Layers,
   Bookmark,
   BookmarkPlus,
-  CircleCheckBig
+  CircleCheckBig,
+  Beef,
+  Wheat,
+  Salad
 } from "lucide-react"
 import {
   db,
@@ -56,7 +59,8 @@ import {
   MealPrepItem,
   MealPrepIngredient,
   DietaryRestriction,
-  PrepStepStatus
+  PrepStepStatus,
+  MealComponentType
 } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { generateId } from '@/lib/utils'
@@ -155,6 +159,25 @@ interface TrackedContainer {
   isExpired: boolean
 }
 
+// Component-based meal prep interfaces
+interface SelectedComponent {
+  id: string
+  name: string
+  type: MealComponentType
+  servings: number
+  description?: string
+  isCustom?: boolean
+}
+
+interface ComponentCombination {
+  day: number
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  protein?: string
+  carb?: string
+  vegetable?: string
+  description?: string
+}
+
 export default function MealPrepPage() {
   const t = useTranslations('mealPrep')
   const tMeals = useTranslations('meals')
@@ -177,6 +200,13 @@ export default function MealPrepPage() {
   const [selectedMeals, setSelectedMeals] = useState<SelectedMeal[]>([])
   const [customMealName, setCustomMealName] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Component-based mode state
+  const [useComponentMode, setUseComponentMode] = useState(false)
+  const [selectedComponents, setSelectedComponents] = useState<SelectedComponent[]>([])
+  const [componentCombinations, setComponentCombinations] = useState<ComponentCombination[]>([])
+  const [customComponentName, setCustomComponentName] = useState('')
+  const [activeComponentType, setActiveComponentType] = useState<MealComponentType>('protein')
 
   // Calculated results state
   const [calculatedIngredients, setCalculatedIngredients] = useState<CalculatedIngredient[]>([])
@@ -610,6 +640,87 @@ export default function MealPrepPage() {
     setSelectedMeals(prev => prev.filter(m => m.id !== mealId))
   }
 
+  // Component-based mode functions
+  const getComponentsByType = (type: MealComponentType) =>
+    selectedComponents.filter(c => c.type === type)
+
+  const addComponent = (type: MealComponentType) => {
+    if (!customComponentName.trim()) return
+
+    setSelectedComponents(prev => [...prev, {
+      id: generateId('comp'),
+      name: customComponentName.trim(),
+      type,
+      servings: numberOfPeople * daysOfPrep,
+      isCustom: true
+    }])
+    setCustomComponentName('')
+  }
+
+  const removeComponent = (componentId: string) => {
+    setSelectedComponents(prev => prev.filter(c => c.id !== componentId))
+  }
+
+  const updateComponentServings = (componentId: string, delta: number) => {
+    setSelectedComponents(prev => prev.map(c =>
+      c.id === componentId
+        ? { ...c, servings: Math.max(1, c.servings + delta) }
+        : c
+    ))
+  }
+
+  // Suggest combinations using AI
+  const suggestCombinations = async () => {
+    if (!openAIKey) {
+      toast.error(t('errors.noApiKey'))
+      setShowApiKeyInput(true)
+      return
+    }
+
+    const proteins = getComponentsByType('protein')
+    const carbs = getComponentsByType('carb')
+    const vegetables = getComponentsByType('vegetable')
+
+    if (proteins.length === 0 || carbs.length === 0 || vegetables.length === 0) {
+      toast.error(t('components.noComponents'))
+      return
+    }
+
+    try {
+      toast.loading(t('calculating.schedule'))
+      const response = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'suggest-component-combinations',
+          apiKey: openAIKey,
+          data: {
+            proteins: proteins.map(p => ({ id: p.id, name: p.name, type: p.type, servings: p.servings })),
+            carbs: carbs.map(c => ({ id: c.id, name: c.name, type: c.type, servings: c.servings })),
+            vegetables: vegetables.map(v => ({ id: v.id, name: v.name, type: v.type, servings: v.servings })),
+            daysOfPrep,
+            mealsPerDay: 2,
+            dietaryRestrictions: dietaryRestrictions.length > 0 ? dietaryRestrictions : undefined
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to suggest combinations')
+      }
+
+      const data = await response.json()
+      setComponentCombinations(data.combinations || [])
+      toast.dismiss()
+      toast.success(t('calculating.complete'))
+    } catch (error) {
+      toast.dismiss()
+      logger.error('Error suggesting combinations:', error)
+      toast.error(error instanceof Error ? error.message : t('errors.calculationFailed'))
+    }
+  }
+
   // Toggle meal type for a selected meal
   const toggleMealType = (mealId: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
     setSelectedMeals(prev => prev.map(m => {
@@ -817,6 +928,140 @@ export default function MealPrepPage() {
     } catch (error) {
       toast.dismiss()
       logger.error('Error calculating meal prep:', error)
+      toast.error(error instanceof Error ? error.message : t('errors.calculationFailed'))
+    } finally {
+      setIsCalculating(false)
+    }
+  }
+
+  // Calculate with component-based AI
+  const calculateWithComponentsAI = async () => {
+    if (!openAIKey) {
+      toast.error(t('errors.noApiKey'))
+      setShowApiKeyInput(true)
+      return
+    }
+
+    const proteins = getComponentsByType('protein')
+    const carbs = getComponentsByType('carb')
+    const vegetables = getComponentsByType('vegetable')
+
+    if (proteins.length === 0 || carbs.length === 0 || vegetables.length === 0) {
+      toast.error(t('components.noComponents'))
+      return
+    }
+
+    setIsCalculating(true)
+
+    try {
+      const allComponents = [...proteins, ...carbs, ...vegetables].map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        servings: c.servings
+      }))
+
+      // Step 1: Calculate component ingredients
+      toast.loading(t('calculating.ingredients'))
+      const ingredientsResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'calculate-component-ingredients',
+          apiKey: openAIKey,
+          data: {
+            components: allComponents,
+            servingsPerMeal: numberOfPeople,
+            numberOfMeals: daysOfPrep * 2 // Assuming 2 meals per day
+          }
+        })
+      })
+
+      if (!ingredientsResponse.ok) {
+        const error = await ingredientsResponse.json()
+        throw new Error(error.error || 'Failed to calculate ingredients')
+      }
+
+      const ingredientsData = await ingredientsResponse.json()
+      setCalculatedIngredients(ingredientsData.ingredients.map((ing: CalculatedIngredient) => ({
+        ...ing,
+        addedToGrocery: false
+      })))
+
+      // Step 2: Generate component instructions
+      toast.loading(t('calculating.instructions'))
+      const instructionsResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate-component-instructions',
+          apiKey: openAIKey,
+          data: { components: allComponents }
+        })
+      })
+
+      if (!instructionsResponse.ok) {
+        const error = await instructionsResponse.json()
+        throw new Error(error.error || 'Failed to generate instructions')
+      }
+
+      const instructionsData = await instructionsResponse.json()
+
+      // Convert component instructions to meal instructions format
+      const componentInstructions: MealInstruction[] = instructionsData.instructions?.map((inst: { componentName: string; prepInstructions: string; cookingTime?: number; storageType?: string; storageDays?: number; nutritionEstimate?: { calories: number; protein: number; carbs: number; fat: number } }) => ({
+        mealName: inst.componentName,
+        prepTime: 0,
+        cookTime: inst.cookingTime || 0,
+        totalTime: inst.cookingTime || 0,
+        instructions: inst.prepInstructions,
+        tips: '',
+        storageType: inst.storageType || 'refrigerator',
+        storageDays: inst.storageDays || 4,
+        storageInstructions: '',
+        reheatingInstructions: '',
+        containerSize: 'medium',
+        containerCount: Math.ceil((proteins.length + carbs.length + vegetables.length) / 3),
+        nutritionEstimate: inst.nutritionEstimate
+      })) || []
+
+      setMealInstructions(componentInstructions)
+      setPrepOrder(instructionsData.prepOrder || allComponents.map(c => c.name))
+      setGeneralTips(instructionsData.generalTips || [])
+
+      // Step 3: Get container guidance (reuse existing)
+      toast.loading(t('calculating.containers'))
+      const containerResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'container-guidance',
+          apiKey: openAIKey,
+          data: {
+            meals: allComponents.map(c => ({ name: c.name, servings: c.servings })),
+            numberOfPeople,
+            daysOfPrep
+          }
+        })
+      })
+
+      if (containerResponse.ok) {
+        const containerData = await containerResponse.json()
+        setContainerPlan(containerData.containerPlan || [])
+        setOrganizationTips(containerData.organizationTips || [])
+      }
+
+      // Step 4: Suggest combinations if not already done
+      if (componentCombinations.length === 0) {
+        await suggestCombinations()
+      }
+
+      toast.dismiss()
+      toast.success(t('calculating.complete'))
+      setCurrentStep('review')
+
+    } catch (error) {
+      toast.dismiss()
+      logger.error('Error calculating component meal prep:', error)
       toast.error(error instanceof Error ? error.message : t('errors.calculationFailed'))
     } finally {
       setIsCalculating(false)
@@ -1098,6 +1343,12 @@ export default function MealPrepPage() {
       case 'setup':
         return cookingDate && startDate && endDate && numberOfPeople > 0
       case 'meals':
+        if (useComponentMode) {
+          // Need at least one of each component type
+          return getComponentsByType('protein').length > 0 &&
+                 getComponentsByType('carb').length > 0 &&
+                 getComponentsByType('vegetable').length > 0
+        }
         return selectedMeals.length > 0
       case 'calculate':
         return calculatedIngredients.length > 0
@@ -1120,8 +1371,12 @@ export default function MealPrepPage() {
     const steps: WizardStep[] = ['setup', 'meals', 'calculate', 'review', 'prep']
     const currentIndex = steps.indexOf(currentStep)
     if (currentStep === 'meals') {
-      distributeMeals()
-      calculateWithAI()
+      if (useComponentMode) {
+        calculateWithComponentsAI()
+      } else {
+        distributeMeals()
+        calculateWithAI()
+      }
     } else if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1])
     }
@@ -1306,6 +1561,27 @@ export default function MealPrepPage() {
                   </div>
                 </div>
 
+                {/* Component Mode Toggle */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        <Beef className="h-5 w-5 text-red-500" />
+                        <Wheat className="h-5 w-5 text-amber-500" />
+                        <Salad className="h-5 w-5 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{t('components.modeToggle')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('components.modeDescription')}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={useComponentMode}
+                      onCheckedChange={setUseComponentMode}
+                    />
+                  </div>
+                </div>
+
                 {/* Templates Section */}
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
@@ -1378,148 +1654,381 @@ export default function MealPrepPage() {
             <>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <UtensilsCrossed className="h-5 w-5" />
-                  {t('meals.title')}
+                  {useComponentMode ? (
+                    <>
+                      <div className="flex gap-0.5">
+                        <Beef className="h-5 w-5 text-red-500" />
+                        <Wheat className="h-5 w-5 text-amber-500" />
+                        <Salad className="h-5 w-5 text-green-500" />
+                      </div>
+                      {t('components.title')}
+                    </>
+                  ) : (
+                    <>
+                      <UtensilsCrossed className="h-5 w-5" />
+                      {t('meals.title')}
+                    </>
+                  )}
                 </CardTitle>
-                <CardDescription>{t('meals.description')}</CardDescription>
+                <CardDescription>
+                  {useComponentMode ? t('components.description') : t('meals.description')}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="saved" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="saved">{t('meals.savedMeals')}</TabsTrigger>
-                    <TabsTrigger value="custom">{t('meals.customMeal')}</TabsTrigger>
-                  </TabsList>
+                {/* COMPONENT MODE */}
+                {useComponentMode ? (
+                  <div className="space-y-6">
+                    {/* Component Type Tabs */}
+                    <Tabs value={activeComponentType} onValueChange={(v) => setActiveComponentType(v as MealComponentType)} className="w-full">
+                      <TabsList className="grid w-full grid-cols-3 mb-4">
+                        <TabsTrigger value="protein" className="gap-2">
+                          <Beef className="h-4 w-4" />
+                          {t('components.proteins')}
+                        </TabsTrigger>
+                        <TabsTrigger value="carb" className="gap-2">
+                          <Wheat className="h-4 w-4" />
+                          {t('components.carbs')}
+                        </TabsTrigger>
+                        <TabsTrigger value="vegetable" className="gap-2">
+                          <Salad className="h-4 w-4" />
+                          {t('components.vegetables')}
+                        </TabsTrigger>
+                      </TabsList>
 
-                  <TabsContent value="saved">
-                    <Input
-                      placeholder={t('meals.searchPlaceholder')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="mb-4"
-                    />
-                    <ScrollArea className="h-64">
-                      <div className="space-y-2">
-                        {filteredSavedMeals.length === 0 ? (
-                          <p className="text-center text-gray-500 py-4">
-                            {t('meals.noSavedMeals')}
-                          </p>
-                        ) : (
-                          filteredSavedMeals.map(meal => (
-                            <div
-                              key={meal.id}
-                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                              onClick={() => addSavedMeal(meal)}
-                            >
-                              <div>
-                                <p className="font-medium">{meal.name}</p>
-                                {meal.description && (
-                                  <p className="text-sm text-gray-500 truncate max-w-xs">{meal.description}</p>
-                                )}
-                                <Badge variant="outline" className="mt-1">
-                                  {getCategoryName(meal.category)}
-                                </Badge>
-                              </div>
-                              <Button variant="ghost" size="icon">
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))
-                        )}
+                      {/* Add Component Input */}
+                      <div className="flex gap-2 mb-4">
+                        <Input
+                          placeholder={t('components.customPlaceholder')}
+                          value={customComponentName}
+                          onChange={(e) => setCustomComponentName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addComponent(activeComponentType)}
+                        />
+                        <Button onClick={() => addComponent(activeComponentType)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          {activeComponentType === 'protein' && t('components.addProtein')}
+                          {activeComponentType === 'carb' && t('components.addCarb')}
+                          {activeComponentType === 'vegetable' && t('components.addVegetable')}
+                        </Button>
                       </div>
-                    </ScrollArea>
-                  </TabsContent>
 
-                  <TabsContent value="custom">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder={t('meals.customPlaceholder')}
-                        value={customMealName}
-                        onChange={(e) => setCustomMealName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addCustomMeal()}
-                      />
-                      <Button onClick={addCustomMeal}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t('meals.add')}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      {t('meals.aiWillGenerate')}
-                    </p>
-                  </TabsContent>
-                </Tabs>
+                      {/* Examples hint */}
+                      <p className="text-xs text-gray-500 mb-4 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        {activeComponentType === 'protein' && t('components.proteinExamples')}
+                        {activeComponentType === 'carb' && t('components.carbExamples')}
+                        {activeComponentType === 'vegetable' && t('components.vegetableExamples')}
+                      </p>
 
-                {/* Selected Meals */}
-                {selectedMeals.length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="font-medium mb-3 flex items-center justify-between">
-                      <span>{t('meals.selected')} ({selectedMeals.length})</span>
-                      <span className="text-sm text-gray-500">
-                        {t('meals.totalServings', { count: totalServings })}
-                      </span>
-                    </h4>
-                    <div className="space-y-3">
-                      {selectedMeals.map(meal => (
-                        <div
-                          key={meal.id}
-                          className="flex items-center justify-between p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{meal.name}</p>
-                              {meal.isCustom && (
-                                <Badge variant="secondary" className="text-xs">
-                                  <Sparkles className="h-3 w-3 mr-1" />
-                                  {t('meals.ai')}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex gap-1 mt-1">
-                              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(type => (
-                                <Badge
-                                  key={type}
-                                  variant={meal.mealTypes.includes(type) ? 'default' : 'outline'}
-                                  className="text-xs cursor-pointer"
-                                  onClick={() => toggleMealType(meal.id, type)}
-                                >
-                                  {tMeals(`mealTypes.${type}`)}
-                                </Badge>
-                              ))}
-                            </div>
+                      {/* Selected Components by Type */}
+                      <TabsContent value="protein" className="mt-0">
+                        <ScrollArea className="h-48">
+                          <div className="space-y-2">
+                            {getComponentsByType('protein').map(comp => (
+                              <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-red-50 dark:bg-red-900/20">
+                                <div className="flex items-center gap-2">
+                                  <Beef className="h-4 w-4 text-red-500" />
+                                  <span className="font-medium">{comp.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="w-10 text-center text-sm">{comp.servings}</span>
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                            {getComponentsByType('protein').length === 0 && (
+                              <p className="text-center text-gray-500 py-4 text-sm">{t('components.proteinExamples')}</p>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateMealServings(meal.id, -numberOfPeople)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-12 text-center font-medium">
-                              {meal.servings}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateMealServings(meal.id, numberOfPeople)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500"
-                              onClick={() => removeMeal(meal.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                        </ScrollArea>
+                      </TabsContent>
+
+                      <TabsContent value="carb" className="mt-0">
+                        <ScrollArea className="h-48">
+                          <div className="space-y-2">
+                            {getComponentsByType('carb').map(comp => (
+                              <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                                <div className="flex items-center gap-2">
+                                  <Wheat className="h-4 w-4 text-amber-500" />
+                                  <span className="font-medium">{comp.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="w-10 text-center text-sm">{comp.servings}</span>
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                            {getComponentsByType('carb').length === 0 && (
+                              <p className="text-center text-gray-500 py-4 text-sm">{t('components.carbExamples')}</p>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </TabsContent>
+
+                      <TabsContent value="vegetable" className="mt-0">
+                        <ScrollArea className="h-48">
+                          <div className="space-y-2">
+                            {getComponentsByType('vegetable').map(comp => (
+                              <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                <div className="flex items-center gap-2">
+                                  <Salad className="h-4 w-4 text-green-500" />
+                                  <span className="font-medium">{comp.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="w-10 text-center text-sm">{comp.servings}</span>
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                            {getComponentsByType('vegetable').length === 0 && (
+                              <p className="text-center text-gray-500 py-4 text-sm">{t('components.vegetableExamples')}</p>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </TabsContent>
+                    </Tabs>
+
+                    {/* Selected Components Summary */}
+                    {selectedComponents.length > 0 && (
+                      <div className="border-t pt-4">
+                        <h4 className="font-medium mb-3">{t('components.selectedComponents')}</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                            <Beef className="h-5 w-5 mx-auto text-red-500 mb-1" />
+                            <p className="text-2xl font-bold text-red-700 dark:text-red-300">{getComponentsByType('protein').length}</p>
+                            <p className="text-xs text-red-600 dark:text-red-400">{t('components.proteinLabel')}</p>
+                          </div>
+                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center">
+                            <Wheat className="h-5 w-5 mx-auto text-amber-500 mb-1" />
+                            <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{getComponentsByType('carb').length}</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">{t('components.carbLabel')}</p>
+                          </div>
+                          <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                            <Salad className="h-5 w-5 mx-auto text-green-500 mb-1" />
+                            <p className="text-2xl font-bold text-green-700 dark:text-green-300">{getComponentsByType('vegetable').length}</p>
+                            <p className="text-xs text-green-600 dark:text-green-400">{t('components.vegetableLabel')}</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Suggest Combinations Button */}
+                        {getComponentsByType('protein').length > 0 &&
+                         getComponentsByType('carb').length > 0 &&
+                         getComponentsByType('vegetable').length > 0 && (
+                          <Button
+                            onClick={suggestCombinations}
+                            className="w-full mt-4"
+                            variant="outline"
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            {t('components.suggestCombinations')}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Suggested Combinations */}
+                    {componentCombinations.length > 0 && (
+                      <div className="border-t pt-4">
+                        <h4 className="font-medium mb-3">{t('components.combinations')}</h4>
+                        <ScrollArea className="h-48">
+                          <div className="space-y-2">
+                            {componentCombinations.map((combo, idx) => (
+                              <div key={idx} className="p-3 border rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Badge variant="secondary">
+                                    Day {combo.day} - {tMeals(`mealTypes.${combo.mealType}`)}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="flex items-center gap-1">
+                                    <Beef className="h-3 w-3 text-red-500" />
+                                    {combo.protein}
+                                  </span>
+                                  <span className="text-gray-400">+</span>
+                                  <span className="flex items-center gap-1">
+                                    <Wheat className="h-3 w-3 text-amber-500" />
+                                    {combo.carb}
+                                  </span>
+                                  <span className="text-gray-400">+</span>
+                                  <span className="flex items-center gap-1">
+                                    <Salad className="h-3 w-3 text-green-500" />
+                                    {combo.vegetable}
+                                  </span>
+                                </div>
+                                {combo.description && (
+                                  <p className="text-xs text-gray-500 mt-1">{combo.description}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  /* STANDARD MEAL MODE */
+                  <>
+                    <Tabs defaultValue="saved" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 mb-4">
+                        <TabsTrigger value="saved">{t('meals.savedMeals')}</TabsTrigger>
+                        <TabsTrigger value="custom">{t('meals.customMeal')}</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="saved">
+                        <Input
+                          placeholder={t('meals.searchPlaceholder')}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="mb-4"
+                        />
+                        <ScrollArea className="h-64">
+                          <div className="space-y-2">
+                            {filteredSavedMeals.length === 0 ? (
+                              <p className="text-center text-gray-500 py-4">
+                                {t('meals.noSavedMeals')}
+                              </p>
+                            ) : (
+                              filteredSavedMeals.map(meal => (
+                                <div
+                                  key={meal.id}
+                                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                                  onClick={() => addSavedMeal(meal)}
+                                >
+                                  <div>
+                                    <p className="font-medium">{meal.name}</p>
+                                    {meal.description && (
+                                      <p className="text-sm text-gray-500 truncate max-w-xs">{meal.description}</p>
+                                    )}
+                                    <Badge variant="outline" className="mt-1">
+                                      {getCategoryName(meal.category)}
+                                    </Badge>
+                                  </div>
+                                  <Button variant="ghost" size="icon">
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </TabsContent>
+
+                      <TabsContent value="custom">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder={t('meals.customPlaceholder')}
+                            value={customMealName}
+                            onChange={(e) => setCustomMealName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && addCustomMeal()}
+                          />
+                          <Button onClick={addCustomMeal}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            {t('meals.add')}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          {t('meals.aiWillGenerate')}
+                        </p>
+                      </TabsContent>
+                    </Tabs>
+
+                    {/* Selected Meals */}
+                    {selectedMeals.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="font-medium mb-3 flex items-center justify-between">
+                          <span>{t('meals.selected')} ({selectedMeals.length})</span>
+                          <span className="text-sm text-gray-500">
+                            {t('meals.totalServings', { count: totalServings })}
+                          </span>
+                        </h4>
+                        <div className="space-y-3">
+                          {selectedMeals.map(meal => (
+                            <div
+                              key={meal.id}
+                              className="flex items-center justify-between p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{meal.name}</p>
+                                  {meal.isCustom && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      <Sparkles className="h-3 w-3 mr-1" />
+                                      {t('meals.ai')}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex gap-1 mt-1">
+                                  {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(type => (
+                                    <Badge
+                                      key={type}
+                                      variant={meal.mealTypes.includes(type) ? 'default' : 'outline'}
+                                      className="text-xs cursor-pointer"
+                                      onClick={() => toggleMealType(meal.id, type)}
+                                    >
+                                      {tMeals(`mealTypes.${type}`)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => updateMealServings(meal.id, -numberOfPeople)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-12 text-center font-medium">
+                                  {meal.servings}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => updateMealServings(meal.id, numberOfPeople)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => removeMeal(meal.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </>

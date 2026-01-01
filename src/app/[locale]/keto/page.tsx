@@ -692,13 +692,13 @@ export default function KetoPage() {
                       ? 'bg-background shadow-md ring-2 ring-primary'
                       : 'hover:bg-background/50'
                   }`}
-                  title={user.name}
+                  title={user.name || 'User'}
                 >
                   <div
                     className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-medium"
-                    style={{ backgroundColor: user.color }}
+                    style={{ backgroundColor: user.color || '#888' }}
                   >
-                    {user.name.charAt(0).toUpperCase()}
+                    {(user.name || 'U').charAt(0).toUpperCase()}
                   </div>
                   {selectedUser === user.id && (
                     <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />

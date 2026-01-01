@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,10 +74,9 @@ export default function HomePage() {
     }
   }
 
-  // Run reset check on component mount and periodically
-  useLiveQuery(async () => {
-    await resetOverdueChores()
-    return db.chores.toArray() // Return something to trigger reactivity
+  // Run reset check on component mount
+  useEffect(() => {
+    resetOverdueChores()
   }, [])
 
   // Chore completion handlers

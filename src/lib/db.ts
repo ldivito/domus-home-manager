@@ -295,6 +295,22 @@ export interface KetoSettings {
   householdId?: string
   userId: string // User who owns this keto plan
   startDate: Date // When they started the keto diet
+  // Goal tracking
+  goalWeight?: number // Target weight in kg or lb
+  weightUnit?: 'kg' | 'lb' // Weight unit preference
+  targetDate?: Date // Target date to reach goal weight
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface KetoWeightEntry {
+  id?: string
+  householdId?: string
+  userId: string // User who owns this entry
+  date: Date // Date of the weight entry
+  weight: number // Weight value
+  unit: 'kg' | 'lb' // Unit of measurement
+  notes?: string // Optional notes
   createdAt: Date
   updatedAt: Date
 }
@@ -809,6 +825,7 @@ export class DomusDatabase extends Dexie {
   homeSettings!: Table<HomeSettings>
   ketoSettings!: Table<KetoSettings>
   ketoDays!: Table<KetoDay>
+  ketoWeightEntries!: Table<KetoWeightEntry>
   // Finance tables
   monthlyIncomes!: Table<MonthlyIncome>
   monthlyExchangeRates!: Table<MonthlyExchangeRate>
@@ -911,6 +928,12 @@ export class DomusDatabase extends Dexie {
         }
       }
       dbLogger.debug('Database upgraded to v26 with income source field')
+    })
+
+    // v29: Add keto weight tracking table and update keto settings
+    this.version(29).stores({
+      ketoSettings: 'id, householdId, userId, startDate, goalWeight, targetDate, createdAt, updatedAt',
+      ketoWeightEntries: 'id, householdId, userId, date, weight, unit, createdAt, updatedAt'
     })
 
     // v28: Add deletion log for sync support

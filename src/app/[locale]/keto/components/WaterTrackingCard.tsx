@@ -14,8 +14,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Droplets, Plus, Minus, Settings } from "lucide-react"
 import { KetoWaterEntry } from "@/lib/db"
+
+// Water unit types and their ml values
+const WATER_UNITS = {
+  glass: 250,      // 250ml glass
+  bottle_small: 500, // 500ml bottle
+  bottle_large: 1000, // 1L bottle
+  cup: 200,        // 200ml cup
+} as const
+
+type WaterUnitType = keyof typeof WATER_UNITS
 
 interface WaterTrackingCardProps {
   todayEntry: KetoWaterEntry | undefined
@@ -33,10 +50,16 @@ export default function WaterTrackingCard({
   const t = useTranslations('keto')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [goalInput, setGoalInput] = useState(String(todayEntry?.goalGlasses || defaultGoal))
+  const [unitType, setUnitType] = useState<WaterUnitType>('glass')
 
   const currentGlasses = todayEntry?.glasses || 0
   const currentGoal = todayEntry?.goalGlasses || defaultGoal
   const progress = Math.min(100, (currentGlasses / currentGoal) * 100)
+
+  // Calculate ml values
+  const mlPerUnit = WATER_UNITS[unitType]
+  const currentMl = currentGlasses * mlPerUnit
+  const goalMl = currentGoal * mlPerUnit
 
   const weekStats = useMemo(() => {
     if (!weekEntries.length) return { avgGlasses: 0, daysHitGoal: 0 }
@@ -118,7 +141,12 @@ export default function WaterTrackingCard({
               <span className="text-lg sm:text-xl md:text-2xl text-muted-foreground">/{currentGoal}</span>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              {t('water.glassesToday')}
+              {t(`water.units.${unitType}`)}
+            </p>
+            <p className="text-xs text-blue-400 mt-0.5">
+              {currentMl >= 1000 ? `${(currentMl / 1000).toFixed(1)}L` : `${currentMl}ml`}
+              <span className="text-muted-foreground"> / </span>
+              {goalMl >= 1000 ? `${(goalMl / 1000).toFixed(1)}L` : `${goalMl}ml`}
             </p>
           </div>
 
@@ -238,7 +266,7 @@ export default function WaterTrackingCard({
 
       {/* Goal Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-[350px]">
+        <DialogContent className="sm:max-w-[380px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Droplets className="h-5 w-5 text-blue-500" />
@@ -249,7 +277,44 @@ export default function WaterTrackingCard({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
+          <div className="py-4 space-y-4">
+            {/* Unit Type Selection */}
+            <div className="space-y-2">
+              <Label>{t('water.unitType')}</Label>
+              <Select value={unitType} onValueChange={(v) => setUnitType(v as WaterUnitType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="glass">
+                    <div className="flex items-center gap-2">
+                      <span>🥛</span>
+                      <span>{t('water.units.glass')} (250ml)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cup">
+                    <div className="flex items-center gap-2">
+                      <span>☕</span>
+                      <span>{t('water.units.cup')} (200ml)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="bottle_small">
+                    <div className="flex items-center gap-2">
+                      <span>🧴</span>
+                      <span>{t('water.units.bottle_small')} (500ml)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="bottle_large">
+                    <div className="flex items-center gap-2">
+                      <span>🍼</span>
+                      <span>{t('water.units.bottle_large')} (1L)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Daily Goal */}
             <div className="space-y-2">
               <Label htmlFor="water-goal">{t('water.dailyGoal')}</Label>
               <div className="flex items-center gap-2">
@@ -262,10 +327,13 @@ export default function WaterTrackingCard({
                   onChange={(e) => setGoalInput(e.target.value)}
                   className="text-center text-lg"
                 />
-                <span className="text-sm text-muted-foreground">{t('water.glasses')}</span>
+                <span className="text-sm text-muted-foreground">{t(`water.units.${unitType}`)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                {t('water.glassSize')}
+                = {(parseInt(goalInput) || 0) * WATER_UNITS[unitType] >= 1000
+                  ? `${((parseInt(goalInput) || 0) * WATER_UNITS[unitType] / 1000).toFixed(1)}L`
+                  : `${(parseInt(goalInput) || 0) * WATER_UNITS[unitType]}ml`
+                } {t('water.perDay')}
               </p>
             </div>
           </div>

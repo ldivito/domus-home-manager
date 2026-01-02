@@ -741,8 +741,8 @@ Responde con un objeto JSON en este formato exacto:
 export async function calculateComponentIngredients(
   config: OpenAIConfig,
   components: MealComponent[],
-  numberOfPeople: number,
-  daysOfPrep: number,
+  servingsPerMeal: number,
+  totalMeals: number,
   dietaryRestrictions?: DietaryRestriction[]
 ): Promise<{ ingredients: IngredientCalculation[]; error?: string }> {
   const dietaryNote = dietaryRestrictions?.length
@@ -751,28 +751,50 @@ export async function calculateComponentIngredients(
 
   const componentTypeNames: Record<MealComponentType, string> = {
     'protein': 'Proteína',
-    'carb': 'Carbohidrato/Acompañamiento',
+    'carb': 'Acompañamiento',
     'vegetable': 'Vegetales/Verduras'
   }
+
+  // Total portions = servingsPerMeal × totalMeals (e.g., 2 people × 14 meals = 28 portions)
+  const totalPortions = servingsPerMeal * totalMeals
 
   const systemPrompt = `Eres un chef profesional de meal prep y nutricionista experto.
 Tu tarea es calcular ingredientes para componentes de comida individuales que se combinarán.
 DEBES responder ÚNICAMENTE con JSON válido, sin texto adicional.
-IMPORTANTE: Usa SIEMPRE el sistema métrico decimal (g, kg, ml, L).
+IMPORTANTE:
+- Usa SIEMPRE el sistema métrico decimal (g, kg, ml, L).
+- Calcula cantidades REALISTAS para porciones normales de una persona.
+- Una porción típica de proteína es 150-200g, de carbohidrato 150-200g, de verduras 100-150g.
 Responde SIEMPRE en español.${dietaryNote}`
 
   const prompt = `Calcula el total de ingredientes para estos componentes de meal prep:
 
-Número de personas por porción: ${numberOfPeople}
-Días de comidas: ${daysOfPrep}
+INFORMACIÓN IMPORTANTE:
+- Personas por comida: ${servingsPerMeal}
+- Total de comidas a preparar: ${totalMeals}
+- TOTAL MÁXIMO DE PORCIONES: ${totalPortions} (si cada componente cubriera todas las comidas)
 
-COMPONENTES:
-${components.map((comp, i) => `
+TAMAÑOS DE PORCIÓN ESTÁNDAR (por persona):
+- Proteínas (pollo, carne, cerdo, pescado): 150-200g crudo por porción
+- Acompañamientos (arroz, pasta, papas): 75-100g crudo por porción (150-200g cocido)
+- Verduras/ensaladas: 100-150g por porción
+
+COMPONENTES A CALCULAR:
+${components.map((comp, i) => {
+  const componentPortions = comp.servings * servingsPerMeal
+  return `
 ${i + 1}. ${comp.name} (${componentTypeNames[comp.type]})
    ${comp.description ? `Descripción: ${comp.description}` : ''}
-   Porciones necesarias: ${comp.servings}
-   ${comp.ingredients?.length ? `Ingredientes conocidos: ${comp.ingredients.map(ing => `${ing.name}${ing.amount ? ` (${ing.amount})` : ''}`).join(', ')}` : ''}
-`).join('\n')}
+   Comidas que cubre: ${comp.servings} de ${totalMeals} comidas
+   PORCIONES A CALCULAR: ${componentPortions} porciones (${comp.servings} comidas × ${servingsPerMeal} personas)
+   ${comp.ingredients?.length ? `Ingredientes conocidos: ${comp.ingredients.map(ing => `${ing.name}${ing.amount ? ` (${ing.amount})` : ''}`).join(', ')}` : ''}`
+}).join('\n')}
+
+EJEMPLO DE CÁLCULO:
+- Pollo para 7 comidas × 2 personas = 14 porciones
+- Cantidad = 14 porciones × 175g/porción = 2.45kg de pollo crudo
+
+IMPORTANTE: Calcula cantidades realistas. NO multipliques de más.
 
 Responde con un objeto JSON en este formato exacto:
 {
@@ -821,7 +843,7 @@ export async function generateComponentInstructions(
 }> {
   const componentTypeNames: Record<MealComponentType, string> = {
     'protein': 'Proteína',
-    'carb': 'Carbohidrato',
+    'carb': 'Acompañamiento',
     'vegetable': 'Vegetales'
   }
 
@@ -943,7 +965,7 @@ ${dietaryNote}
 PROTEÍNAS DISPONIBLES:
 ${proteins.map(p => `- ${p.name}`).join('\n')}
 
-CARBOHIDRATOS/ACOMPAÑAMIENTOS DISPONIBLES:
+ACOMPAÑAMIENTOS DISPONIBLES:
 ${carbs.map(c => `- ${c.name}`).join('\n')}
 
 VEGETALES/VERDURAS DISPONIBLES:

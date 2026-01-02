@@ -207,6 +207,7 @@ export default function MealPrepPage() {
   const [componentCombinations, setComponentCombinations] = useState<ComponentCombination[]>([])
   const [customComponentName, setCustomComponentName] = useState('')
   const [activeComponentType, setActiveComponentType] = useState<MealComponentType>('protein')
+  const [mealsPerDay, setMealsPerDay] = useState(2) // Number of main meals per day (lunch + dinner)
 
   // Calculated results state
   const [calculatedIngredients, setCalculatedIngredients] = useState<CalculatedIngredient[]>([])
@@ -644,14 +645,30 @@ export default function MealPrepPage() {
   const getComponentsByType = (type: MealComponentType) =>
     selectedComponents.filter(c => c.type === type)
 
+  // Total meals = days × meals per day (e.g., 7 days × 2 meals = 14 meals)
+  const totalMeals = daysOfPrep * mealsPerDay
+
+  // Auto-update component servings when totalMeals changes
+  useEffect(() => {
+    if (selectedComponents.length > 0) {
+      setSelectedComponents(prev => prev.map(comp => ({
+        ...comp,
+        servings: totalMeals // Update to cover all meals by default
+      })))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalMeals]) // Only run when totalMeals changes, not when components change
+
   const addComponent = (type: MealComponentType) => {
     if (!customComponentName.trim()) return
 
+    // Component servings = number of meals this component covers (default: all meals)
+    // Total portions will be calculated as: servings × numberOfPeople
     setSelectedComponents(prev => [...prev, {
       id: generateId('comp'),
       name: customComponentName.trim(),
       type,
-      servings: numberOfPeople * daysOfPrep,
+      servings: totalMeals, // Default to covering all meals
       isCustom: true
     }])
     setCustomComponentName('')
@@ -699,7 +716,7 @@ export default function MealPrepPage() {
             carbs: carbs.map(c => ({ id: c.id, name: c.name, type: c.type, servings: c.servings })),
             vegetables: vegetables.map(v => ({ id: v.id, name: v.name, type: v.type, servings: v.servings })),
             daysOfPrep,
-            mealsPerDay: 2,
+            mealsPerDay,
             dietaryRestrictions: dietaryRestrictions.length > 0 ? dietaryRestrictions : undefined
           }
         })
@@ -972,7 +989,7 @@ export default function MealPrepPage() {
           data: {
             components: allComponents,
             servingsPerMeal: numberOfPeople,
-            numberOfMeals: daysOfPrep * 2 // Assuming 2 meals per day
+            numberOfMeals: totalMeals // daysOfPrep × mealsPerDay
           }
         })
       })
@@ -1241,6 +1258,38 @@ export default function MealPrepPage() {
     try {
       const now = new Date()
 
+      // Handle component mode separately
+      if (useComponentMode && componentCombinations.length > 0) {
+        // Calculate the dates for each day
+        const start = new Date(startDate)
+
+        for (const combo of componentCombinations) {
+          // Calculate the date for this combination
+          const mealDate = new Date(start)
+          mealDate.setDate(start.getDate() + (combo.day - 1))
+
+          // Build meal title from components
+          const components = [combo.protein, combo.carb, combo.vegetable].filter(Boolean)
+          const mealTitle = components.join(' + ') || 'Meal Prep'
+
+          // Build description from combination suggestion
+          const mealDescription = combo.description || components.join(', ')
+
+          await db.meals.add({
+            id: generateId('mea'),
+            title: mealTitle,
+            description: mealDescription,
+            date: mealDate,
+            mealType: combo.mealType,
+            createdAt: now
+          })
+        }
+
+        toast.success(t('notifications.mealsCreated'))
+        return
+      }
+
+      // Regular mode - use selectedMeals
       for (const meal of selectedMeals) {
         // Get meal instructions from AI calculations
         const instruction = mealInstructions.find(i => i.mealName === meal.name)
@@ -1301,7 +1350,6 @@ export default function MealPrepPage() {
               description: mealDescription,
               date: new Date(day),
               mealType,
-              ingredients: meal.ingredients,
               createdAt: now
             })
           }
@@ -1543,6 +1591,34 @@ export default function MealPrepPage() {
                   </div>
                 </div>
 
+                {/* Meals per Day - only show in component mode */}
+                {useComponentMode && (
+                  <div>
+                    <Label>{t('setup.mealsPerDay')}</Label>
+                    <p className="text-xs text-gray-500 mb-2">{t('setup.mealsPerDayHint')}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setMealsPerDay(Math.max(1, mealsPerDay - 1))}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Utensils className="h-5 w-5 text-gray-500" />
+                        <span className="text-2xl font-bold w-12 text-center">{mealsPerDay}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setMealsPerDay(Math.min(4, mealsPerDay + 1))}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Dietary Restrictions */}
                 <div>
                   <Label className="mb-2 block">{t('setup.dietaryRestrictions')}</Label>
@@ -1687,7 +1763,7 @@ export default function MealPrepPage() {
                         </TabsTrigger>
                         <TabsTrigger value="carb" className="gap-2">
                           <Wheat className="h-4 w-4" />
-                          {t('components.carbs')}
+                          {t('components.sides')}
                         </TabsTrigger>
                         <TabsTrigger value="vegetable" className="gap-2">
                           <Salad className="h-4 w-4" />
@@ -1706,7 +1782,7 @@ export default function MealPrepPage() {
                         <Button onClick={() => addComponent(activeComponentType)}>
                           <Plus className="h-4 w-4 mr-2" />
                           {activeComponentType === 'protein' && t('components.addProtein')}
-                          {activeComponentType === 'carb' && t('components.addCarb')}
+                          {activeComponentType === 'carb' && t('components.addSide')}
                           {activeComponentType === 'vegetable' && t('components.addVegetable')}
                         </Button>
                       </div>
@@ -1715,7 +1791,7 @@ export default function MealPrepPage() {
                       <p className="text-xs text-gray-500 mb-4 flex items-center gap-1">
                         <Sparkles className="h-3 w-3" />
                         {activeComponentType === 'protein' && t('components.proteinExamples')}
-                        {activeComponentType === 'carb' && t('components.carbExamples')}
+                        {activeComponentType === 'carb' && t('components.sideExamples')}
                         {activeComponentType === 'vegetable' && t('components.vegetableExamples')}
                       </p>
 
@@ -1774,7 +1850,7 @@ export default function MealPrepPage() {
                               </div>
                             ))}
                             {getComponentsByType('carb').length === 0 && (
-                              <p className="text-center text-gray-500 py-4 text-sm">{t('components.carbExamples')}</p>
+                              <p className="text-center text-gray-500 py-4 text-sm">{t('components.sideExamples')}</p>
                             )}
                           </div>
                         </ScrollArea>
@@ -1824,7 +1900,7 @@ export default function MealPrepPage() {
                           <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center">
                             <Wheat className="h-5 w-5 mx-auto text-amber-500 mb-1" />
                             <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{getComponentsByType('carb').length}</p>
-                            <p className="text-xs text-amber-600 dark:text-amber-400">{t('components.carbLabel')}</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">{t('components.sideLabel')}</p>
                           </div>
                           <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
                             <Salad className="h-5 w-5 mx-auto text-green-500 mb-1" />
@@ -2114,28 +2190,75 @@ export default function MealPrepPage() {
 
                   <TabsContent value="schedule">
                     <div className="space-y-4">
-                      {selectedMeals.map(meal => (
-                        <div key={meal.id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium">{meal.name}</h4>
-                            <Badge>{meal.servings} {t('review.servings')}</Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {meal.mealTypes.map(type => (
-                              <Badge key={type} variant="outline">
-                                {tMeals(`mealTypes.${type}`)}
-                              </Badge>
-                            ))}
-                          </div>
-                          {meal.assignedDays.length > 0 && (
-                            <div className="mt-2 text-sm text-gray-500">
-                              {t('review.assignedDays')}: {meal.assignedDays.map(d =>
-                                new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                              ).join(', ')}
+                      {/* Component Mode: Show combinations by day */}
+                      {useComponentMode && componentCombinations.length > 0 ? (
+                        <>
+                          {/* Group combinations by day */}
+                          {Array.from(new Set(componentCombinations.map(c => c.day))).sort((a, b) => a - b).map(day => {
+                            const start = new Date(startDate)
+                            const mealDate = new Date(start)
+                            mealDate.setDate(start.getDate() + (day - 1))
+                            const dayCombos = componentCombinations.filter(c => c.day === day)
+
+                            return (
+                              <div key={day} className="border rounded-lg p-4">
+                                <div className="font-medium mb-3 flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-blue-500" />
+                                  {mealDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                                </div>
+                                <div className="space-y-2">
+                                  {dayCombos.map((combo, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                                      <Badge variant="outline">{tMeals(`mealTypes.${combo.mealType}`)}</Badge>
+                                      <div className="flex items-center gap-1">
+                                        {combo.protein && (
+                                          <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs">
+                                            {combo.protein}
+                                          </span>
+                                        )}
+                                        {combo.carb && (
+                                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded text-xs">
+                                            {combo.carb}
+                                          </span>
+                                        )}
+                                        {combo.vegetable && (
+                                          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                                            {combo.vegetable}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </>
+                      ) : (
+                        /* Regular Mode: Show selected meals */
+                        selectedMeals.map(meal => (
+                          <div key={meal.id} className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium">{meal.name}</h4>
+                              <Badge>{meal.servings} {t('review.servings')}</Badge>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            <div className="flex flex-wrap gap-1">
+                              {meal.mealTypes.map(type => (
+                                <Badge key={type} variant="outline">
+                                  {tMeals(`mealTypes.${type}`)}
+                                </Badge>
+                              ))}
+                            </div>
+                            {meal.assignedDays.length > 0 && (
+                              <div className="mt-2 text-sm text-gray-500">
+                                {t('review.assignedDays')}: {meal.assignedDays.map(d =>
+                                  new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                                ).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
 
                       <Button onClick={createCalendarMeals} variant="outline" className="w-full">
                         <Calendar className="h-4 w-4 mr-2" />

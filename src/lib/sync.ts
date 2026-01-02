@@ -89,7 +89,8 @@ const SYNC_TABLES = [
   'mealPrepSchedules',
   // Component-based meal prep (protein + carb + vegetable)
   'mealPrepComponents',
-  'mealPrepCombinations'
+  'mealPrepCombinations',
+  'savedMealComponents'
 ] as const
 
 type SyncTable = typeof SYNC_TABLES[number]

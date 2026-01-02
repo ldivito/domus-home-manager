@@ -127,7 +127,11 @@
     "servingsPerComponent": "{count} porciones",
     "proteinLabel": "Proteína",
     "sideLabel": "Acompañamiento",
-    "vegetableLabel": "Vegetal"
+    "vegetableLabel": "Vegetal",
+    "savedComponents": "Agregar Rápido",
+    "noSavedComponents": "Sin componentes guardados. Los que uses aparecerán aquí.",
+    "saveComponent": "Guardar para después",
+    "componentSaved": "Componente guardado"
   },
 
   "calculating": {

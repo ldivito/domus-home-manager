@@ -60,7 +60,8 @@ import {
   MealPrepIngredient,
   DietaryRestriction,
   PrepStepStatus,
-  MealComponentType
+  MealComponentType,
+  SavedMealComponent
 } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { generateId } from '@/lib/utils'
@@ -306,6 +307,12 @@ export default function MealPrepPage() {
       if (planIds.length === 0) return []
       return db.mealPrepIngredients.filter(i => planIds.includes(i.mealPrepPlanId)).toArray()
     },
+    []
+  ) || []
+
+  // Load saved meal components for quick reuse
+  const savedMealComponents = useLiveQuery(
+    () => db.savedMealComponents.orderBy('timesUsed').reverse().toArray(),
     []
   ) || []
 
@@ -707,6 +714,57 @@ export default function MealPrepPage() {
 
   const removeComponent = (componentId: string) => {
     setSelectedComponents(prev => prev.filter(c => c.id !== componentId))
+  }
+
+  // Add from saved component
+  const addFromSaved = (savedComponent: SavedMealComponent) => {
+    // Check if already added
+    const exists = selectedComponents.some(
+      c => c.name.toLowerCase() === savedComponent.name.toLowerCase() && c.type === savedComponent.type
+    )
+    if (exists) return
+
+    setSelectedComponents(prev => [...prev, {
+      id: generateId('comp'),
+      name: savedComponent.name,
+      type: savedComponent.type,
+      servings: totalMeals,
+      description: savedComponent.description,
+      isCustom: false
+    }])
+
+    // Update usage count
+    db.savedMealComponents.update(savedComponent.id!, {
+      timesUsed: savedComponent.timesUsed + 1,
+      lastUsed: new Date()
+    })
+  }
+
+  // Save current component to saved components
+  const saveComponentForReuse = async (component: SelectedComponent) => {
+    try {
+      // Check if already saved
+      const existing = savedMealComponents.find(
+        c => c.name.toLowerCase() === component.name.toLowerCase() && c.type === component.type
+      )
+      if (existing) {
+        toast.error(t('components.componentSaved'))
+        return
+      }
+
+      await db.savedMealComponents.add({
+        id: generateId('smc'),
+        name: component.name,
+        type: component.type,
+        description: component.description,
+        timesUsed: 1,
+        lastUsed: new Date(),
+        createdAt: new Date()
+      })
+      toast.success(t('components.componentSaved'))
+    } catch (error) {
+      logger.error('Error saving component:', error)
+    }
   }
 
   const updateComponentServings = (componentId: string, delta: number) => {
@@ -1990,30 +2048,65 @@ export default function MealPrepPage() {
                         {activeComponentType === 'vegetable' && t('components.vegetableExamples')}
                       </p>
 
+                      {/* Quick Add from saved components */}
+                      {savedMealComponents.filter(c => c.type === activeComponentType).length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-500 mb-2">{t('components.savedComponents')}:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {savedMealComponents
+                              .filter(c => c.type === activeComponentType)
+                              .slice(0, 8)
+                              .map(saved => (
+                                <Badge
+                                  key={saved.id}
+                                  variant="outline"
+                                  className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                                  onClick={() => addFromSaved(saved)}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  {saved.name}
+                                </Badge>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Selected Components by Type */}
                       <TabsContent value="protein" className="mt-0">
                         <ScrollArea className="h-48">
                           <div className="space-y-2">
-                            {getComponentsByType('protein').map(comp => (
-                              <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-red-50 dark:bg-red-900/20">
-                                <div className="flex items-center gap-2">
-                                  <Beef className="h-4 w-4 text-red-500" />
-                                  <span className="font-medium">{comp.name}</span>
+                            {getComponentsByType('protein').map(comp => {
+                              const isSaved = savedMealComponents.some(s => s.name.toLowerCase() === comp.name.toLowerCase() && s.type === comp.type)
+                              return (
+                                <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-red-50 dark:bg-red-900/20">
+                                  <div className="flex items-center gap-2">
+                                    <Beef className="h-4 w-4 text-red-500" />
+                                    <span className="font-medium">{comp.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-10 text-center text-sm">{comp.servings}</span>
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-7 w-7 ${isSaved ? 'text-yellow-500' : 'text-gray-400'}`}
+                                      onClick={() => !isSaved && saveComponentForReuse(comp)}
+                                      disabled={isSaved}
+                                    >
+                                      <Bookmark className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="w-10 text-center text-sm">{comp.servings}</span>
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                             {getComponentsByType('protein').length === 0 && (
                               <p className="text-center text-gray-500 py-4 text-sm">{t('components.proteinExamples')}</p>
                             )}
@@ -2024,26 +2117,38 @@ export default function MealPrepPage() {
                       <TabsContent value="carb" className="mt-0">
                         <ScrollArea className="h-48">
                           <div className="space-y-2">
-                            {getComponentsByType('carb').map(comp => (
-                              <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                                <div className="flex items-center gap-2">
-                                  <Wheat className="h-4 w-4 text-amber-500" />
-                                  <span className="font-medium">{comp.name}</span>
+                            {getComponentsByType('carb').map(comp => {
+                              const isSaved = savedMealComponents.some(s => s.name.toLowerCase() === comp.name.toLowerCase() && s.type === comp.type)
+                              return (
+                                <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                                  <div className="flex items-center gap-2">
+                                    <Wheat className="h-4 w-4 text-amber-500" />
+                                    <span className="font-medium">{comp.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-10 text-center text-sm">{comp.servings}</span>
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-7 w-7 ${isSaved ? 'text-yellow-500' : 'text-gray-400'}`}
+                                      onClick={() => !isSaved && saveComponentForReuse(comp)}
+                                      disabled={isSaved}
+                                    >
+                                      <Bookmark className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="w-10 text-center text-sm">{comp.servings}</span>
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                             {getComponentsByType('carb').length === 0 && (
                               <p className="text-center text-gray-500 py-4 text-sm">{t('components.sideExamples')}</p>
                             )}
@@ -2054,26 +2159,38 @@ export default function MealPrepPage() {
                       <TabsContent value="vegetable" className="mt-0">
                         <ScrollArea className="h-48">
                           <div className="space-y-2">
-                            {getComponentsByType('vegetable').map(comp => (
-                              <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                <div className="flex items-center gap-2">
-                                  <Salad className="h-4 w-4 text-green-500" />
-                                  <span className="font-medium">{comp.name}</span>
+                            {getComponentsByType('vegetable').map(comp => {
+                              const isSaved = savedMealComponents.some(s => s.name.toLowerCase() === comp.name.toLowerCase() && s.type === comp.type)
+                              return (
+                                <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                  <div className="flex items-center gap-2">
+                                    <Salad className="h-4 w-4 text-green-500" />
+                                    <span className="font-medium">{comp.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-10 text-center text-sm">{comp.servings}</span>
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-7 w-7 ${isSaved ? 'text-yellow-500' : 'text-gray-400'}`}
+                                      onClick={() => !isSaved && saveComponentForReuse(comp)}
+                                      disabled={isSaved}
+                                    >
+                                      <Bookmark className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, -1)}>
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="w-10 text-center text-sm">{comp.servings}</span>
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateComponentServings(comp.id, 1)}>
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeComponent(comp.id)}>
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                             {getComponentsByType('vegetable').length === 0 && (
                               <p className="text-center text-gray-500 py-4 text-sm">{t('components.vegetableExamples')}</p>
                             )}

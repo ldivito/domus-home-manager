@@ -774,6 +774,18 @@ export interface MealPrepCombination {
   createdAt: Date
 }
 
+// Saved component for quick reuse
+export interface SavedMealComponent {
+  id?: string
+  name: string
+  type: MealComponentType              // protein, carb, or vegetable
+  description?: string
+  timesUsed: number                    // For sorting by popularity
+  lastUsed?: Date
+  householdId?: string
+  createdAt: Date
+}
+
 export interface MealPrepPlan {
   id?: string
   name: string
@@ -1060,6 +1072,7 @@ export class DomusDatabase extends Dexie {
   // Component-based meal prep tables
   mealPrepComponents!: Table<MealPrepComponent>
   mealPrepCombinations!: Table<MealPrepCombination>
+  savedMealComponents!: Table<SavedMealComponent>
   // Sync support
   deletionLog!: Table<DeletionLog>
   private legacyMealIngredientMigrationComplete = false
@@ -1158,6 +1171,11 @@ export class DomusDatabase extends Dexie {
     this.version(31).stores({
       mealPrepComponents: 'id, mealPrepPlanId, name, type, householdId, createdAt',
       mealPrepCombinations: 'id, mealPrepPlanId, dayIndex, date, mealType, proteinComponentId, carbComponentId, vegetableComponentId, householdId, createdAt'
+    })
+
+    // v32: Add saved meal components for quick reuse
+    this.version(32).stores({
+      savedMealComponents: 'id, name, type, timesUsed, lastUsed, householdId, createdAt'
     })
 
     // v27: Add Savings module tables

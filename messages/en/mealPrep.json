@@ -127,7 +127,11 @@
     "servingsPerComponent": "{count} servings",
     "proteinLabel": "Protein",
     "sideLabel": "Side",
-    "vegetableLabel": "Vegetable"
+    "vegetableLabel": "Vegetable",
+    "savedComponents": "Quick Add",
+    "noSavedComponents": "No saved components yet. Components you use will appear here.",
+    "saveComponent": "Save for later",
+    "componentSaved": "Component saved for quick access"
   },
 
   "calculating": {

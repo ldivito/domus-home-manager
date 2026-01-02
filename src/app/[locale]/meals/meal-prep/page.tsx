@@ -229,6 +229,10 @@ export default function MealPrepPage() {
   // Templates
   const [showTemplates, setShowTemplates] = useState(false)
 
+  // Saved plans view
+  const [showSavedPlans, setShowSavedPlans] = useState(false)
+  const [viewingPlanId, setViewingPlanId] = useState<string | null>(null)
+
   // Smart scheduling data
   const [smartSchedule, setSmartSchedule] = useState<SmartScheduleData | null>(null)
 
@@ -274,6 +278,33 @@ export default function MealPrepPage() {
       const templateIds = templates.map(t => t.id).filter(Boolean) as string[]
       if (templateIds.length === 0) return []
       return db.mealPrepItems.filter(i => templateIds.includes(i.mealPrepPlanId)).toArray()
+    },
+    []
+  ) || []
+
+  // Load saved plans (not templates)
+  const savedPlans = useLiveQuery(
+    () => db.mealPrepPlans.filter(p => p.isTemplate !== true).reverse().toArray(),
+    []
+  ) || []
+
+  // Load items and ingredients for saved plans
+  const savedPlanItems = useLiveQuery(
+    async () => {
+      const plans = await db.mealPrepPlans.filter(p => p.isTemplate !== true).toArray()
+      const planIds = plans.map(p => p.id).filter(Boolean) as string[]
+      if (planIds.length === 0) return []
+      return db.mealPrepItems.filter(i => planIds.includes(i.mealPrepPlanId)).toArray()
+    },
+    []
+  ) || []
+
+  const savedPlanIngredients = useLiveQuery(
+    async () => {
+      const plans = await db.mealPrepPlans.filter(p => p.isTemplate !== true).toArray()
+      const planIds = plans.map(p => p.id).filter(Boolean) as string[]
+      if (planIds.length === 0) return []
+      return db.mealPrepIngredients.filter(i => planIds.includes(i.mealPrepPlanId)).toArray()
     },
     []
   ) || []
@@ -1253,6 +1284,35 @@ export default function MealPrepPage() {
     }
   }
 
+  // Delete a saved plan
+  const deletePlan = async (planId: string) => {
+    if (!confirm(t('savedPlans.confirmDelete'))) return
+
+    try {
+      // Delete related items first
+      await db.mealPrepItems.filter(i => i.mealPrepPlanId === planId).delete()
+      await db.mealPrepIngredients.filter(i => i.mealPrepPlanId === planId).delete()
+      await db.mealPrepSteps.filter(i => i.mealPrepPlanId === planId).delete()
+      await db.mealPrepContainers.filter(i => i.mealPrepPlanId === planId).delete()
+      await db.mealPrepSchedules.filter(i => i.mealPrepPlanId === planId).delete()
+      await db.mealPrepSessions.filter(i => i.mealPrepPlanId === planId).delete()
+      // Delete components and combinations if any
+      await db.mealPrepComponents.filter(i => i.mealPrepPlanId === planId).delete()
+      await db.mealPrepCombinations.filter(i => i.mealPrepPlanId === planId).delete()
+      // Delete the plan itself
+      await db.mealPrepPlans.delete(planId)
+
+      if (viewingPlanId === planId) {
+        setViewingPlanId(null)
+      }
+
+      toast.success(t('savedPlans.deleted'))
+    } catch (error) {
+      logger.error('Error deleting plan:', error)
+      toast.error(t('errors.saveFailed'))
+    }
+  }
+
   // Create calendar meals from the prep plan and save to savedMeals
   const createCalendarMeals = async () => {
     try {
@@ -1705,6 +1765,141 @@ export default function MealPrepPage() {
                             </Button>
                           </div>
                         ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Saved Plans Section */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label>{t('savedPlans.title')}</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSavedPlans(!showSavedPlans)}
+                    >
+                      <Layers className="h-4 w-4 mr-2" />
+                      {showSavedPlans ? t('savedPlans.hide') : t('savedPlans.show')}
+                    </Button>
+                  </div>
+
+                  {showSavedPlans && (
+                    <div className="space-y-2">
+                      {savedPlans.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-4">
+                          {t('savedPlans.noPlans')}
+                        </p>
+                      ) : (
+                        savedPlans.map(plan => {
+                          const planItems = savedPlanItems.filter(i => i.mealPrepPlanId === plan.id)
+                          const planIngredients = savedPlanIngredients.filter(i => i.mealPrepPlanId === plan.id)
+                          const isViewing = viewingPlanId === plan.id
+
+                          return (
+                            <div
+                              key={plan.id}
+                              className="border rounded-lg overflow-hidden"
+                            >
+                              <div className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <div className="flex-1">
+                                  <p className="font-medium">{plan.name}</p>
+                                  <div className="flex gap-2 text-xs text-gray-500 mt-1">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {new Date(plan.cookingDate).toLocaleDateString()}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{planItems.length} {t('templates.meals')}</span>
+                                    <span>•</span>
+                                    <span>{planIngredients.length} {t('savedPlans.ingredients')}</span>
+                                    <span>•</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {t(`savedPlans.statusLabels.${plan.status}`)}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setViewingPlanId(isViewing ? null : plan.id!)}
+                                  >
+                                    {isViewing ? (
+                                      <ChevronUp className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => deletePlan(plan.id!)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Expanded plan details */}
+                              {isViewing && (
+                                <div className="border-t p-4 bg-gray-50 dark:bg-gray-800/50">
+                                  <div className="grid gap-4">
+                                    {/* Date range */}
+                                    <div>
+                                      <h5 className="text-xs font-medium text-gray-500 mb-1">{t('savedPlans.dateRange')}</h5>
+                                      <p className="text-sm">
+                                        {new Date(plan.startDate).toLocaleDateString()} - {new Date(plan.endDate).toLocaleDateString()}
+                                      </p>
+                                    </div>
+
+                                    {/* Meals */}
+                                    <div>
+                                      <h5 className="text-xs font-medium text-gray-500 mb-2">{t('meals.selected')}</h5>
+                                      <div className="space-y-2">
+                                        {planItems.map(item => (
+                                          <div key={item.id} className="p-2 bg-white dark:bg-gray-800 rounded border">
+                                            <div className="flex items-center justify-between">
+                                              <span className="font-medium text-sm">{item.mealName}</span>
+                                              <Badge variant="outline" className="text-xs">{item.quantity} {t('review.servings')}</Badge>
+                                            </div>
+                                            {item.prepInstructions && (
+                                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.prepInstructions}</p>
+                                            )}
+                                            {item.storageType && (
+                                              <div className="flex gap-2 mt-1 text-xs text-gray-400">
+                                                <span>{t(`prep.storageType.${item.storageType}`)}</span>
+                                                {item.storageDays && <span>• {t('prep.days', { count: item.storageDays })}</span>}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Ingredients */}
+                                    <div>
+                                      <h5 className="text-xs font-medium text-gray-500 mb-2">{t('review.ingredients')}</h5>
+                                      <div className="grid grid-cols-2 gap-1">
+                                        {planIngredients.slice(0, 10).map(ing => (
+                                          <div key={ing.id} className="text-xs p-1 bg-white dark:bg-gray-800 rounded">
+                                            {ing.name} <span className="text-gray-400">({ing.amount})</span>
+                                          </div>
+                                        ))}
+                                        {planIngredients.length > 10 && (
+                                          <div className="text-xs p-1 text-gray-400 italic">
+                                            +{planIngredients.length - 10} more
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })
                       )}
                     </div>
                   )}

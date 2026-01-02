@@ -65,6 +65,30 @@
     "saveAsTemplate": "Guardar como Plantilla"
   },
 
+  "savedPlans": {
+    "title": "Planes Guardados",
+    "show": "Ver Planes Guardados",
+    "hide": "Ocultar Planes",
+    "noPlans": "Sin planes guardados. Completa una sesión de meal prep para guardar un plan.",
+    "view": "Ver",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este plan?",
+    "deleted": "Plan eliminado",
+    "cookingDate": "Día de Cocina",
+    "dateRange": "Rango de Fechas",
+    "status": "Estado",
+    "ingredients": "ingredientes",
+    "steps": "pasos",
+    "viewDetails": "Ver Detalles Completos",
+    "closeDetails": "Cerrar",
+    "statusLabels": {
+      "planning": "Planificando",
+      "shopping": "Comprando",
+      "cooking": "Cocinando",
+      "completed": "Completado"
+    }
+  },
+
   "meals": {
     "title": "Selecciona tus Comidas",
     "description": "Elige comidas de tus recetas guardadas o agrega personalizadas",

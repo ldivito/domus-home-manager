@@ -1114,19 +1114,34 @@ export default function MealPrepPage() {
       const instructionsData = await instructionsResponse.json()
 
       // Convert component instructions to meal instructions format
-      const componentInstructions: MealInstruction[] = instructionsData.instructions?.map((inst: { componentName: string; prepInstructions: string; cookingTime?: number; storageType?: string; storageDays?: number; nutritionEstimate?: { calories: number; protein: number; carbs: number; fat: number } }) => ({
-        mealName: inst.componentName,
-        prepTime: 0,
-        cookTime: inst.cookingTime || 0,
-        totalTime: inst.cookingTime || 0,
-        instructions: inst.prepInstructions,
-        tips: '',
+      // The API returns mealInstructions with full details from generateComponentInstructions
+      const componentInstructions: MealInstruction[] = instructionsData.instructions?.map((inst: {
+        mealName: string
+        prepTime?: number
+        cookTime?: number
+        totalTime?: number
+        instructions?: string
+        tips?: string
+        storageType?: 'refrigerator' | 'freezer' | 'pantry'
+        storageDays?: number
+        storageInstructions?: string
+        reheatingInstructions?: string
+        containerSize?: 'small' | 'medium' | 'large' | 'extra-large'
+        containerCount?: number
+        nutritionEstimate?: { calories: number; protein: number; carbs: number; fat: number }
+      }) => ({
+        mealName: inst.mealName,
+        prepTime: inst.prepTime || 0,
+        cookTime: inst.cookTime || 0,
+        totalTime: inst.totalTime || (inst.prepTime || 0) + (inst.cookTime || 0),
+        instructions: inst.instructions || '',
+        tips: inst.tips || '',
         storageType: inst.storageType || 'refrigerator',
         storageDays: inst.storageDays || 4,
-        storageInstructions: '',
-        reheatingInstructions: '',
-        containerSize: 'medium',
-        containerCount: Math.ceil((proteins.length + carbs.length + vegetables.length) / 3),
+        storageInstructions: inst.storageInstructions || '',
+        reheatingInstructions: inst.reheatingInstructions || '',
+        containerSize: inst.containerSize || 'medium',
+        containerCount: inst.containerCount || 1,
         nutritionEstimate: inst.nutritionEstimate
       })) || []
 
@@ -1156,7 +1171,45 @@ export default function MealPrepPage() {
         setOrganizationTips(containerData.organizationTips || [])
       }
 
-      // Step 4: Suggest combinations if not already done
+      // Step 4: Generate smart schedule for component prep
+      toast.loading(t('calculating.schedule'))
+      const scheduleResponse = await fetch('/api/meal-prep/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'smart-schedule',
+          apiKey: openAIKey,
+          data: {
+            meals: allComponents.map(c => {
+              const inst = componentInstructions.find(i => i.mealName === c.name)
+              return {
+                name: c.name,
+                prepTime: inst?.prepTime,
+                cookTime: inst?.cookTime,
+                category: c.type
+              }
+            })
+          }
+        })
+      })
+
+      if (scheduleResponse.ok) {
+        const scheduleData = await scheduleResponse.json()
+        setSmartSchedule({
+          optimizedOrder: scheduleData.optimizedOrder || [],
+          parallelTasks: scheduleData.parallelTasks,
+          equipmentNeeded: scheduleData.equipmentNeeded,
+          timelineSteps: scheduleData.timelineSteps,
+          totalEstimatedTime: scheduleData.totalEstimatedTime || 0,
+          efficiencyTips: scheduleData.efficiencyTips || []
+        })
+        // Update prep order with optimized order
+        if (scheduleData.optimizedOrder?.length > 0) {
+          setPrepOrder(scheduleData.optimizedOrder)
+        }
+      }
+
+      // Step 5: Suggest combinations if not already done
       if (componentCombinations.length === 0) {
         await suggestCombinations()
       }

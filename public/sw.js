@@ -1,6 +1,5 @@
-const CACHE_NAME = 'domus-v1';
+const CACHE_NAME = 'domus-v2';
 const STATIC_ASSETS = [
-  '/',
   '/en',
   '/es',
   '/icons/icon-192x192.png',
@@ -65,12 +64,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For HTML pages - Stale While Revalidate
+  // For HTML pages - Stale While Revalidate with redirect handling
   if (request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request).then((response) => {
-          if (response.ok) {
+        const fetchPromise = fetch(request, { redirect: 'follow' }).then((response) => {
+          // Don't cache redirect responses - Safari doesn't allow serving them
+          if (response.ok && !response.redirected) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }

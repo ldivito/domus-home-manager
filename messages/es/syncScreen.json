@@ -5,5 +5,11 @@
   "syncFailed": "Sincronización Fallida",
   "syncSuccess": "Sincronizados {pushed} cambios, descargados {pulled} actualizaciones",
   "syncError": "No se pudo sincronizar los datos",
-  "pleaseWait": "Por favor espera mientras sincronizamos tus datos"
+  "pleaseWait": "Por favor espera mientras sincronizamos tus datos",
+  "stepMigration": "Verificando base de datos...",
+  "stepCollecting": "Recopilando cambios locales...",
+  "stepPushing": "Subiendo cambios...",
+  "stepPulling": "Descargando actualizaciones...",
+  "stepApplying": "Aplicando cambios...",
+  "itemsProgress": "{current} de {total} elementos"
 }

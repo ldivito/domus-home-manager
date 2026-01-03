@@ -26,6 +26,14 @@ export interface SyncResult {
   error?: string
 }
 
+export interface SyncProgress {
+  step: 'migration' | 'collecting' | 'pushing' | 'pulling' | 'applying' | 'complete'
+  message: string
+  current?: number    // Current item count
+  total?: number      // Total items to process
+  percent?: number    // 0-100 progress percentage
+}
+
 const SYNC_TABLES = [
   // Core tables
   'users',
@@ -203,10 +211,14 @@ async function clearDeletionLog(before: Date): Promise<void> {
 }
 
 /**
- * Apply remote changes to local database
+ * Apply remote changes to local database with progress callback
  */
-async function applyRemoteChanges(changes: SyncRecord[]): Promise<number> {
+async function applyRemoteChangesWithProgress(
+  changes: SyncRecord[],
+  onProgress: (current: number, total: number) => void
+): Promise<number> {
   let applied = 0
+  const total = changes.length
 
   for (const change of changes) {
     const table = db[change.table as SyncTable]
@@ -222,6 +234,11 @@ async function applyRemoteChanges(changes: SyncRecord[]): Promise<number> {
         await table.put(change.data as any)
       }
       applied++
+
+      // Report progress every 10 items or at the end
+      if (applied % 10 === 0 || applied === total) {
+        onProgress(applied, total)
+      }
     } catch (error) {
       logger.error(`Error applying change to ${change.table}:`, error)
     }
@@ -293,8 +310,12 @@ async function pullChanges(since: Date | null): Promise<{ success: boolean; chan
 /**
  * Perform a full bi-directional sync
  * @param forceFullSync - If true, ignores last sync time and syncs all data
+ * @param onProgress - Optional callback for progress updates
  */
-export async function performSync(forceFullSync: boolean = false): Promise<SyncResult> {
+export async function performSync(
+  forceFullSync: boolean = false,
+  onProgress?: (progress: SyncProgress) => void
+): Promise<SyncResult> {
   const lastSync = forceFullSync ? null : getLastSyncTime()
   const result: SyncResult = {
     success: false,
@@ -303,8 +324,20 @@ export async function performSync(forceFullSync: boolean = false): Promise<SyncR
     conflicts: 0
   }
 
+  const reportProgress = (progress: SyncProgress) => {
+    if (onProgress) {
+      onProgress(progress)
+    }
+  }
+
   try {
     // 0. Check if migration is needed before syncing
+    reportProgress({
+      step: 'migration',
+      message: 'Checking database...',
+      percent: 5
+    })
+
     const migrationStatus = await checkMigrationNeeded()
     if (migrationStatus.needsMigration) {
       logger.debug('Migration needed before sync, performing migration...')
@@ -318,11 +351,33 @@ export async function performSync(forceFullSync: boolean = false): Promise<SyncR
     }
 
     // 1. Collect local changes
+    reportProgress({
+      step: 'collecting',
+      message: 'Collecting local changes...',
+      percent: 15
+    })
+
     const localChanges = await collectLocalChanges(lastSync)
+
+    reportProgress({
+      step: 'collecting',
+      message: 'Collecting local changes...',
+      current: localChanges.length,
+      total: localChanges.length,
+      percent: 30
+    })
 
     // 2. Push local changes to server
     const syncStartTime = new Date()
     if (localChanges.length > 0) {
+      reportProgress({
+        step: 'pushing',
+        message: 'Uploading changes...',
+        current: 0,
+        total: localChanges.length,
+        percent: 35
+      })
+
       const pushResult = await pushChanges(localChanges)
       if (!pushResult.success) {
         result.error = `Push failed: ${pushResult.error}`
@@ -330,25 +385,88 @@ export async function performSync(forceFullSync: boolean = false): Promise<SyncR
       }
       result.pushed = pushResult.count
 
+      reportProgress({
+        step: 'pushing',
+        message: 'Uploading changes...',
+        current: localChanges.length,
+        total: localChanges.length,
+        percent: 50
+      })
+
       // Clear deletion log for successfully pushed deletions
       await clearDeletionLog(syncStartTime)
+    } else {
+      reportProgress({
+        step: 'pushing',
+        message: 'No local changes to upload',
+        current: 0,
+        total: 0,
+        percent: 50
+      })
     }
 
     // 3. Pull remote changes from server
+    reportProgress({
+      step: 'pulling',
+      message: 'Downloading updates...',
+      percent: 55
+    })
+
     const pullResult = await pullChanges(lastSync)
     if (!pullResult.success) {
       result.error = `Pull failed: ${pullResult.error}`
       return result
     }
 
+    reportProgress({
+      step: 'pulling',
+      message: 'Downloading updates...',
+      current: pullResult.changes.length,
+      total: pullResult.changes.length,
+      percent: 70
+    })
+
     // 4. Apply remote changes to local database
     if (pullResult.changes.length > 0) {
-      result.pulled = await applyRemoteChanges(pullResult.changes)
+      reportProgress({
+        step: 'applying',
+        message: 'Applying changes...',
+        current: 0,
+        total: pullResult.changes.length,
+        percent: 75
+      })
+
+      result.pulled = await applyRemoteChangesWithProgress(
+        pullResult.changes,
+        (current, total) => {
+          reportProgress({
+            step: 'applying',
+            message: 'Applying changes...',
+            current,
+            total,
+            percent: 75 + Math.round((current / total) * 25)
+          })
+        }
+      )
+    } else {
+      reportProgress({
+        step: 'applying',
+        message: 'No updates to apply',
+        current: 0,
+        total: 0,
+        percent: 95
+      })
     }
 
     // 5. Update last sync timestamp
     setLastSyncTime(new Date())
     result.success = true
+
+    reportProgress({
+      step: 'complete',
+      message: 'Sync complete!',
+      percent: 100
+    })
 
     return result
   } catch (error) {

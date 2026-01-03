@@ -196,6 +196,8 @@ class CloudflareD1REST implements D1Database {
   }
 }
 
+const CLOUDFLARE_API_TIMEOUT = 15000 // 15 seconds
+
 class CloudflareD1RESTStatement implements D1PreparedStatement {
   private values: unknown[] = []
 
@@ -217,38 +219,56 @@ class CloudflareD1RESTStatement implements D1PreparedStatement {
   }
 
   async run(): Promise<D1Result> {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sql: this.query,
-          params: this.values
-        })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_API_TIMEOUT)
+
+    try {
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sql: this.query,
+            params: this.values
+          }),
+          signal: controller.signal
+        }
+      )
+
+      clearTimeout(timeout)
+
+      const data = await response.json() as {
+        success: boolean
+        result?: Array<{ results: unknown[], success: boolean, meta: D1Result['meta'] }>
+        errors?: Array<{ message: string }>
       }
-    )
 
-    const data = await response.json() as {
-      success: boolean
-      result?: Array<{ results: unknown[], success: boolean, meta: D1Result['meta'] }>
-      errors?: Array<{ message: string }>
-    }
+      if (!data.success || !data.result?.[0]) {
+        return {
+          success: false,
+          error: data.errors?.[0]?.message || 'Unknown error'
+        }
+      }
 
-    if (!data.success || !data.result?.[0]) {
       return {
-        success: false,
-        error: data.errors?.[0]?.message || 'Unknown error'
+        success: data.result[0].success,
+        results: data.result[0].results,
+        meta: data.result[0].meta
       }
-    }
-
-    return {
-      success: data.result[0].success,
-      results: data.result[0].results,
-      meta: data.result[0].meta
+    } catch (error) {
+      clearTimeout(timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.error('[Cloudflare D1] Request timeout after', CLOUDFLARE_API_TIMEOUT, 'ms')
+        return {
+          success: false,
+          error: 'Cloudflare D1 API timeout'
+        }
+      }
+      throw error
     }
   }
 
@@ -266,62 +286,107 @@ class CloudflareKVREST implements KVNamespace {
   ) {}
 
   async get(key: string): Promise<string | null> {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${this.apiToken}`
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_API_TIMEOUT)
+
+    try {
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiToken}`
+          },
+          signal: controller.signal
         }
+      )
+
+      clearTimeout(timeout)
+
+      if (response.status === 404) {
+        return null
       }
-    )
 
-    if (response.status === 404) {
-      return null
+      if (!response.ok) {
+        throw new Error(`KV GET failed: ${response.statusText}`)
+      }
+
+      return await response.text()
+    } catch (error) {
+      clearTimeout(timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.error('[Cloudflare KV] GET timeout after', CLOUDFLARE_API_TIMEOUT, 'ms')
+        throw new Error('Cloudflare KV API timeout')
+      }
+      throw error
     }
-
-    if (!response.ok) {
-      throw new Error(`KV GET failed: ${response.statusText}`)
-    }
-
-    return await response.text()
   }
 
   async put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void> {
-    const url = new URL(
-      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`
-    )
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_API_TIMEOUT)
 
-    if (options?.expirationTtl) {
-      url.searchParams.set('expiration_ttl', options.expirationTtl.toString())
-    }
+    try {
+      const url = new URL(
+        `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`
+      )
 
-    const response = await fetch(url.toString(), {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${this.apiToken}`,
-        'Content-Type': 'text/plain'
-      },
-      body: value
-    })
+      if (options?.expirationTtl) {
+        url.searchParams.set('expiration_ttl', options.expirationTtl.toString())
+      }
 
-    if (!response.ok) {
-      throw new Error(`KV PUT failed: ${response.statusText}`)
+      const response = await fetch(url.toString(), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.apiToken}`,
+          'Content-Type': 'text/plain'
+        },
+        body: value,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeout)
+
+      if (!response.ok) {
+        throw new Error(`KV PUT failed: ${response.statusText}`)
+      }
+    } catch (error) {
+      clearTimeout(timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.error('[Cloudflare KV] PUT timeout after', CLOUDFLARE_API_TIMEOUT, 'ms')
+        throw new Error('Cloudflare KV API timeout')
+      }
+      throw error
     }
   }
 
   async delete(key: string): Promise<void> {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${this.apiToken}`
-        }
-      }
-    )
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_API_TIMEOUT)
 
-    if (!response.ok && response.status !== 404) {
-      throw new Error(`KV DELETE failed: ${response.statusText}`)
+    try {
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}/values/${key}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${this.apiToken}`
+          },
+          signal: controller.signal
+        }
+      )
+
+      clearTimeout(timeout)
+
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`KV DELETE failed: ${response.statusText}`)
+      }
+    } catch (error) {
+      clearTimeout(timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.error('[Cloudflare KV] DELETE timeout after', CLOUDFLARE_API_TIMEOUT, 'ms')
+        throw new Error('Cloudflare KV API timeout')
+      }
+      throw error
     }
   }
 }

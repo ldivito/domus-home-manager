@@ -87,8 +87,18 @@ export async function getUserFromRequest(
   // If KV is available, also check if session exists
   // This handles logout scenarios where session is deleted from KV
   if (env) {
-    const kvSession = await getSession(token, env)
-    if (!kvSession) return null
+    try {
+      const kvSession = await getSession(token, env)
+      if (!kvSession) return null
+    } catch (error) {
+      // In development, fall back to JWT-only auth if KV fails (e.g., API timeout)
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('KV session check failed, using JWT only:', error)
+        return jwtData
+      }
+      // In production, rethrow the error
+      throw error
+    }
   }
 
   return jwtData

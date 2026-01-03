@@ -44,10 +44,11 @@ export async function POST(request: Request) {
     // Generate a unique invite code (8 characters, alphanumeric)
     const inviteCode = generateInviteCode()
     const householdId = `household_${crypto.randomUUID()}`
+    const memberId = `member_${crypto.randomUUID()}`
     const now = new Date().toISOString()
 
     // Create household record
-    await db
+    const householdResult = await db
       .prepare(`
         INSERT INTO households (id, name, description, ownerId, inviteCode, createdAt, updatedAt)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -55,8 +56,16 @@ export async function POST(request: Request) {
       .bind(householdId, name.trim(), description?.trim() || null, session.userId, inviteCode, now, now)
       .run()
 
+    if (!householdResult.success) {
+      logger.error('Failed to create household:', householdResult.error)
+      return NextResponse.json(
+        { error: 'Failed to create household - database error' },
+        { status: 500 }
+      )
+    }
+
     // Create household member record for owner
-    await db
+    const memberResult = await db
       .prepare(`
         INSERT INTO household_members (
           id, householdId, userId, role, joinedAt,
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
-        `member_${crypto.randomUUID()}`,
+        memberId,
         householdId,
         session.userId,
         'owner',
@@ -76,11 +85,32 @@ export async function POST(request: Request) {
       )
       .run()
 
+    if (!memberResult.success) {
+      logger.error('Failed to create household member:', memberResult.error)
+      // Rollback household creation
+      await db.prepare('DELETE FROM households WHERE id = ?').bind(householdId).run()
+      return NextResponse.json(
+        { error: 'Failed to create household - database error' },
+        { status: 500 }
+      )
+    }
+
     // Update user's householdId
-    await db
+    const userResult = await db
       .prepare('UPDATE users SET householdId = ? WHERE id = ?')
       .bind(householdId, session.userId)
       .run()
+
+    if (!userResult.success) {
+      logger.error('Failed to update user householdId:', userResult.error)
+      // Rollback member and household creation
+      await db.prepare('DELETE FROM household_members WHERE id = ?').bind(memberId).run()
+      await db.prepare('DELETE FROM households WHERE id = ?').bind(householdId).run()
+      return NextResponse.json(
+        { error: 'Failed to create household - database error' },
+        { status: 500 }
+      )
+    }
 
     // Create new session token with householdId
     const newToken = await createToken({

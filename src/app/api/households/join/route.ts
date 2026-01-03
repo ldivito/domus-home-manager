@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const memberId = `hm_${crypto.randomUUID()}`
 
     // Create household member record
-    await db
+    const memberResult = await db
       .prepare(`
         INSERT INTO household_members (
           id, householdId, userId, role, joinedAt,
@@ -78,11 +78,34 @@ export async function POST(request: Request) {
       )
       .run()
 
+    // Check if INSERT succeeded
+    if (!memberResult.success) {
+      logger.error('Failed to create household member:', memberResult.error)
+      return NextResponse.json(
+        { error: 'Failed to join household - database error' },
+        { status: 500 }
+      )
+    }
+
     // Update user's householdId
-    await db
+    const userResult = await db
       .prepare('UPDATE users SET householdId = ?, updatedAt = ? WHERE id = ?')
       .bind(household.id, now, session.userId)
       .run()
+
+    // Check if UPDATE succeeded
+    if (!userResult.success) {
+      logger.error('Failed to update user householdId:', userResult.error)
+      // Try to rollback the member insert
+      await db
+        .prepare('DELETE FROM household_members WHERE id = ?')
+        .bind(memberId)
+        .run()
+      return NextResponse.json(
+        { error: 'Failed to join household - database error' },
+        { status: 500 }
+      )
+    }
 
     // Create new session token with householdId
     const newToken = await createToken({

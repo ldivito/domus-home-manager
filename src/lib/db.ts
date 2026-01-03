@@ -1666,3 +1666,112 @@ export async function bulkDeleteWithSync<T extends { id?: string; householdId?: 
 
   await db.deletionLog.bulkAdd(deletionLogs)
 }
+
+// =============================================================================
+// AUTO-SYNC HOOKS
+// =============================================================================
+
+/**
+ * List of tables that should trigger sync when modified
+ * Matches SYNC_TABLES in sync.ts
+ */
+const SYNCABLE_TABLES = [
+  'users',
+  'households',
+  'householdMembers',
+  'chores',
+  'groceryItems',
+  'groceryCategories',
+  'savedGroceryItems',
+  'tasks',
+  'taskCategories',
+  'homeImprovements',
+  'meals',
+  'mealCategories',
+  'savedMeals',
+  'reminders',
+  'calendarEvents',
+  'homeSettings',
+  'ketoSettings',
+  'ketoDays',
+  'ketoWeightEntries',
+  'ketoBodyMeasurements',
+  'ketoWaterEntries',
+  'ketoSymptomEntries',
+  'monthlyIncomes',
+  'monthlyExchangeRates',
+  'recurringExpenses',
+  'expenseCategories',
+  'expensePayments',
+  'settlementPayments',
+  'documents',
+  'documentFolders',
+  'documentTags',
+  'maintenanceItems',
+  'maintenanceTasks',
+  'maintenanceLogs',
+  'subscriptions',
+  'subscriptionPayments',
+  'pets',
+  'petFeedingSchedules',
+  'petFeedingLogs',
+  'petMedications',
+  'petMedicationLogs',
+  'petVetVisits',
+  'petVaccinations',
+  'savingsCampaigns',
+  'savingsMilestones',
+  'savingsParticipants',
+  'savingsContributions'
+] as const
+
+/**
+ * Emit a custom event to notify SyncContext that data has changed
+ */
+function emitSyncNeeded() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sync-needed'))
+  }
+}
+
+/**
+ * Set up database hooks to detect changes and trigger auto-sync
+ * This is called after database initialization
+ */
+function setupAutoSyncHooks() {
+  // Skip in server-side rendering
+  if (typeof window === 'undefined') return
+
+  SYNCABLE_TABLES.forEach(tableName => {
+    const table = db[tableName as keyof DomusDatabase]
+    if (!table || typeof table !== 'object' || !('hook' in table)) return
+
+    // Type assertion for Dexie Table
+    const dexieTable = table as Table<unknown>
+
+    // Hook into creating operations
+    dexieTable.hook('creating', function() {
+      emitSyncNeeded()
+    })
+
+    // Hook into updating operations
+    dexieTable.hook('updating', function() {
+      emitSyncNeeded()
+    })
+
+    // Hook into deleting operations
+    dexieTable.hook('deleting', function() {
+      emitSyncNeeded()
+    })
+  })
+
+  dbLogger.debug('Auto-sync hooks initialized for', SYNCABLE_TABLES.length, 'tables')
+}
+
+// Initialize hooks when the module loads (client-side only)
+if (typeof window !== 'undefined') {
+  // Use setTimeout to ensure db is fully initialized
+  setTimeout(() => {
+    setupAutoSyncHooks()
+  }, 0)
+}

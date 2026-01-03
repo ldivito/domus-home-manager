@@ -1,68 +1,43 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import { Button } from './ui/button'
 import { Cloud, RefreshCw, Check, AlertCircle, LogIn } from 'lucide-react'
-import { performSync, isAuthenticated, getSyncStatus } from '@/lib/sync'
-import { toast } from 'sonner'
+import { useSyncContext } from '@/contexts/SyncContext'
 
 export default function SyncButton({ compact = false }: { compact?: boolean }) {
   const t = useTranslations('sync')
   const tAuth = useTranslations('auth')
   const router = useRouter()
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [isAuth, setIsAuth] = useState(false)
-  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  // Check auth status and sync status on mount
-  useEffect(() => {
-    checkAuthStatus()
-    loadSyncStatus()
-  }, [])
-
-  const loadSyncStatus = async () => {
-    const status = await getSyncStatus()
-    setLastSyncAt(status.lastSyncAt)
-    if (status.needsMigration) {
-      setError(status.error || 'Migration required')
-    }
-  }
-
-  const checkAuthStatus = async () => {
-    const authenticated = await isAuthenticated()
-    setIsAuth(authenticated)
-  }
+  // Use global sync context instead of local state
+  const {
+    isSyncing,
+    lastSyncAt,
+    pendingChanges,
+    error,
+    isAuthenticated,
+    triggerSync
+  } = useSyncContext()
 
   const handleSync = async () => {
-    setIsSyncing(true)
-    setError(null)
-
-    try {
-      const result = await performSync(false)
-
-      if (result.success) {
-        setLastSyncAt(new Date())
-        toast.success(t('syncComplete') || `Synced! Pushed ${result.pushed}, pulled ${result.pulled}`)
-      } else {
-        setError(result.error || 'Sync failed')
-        toast.error(result.error || 'Sync failed')
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      setError(errorMessage)
-      toast.error(`Sync failed: ${errorMessage}`)
-    } finally {
-      setIsSyncing(false)
-    }
+    await triggerSync(false, false) // Not forced, not silent (show toast)
   }
 
   const getIcon = () => {
     if (isSyncing) return <RefreshCw className="h-4 w-4 animate-spin" />
     if (error) return <AlertCircle className="h-4 w-4 text-destructive" />
-    if (!isAuth) return <LogIn className="h-4 w-4" />
+    if (!isAuthenticated) return <LogIn className="h-4 w-4" />
+    // Show cloud with pending indicator if there are pending changes
+    if (pendingChanges) {
+      return (
+        <div className="relative">
+          <Cloud className="h-4 w-4" />
+          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-amber-500 rounded-full animate-pulse" />
+        </div>
+      )
+    }
     if (lastSyncAt) return <Check className="h-4 w-4 text-green-500" />
     return <Cloud className="h-4 w-4" />
   }
@@ -70,7 +45,8 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
   const getStatusText = () => {
     if (isSyncing) return t('syncing')
     if (error) return t('error')
-    if (!isAuth) return tAuth('signIn')
+    if (!isAuthenticated) return tAuth('signIn')
+    if (pendingChanges) return t('pending') || 'Pending...'
     if (lastSyncAt) {
       const now = new Date()
       const diff = now.getTime() - lastSyncAt.getTime()
@@ -84,7 +60,7 @@ export default function SyncButton({ compact = false }: { compact?: boolean }) {
   }
 
   // When not authenticated, show a simple login button
-  if (!isAuth) {
+  if (!isAuthenticated) {
     if (compact) {
       return (
         <Button

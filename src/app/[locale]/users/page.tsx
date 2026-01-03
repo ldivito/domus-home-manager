@@ -265,7 +265,7 @@ export default function UsersPage() {
                         <div className="relative">
                           <Avatar className={`h-16 w-16 sm:h-20 sm:w-20 ${user.color} ring-4 ring-background shadow-modern`}>
                             <AvatarFallback className="text-white text-xl sm:text-2xl font-bold">
-                              {user.avatar || user.name.charAt(0).toUpperCase()}
+                              {user.avatar || user.name?.charAt(0)?.toUpperCase() || '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full border-2 border-background flex items-center justify-center">
@@ -380,7 +380,7 @@ export default function UsersPage() {
                                     className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
                                     style={{ backgroundColor: activity.userColor || '#6b7280' }}
                                   >
-                                    {activity.userName.charAt(0).toUpperCase()}
+                                    {activity.userName?.charAt(0)?.toUpperCase() || '?'}
                                   </div>
                                   <span className="text-xs text-muted-foreground">{activity.userName}</span>
                                 </div>
@@ -451,7 +451,7 @@ export default function UsersPage() {
                                   </div>
                                   <Avatar className={`h-6 w-6 sm:h-8 sm:w-8 ${user.color}`}>
                                     <AvatarFallback className="text-white text-xs sm:text-sm font-bold">
-                                      {user.avatar || user.name.charAt(0).toUpperCase()}
+                                      {user.avatar || user.name?.charAt(0)?.toUpperCase() || '?'}
                                     </AvatarFallback>
                                   </Avatar>
                                 </div>

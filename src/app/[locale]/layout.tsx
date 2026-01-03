@@ -4,6 +4,7 @@ import Navigation from "@/components/Navigation";
 import MobileNavigation from "@/components/MobileNavigation";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SyncProvider } from "@/contexts/SyncContext";
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -83,22 +84,24 @@ export default async function LocaleLayout({
       <body className="font-sans antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            <div className="flex h-screen bg-background">
-              {/* Sidebar navigation - hidden on mobile */}
-              <div className="hidden md:block">
-                <Navigation />
+            <SyncProvider>
+              <div className="flex h-screen bg-background">
+                {/* Sidebar navigation - hidden on mobile */}
+                <div className="hidden md:block">
+                  <Navigation />
+                </div>
+                <main className="flex-1 overflow-auto pb-20 md:pb-0">
+                  {children}
+                </main>
+                {/* Mobile bottom navigation - visible only on mobile */}
+                <div className="md:hidden">
+                  <MobileNavigation />
+                </div>
               </div>
-              <main className="flex-1 overflow-auto pb-20 md:pb-0">
-                {children}
-              </main>
-              {/* Mobile bottom navigation - visible only on mobile */}
-              <div className="md:hidden">
-                <MobileNavigation />
-              </div>
-            </div>
-            <Toaster />
-            <PWAInstallPrompt />
-            <ServiceWorkerRegistration />
+              <Toaster />
+              <PWAInstallPrompt />
+              <ServiceWorkerRegistration />
+            </SyncProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

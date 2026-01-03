@@ -63,7 +63,7 @@ export function UserFormModal({ open, onOpenChange, user, onCreateUser, onUpdate
     if (open) {
       if (user) {
         setFormState({
-          name: user.name,
+          name: user.name || '',
           userType: user.type,
           selectedColor: user.color || AVATAR_COLORS[0]
         })
@@ -80,17 +80,17 @@ export function UserFormModal({ open, onOpenChange, user, onCreateUser, onUpdate
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formState.name.trim()) return
+    if (!formState.name?.trim()) return
     if (isEditing && !user?.id) return
 
     setIsSubmitting(true)
 
     try {
       const userData = {
-        name: formState.name.trim(),
+        name: formState.name?.trim() || '',
         type: formState.userType,
         color: formState.selectedColor,
-        avatar: formState.name.charAt(0).toUpperCase()
+        avatar: formState.name?.charAt(0)?.toUpperCase() || '?'
       }
 
       if (isEditing && onUpdateUser) {
@@ -260,7 +260,7 @@ export function UserFormModal({ open, onOpenChange, user, onCreateUser, onUpdate
             </Button>
             <Button
               type="submit"
-              disabled={!formState.name.trim() || isSubmitting}
+              disabled={!formState.name?.trim() || isSubmitting}
               className="flex-1 h-14 text-base font-medium shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-105 active:scale-95 disabled:hover:scale-100"
             >
               {isSubmitting ? (

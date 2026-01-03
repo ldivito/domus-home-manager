@@ -23,13 +23,29 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const sinceParam = searchParams.get('since')
 
-    // Build query based on whether we have a timestamp filter
-    let query = `
-      SELECT tableName, recordId, operation, data, updatedAt
-      FROM sync_metadata
-      WHERE userId = ? AND deletedAt IS NULL
-    `
-    const params = [session.userId]
+    // Build query based on whether user has a household
+    // If user has a household, pull all household data (shared between members)
+    // If user has no household, pull only their own data
+    let query: string
+    let params: string[]
+
+    if (session.householdId) {
+      // User has a household - pull all data from household members
+      query = `
+        SELECT tableName, recordId, operation, data, updatedAt
+        FROM sync_metadata
+        WHERE householdId = ? AND deletedAt IS NULL
+      `
+      params = [session.householdId]
+    } else {
+      // User has no household - pull only their own data
+      query = `
+        SELECT tableName, recordId, operation, data, updatedAt
+        FROM sync_metadata
+        WHERE userId = ? AND deletedAt IS NULL
+      `
+      params = [session.userId]
+    }
 
     if (sinceParam) {
       query += ' AND updatedAt > ?'

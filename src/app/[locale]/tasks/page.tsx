@@ -607,7 +607,7 @@ export default function TasksPage() {
                           className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-medium"
                           style={{ backgroundColor: assignedUser.color }}
                         >
-                          {assignedUser.name.charAt(0).toUpperCase()}
+                          {assignedUser.name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <span className="max-w-[60px] truncate">{assignedUser.name}</span>
                       </span>
@@ -640,7 +640,7 @@ export default function TasksPage() {
                           className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-medium flex-shrink-0"
                           style={{ backgroundColor: assignedUser.color }}
                         >
-                          {assignedUser.name.charAt(0).toUpperCase()}
+                          {assignedUser.name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <span className="text-gray-600 dark:text-gray-300 max-w-[80px] truncate">
                           {assignedUser.name}

@@ -5,5 +5,11 @@
   "syncFailed": "Sync Failed",
   "syncSuccess": "Synced {pushed} changes, pulled {pulled} updates",
   "syncError": "Unable to sync data",
-  "pleaseWait": "Please wait while we sync your data"
+  "pleaseWait": "Please wait while we sync your data",
+  "stepMigration": "Checking database...",
+  "stepCollecting": "Collecting local changes...",
+  "stepPushing": "Uploading changes...",
+  "stepPulling": "Downloading updates...",
+  "stepApplying": "Applying changes...",
+  "itemsProgress": "{current} of {total} items"
 }

@@ -44,7 +44,7 @@ export default function NotificationsPage() {
   )
 
   const maintenanceTasks = useLiveQuery(
-    () => db.maintenanceTasks.where('isCompleted').equals(0).toArray(),
+    () => db.maintenanceTasks.toArray(),
     []
   )
 

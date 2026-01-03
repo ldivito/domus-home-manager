@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Domus - Home Management',
     short_name: 'Domus',
     description: 'A tablet-first home management app for families',
-    start_url: '/',
+    start_url: '/es',
     display: 'standalone',
     background_color: '#0a0a1a',
     theme_color: '#7c3aed',

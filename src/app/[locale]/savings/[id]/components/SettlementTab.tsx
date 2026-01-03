@@ -180,7 +180,7 @@ export function SettlementTab({ campaign, participants, contributions, users }: 
                           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                           style={{ backgroundColor: balance.color }}
                         >
-                          {balance.name.charAt(0).toUpperCase()}
+                          {balance.name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <span className="font-medium">{balance.name}</span>
                       </div>
@@ -283,7 +283,7 @@ export function SettlementTab({ campaign, participants, contributions, users }: 
                       className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
                       style={{ backgroundColor: transfer.from.color }}
                     >
-                      {transfer.from.name.charAt(0).toUpperCase()}
+                      {transfer.from.name?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                     <span className="font-medium">{transfer.from.name}</span>
                   </div>
@@ -305,7 +305,7 @@ export function SettlementTab({ campaign, participants, contributions, users }: 
                       className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
                       style={{ backgroundColor: transfer.to.color }}
                     >
-                      {transfer.to.name.charAt(0).toUpperCase()}
+                      {transfer.to.name?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                   </div>
                 </div>

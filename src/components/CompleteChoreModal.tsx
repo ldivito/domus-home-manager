@@ -93,7 +93,7 @@ export function CompleteChoreModal({ open, onOpenChange, onComplete, choreTitle 
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
                 <Avatar className={`h-10 w-10 ${getSelectedUser()?.color}`}>
                   <AvatarFallback className="text-white font-bold">
-                    {getSelectedUser()?.avatar || getSelectedUser()?.name.charAt(0).toUpperCase()}
+                    {getSelectedUser()?.avatar || getSelectedUser()?.name?.charAt(0)?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">{getSelectedUser()?.name}</span>
@@ -113,7 +113,7 @@ export function CompleteChoreModal({ open, onOpenChange, onComplete, choreTitle 
                     <div className="flex items-center gap-3">
                       <Avatar className={`h-6 w-6 ${user.color}`}>
                         <AvatarFallback className="text-white text-xs font-bold">
-                          {user.avatar || user.name.charAt(0).toUpperCase()}
+                          {user.avatar || user.name?.charAt(0)?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <span>{user.name}</span>

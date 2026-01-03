@@ -150,7 +150,7 @@ export function CampaignCard({ campaign, participants }: CampaignCardProps) {
                       className="text-xs font-medium"
                       style={{ backgroundColor: user.color }}
                     >
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.name?.charAt(0)?.toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
                 ))}

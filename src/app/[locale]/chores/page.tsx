@@ -371,7 +371,7 @@ export default function ChoresPage() {
                     className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-medium"
                     style={{ backgroundColor: assignedUser.color }}
                   >
-                    {assignedUser.name.charAt(0).toUpperCase()}
+                    {assignedUser.name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <span className="truncate max-w-[60px]">{assignedUser.name}</span>
                 </span>

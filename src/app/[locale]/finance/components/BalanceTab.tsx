@@ -359,7 +359,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                             className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0"
                             style={{ backgroundColor: balance.userColor }}
                           >
-                            {balance.userName.charAt(0).toUpperCase()}
+                            {balance.userName?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -475,7 +475,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                                   className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
                                   style={{ backgroundColor: settlement.fromColor }}
                                 >
-                                  {settlement.fromName.charAt(0).toUpperCase()}
+                                  {settlement.fromName?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
                                 <div className="text-left">
                                   <span className="font-semibold text-sm sm:text-base">{settlement.fromName}</span>
@@ -488,7 +488,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                                   className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
                                   style={{ backgroundColor: settlement.toColor }}
                                 >
-                                  {settlement.toName.charAt(0).toUpperCase()}
+                                  {settlement.toName?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
                                 <div className="text-left">
                                   <span className="font-semibold text-sm sm:text-base">{settlement.toName}</span>
@@ -581,7 +581,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
                     style={{ backgroundColor: selectedSettlement.fromColor }}
                   >
-                    {selectedSettlement.fromName.charAt(0).toUpperCase()}
+                    {selectedSettlement.fromName?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <span className="font-medium">{selectedSettlement.fromName}</span>
                 </div>
@@ -591,7 +591,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
                     style={{ backgroundColor: selectedSettlement.toColor }}
                   >
-                    {selectedSettlement.toName.charAt(0).toUpperCase()}
+                    {selectedSettlement.toName?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <span className="font-medium">{selectedSettlement.toName}</span>
                 </div>

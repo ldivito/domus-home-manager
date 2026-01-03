@@ -331,7 +331,7 @@ export function AddCampaignDialog({ open, onOpenChange, users }: AddCampaignDial
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                     style={{ backgroundColor: user.color }}
                   >
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <span className="font-medium truncate">{user.name}</span>
                 </label>
@@ -408,7 +408,7 @@ export function AddCampaignDialog({ open, onOpenChange, users }: AddCampaignDial
                             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
                             style={{ backgroundColor: user.color }}
                           >
-                            {user.name.charAt(0).toUpperCase()}
+                            {user.name?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                           <span className="font-medium flex-1 truncate">{user.name}</span>
                           <div className="flex items-center gap-2">

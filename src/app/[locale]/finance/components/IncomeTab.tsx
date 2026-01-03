@@ -324,7 +324,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                             className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold shrink-0"
                             style={{ backgroundColor: user.color }}
                           >
-                            {user.name.charAt(0).toUpperCase()}
+                            {user.name?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-base sm:text-lg">{user.name}</p>

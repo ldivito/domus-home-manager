@@ -240,7 +240,7 @@ export function ChoreFormModal({ open, onOpenChange, chore, onCreateChore, onEdi
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
                 <Avatar className={`h-10 w-10 ${getAssignedUser()?.color}`}>
                   <AvatarFallback className="text-white font-bold">
-                    {getAssignedUser()?.avatar || getAssignedUser()?.name.charAt(0).toUpperCase()}
+                    {getAssignedUser()?.avatar || getAssignedUser()?.name?.charAt(0)?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">{getAssignedUser()?.name}</span>
@@ -260,7 +260,7 @@ export function ChoreFormModal({ open, onOpenChange, chore, onCreateChore, onEdi
                     <div className="flex items-center gap-3">
                       <Avatar className={`h-6 w-6 ${user.color}`}>
                         <AvatarFallback className="text-white text-xs font-bold">
-                          {user.avatar || user.name.charAt(0).toUpperCase()}
+                          {user.avatar || user.name?.charAt(0)?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <span>{user.name}</span>

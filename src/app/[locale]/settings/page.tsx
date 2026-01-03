@@ -93,6 +93,20 @@ export default function SettingsPage() {
     loadHomeSettings()
     loadHouseholdInfo()
     loadSyncStatus()
+
+    // Check if we need to sync after joining/creating household
+    const pendingSync = localStorage.getItem('domus-pending-household-sync')
+    if (pendingSync) {
+      localStorage.removeItem('domus-pending-household-sync')
+      // Trigger force full sync to pull household data
+      performSync(true).then(result => {
+        if (result.success) {
+          toast.success(`Synced household data! Pulled ${result.pulled} items.`)
+        } else {
+          logger.error('Failed to sync household data:', result.error)
+        }
+      })
+    }
   }, [])
 
   const loadSyncStatus = async () => {
@@ -472,6 +486,10 @@ export default function SettingsPage() {
 
       if (response.ok) {
         toast.success(th('householdCreated'))
+        // Reset sync state to ensure clean sync after reload
+        resetSyncState()
+        // Store flag to trigger sync after reload
+        localStorage.setItem('domus-pending-household-sync', 'true')
         // Force page reload to ensure new session cookie is applied
         window.location.reload()
       } else {
@@ -534,6 +552,10 @@ export default function SettingsPage() {
 
       if (response.ok) {
         toast.success(th('householdJoined') || 'Successfully joined household!')
+        // Reset sync state to force full sync after reload
+        resetSyncState()
+        // Store flag to trigger sync after reload
+        localStorage.setItem('domus-pending-household-sync', 'true')
         // Force page reload to ensure new session cookie is applied
         window.location.reload()
       } else {

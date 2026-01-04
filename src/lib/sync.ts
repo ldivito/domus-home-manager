@@ -260,7 +260,7 @@ async function applyRemoteChangesWithProgress(
         const existingRecord = await table.get(change.id)
         const remoteData = change.data as Record<string, unknown>
 
-        if (isRemoteDataMoreComplete(existingRecord as Record<string, unknown> | null, remoteData, change.table)) {
+        if (isRemoteDataMoreComplete(existingRecord as unknown as Record<string, unknown> | null, remoteData, change.table)) {
           // Handle upsert - merge with existing data if available
           const mergedData = existingRecord
             ? { ...existingRecord, ...remoteData }

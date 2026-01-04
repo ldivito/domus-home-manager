@@ -38,6 +38,7 @@ export default function ProjectsPage() {
   const [filterUser, setFilterUser] = useState<string>('all')
   const [sortBy, setSortBy] = useState<SortOption>('priority')
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const projects = useLiveQuery(
     () => db.homeImprovements.orderBy('createdAt').reverse().toArray(),
     []

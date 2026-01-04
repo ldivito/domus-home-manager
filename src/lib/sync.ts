@@ -211,6 +211,33 @@ async function clearDeletionLog(before: Date): Promise<void> {
 }
 
 /**
+ * Check if remote data is more complete than local data
+ * Returns true if remote should replace local
+ */
+function isRemoteDataMoreComplete(
+  local: Record<string, unknown> | null,
+  remote: Record<string, unknown>,
+  tableName: string
+): boolean {
+  // If no local data, remote is more complete
+  if (!local) return true
+
+  // For users table, check if remote has essential fields
+  if (tableName === 'users') {
+    const remoteHasName = 'name' in remote && remote.name
+    const localHasName = 'name' in local && local.name
+
+    // Don't overwrite complete local data with incomplete remote data
+    if (localHasName && !remoteHasName) {
+      return false
+    }
+  }
+
+  // Default: remote is newer, use it
+  return true
+}
+
+/**
  * Apply remote changes to local database with progress callback
  */
 async function applyRemoteChangesWithProgress(
@@ -229,9 +256,20 @@ async function applyRemoteChangesWithProgress(
         // Handle deletion
         await table.delete(change.id)
       } else {
-        // Handle upsert
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await table.put(change.data as any)
+        // Check if we should apply this change
+        const existingRecord = await table.get(change.id)
+        const remoteData = change.data as Record<string, unknown>
+
+        if (isRemoteDataMoreComplete(existingRecord as Record<string, unknown> | null, remoteData, change.table)) {
+          // Handle upsert - merge with existing data if available
+          const mergedData = existingRecord
+            ? { ...existingRecord, ...remoteData }
+            : remoteData
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await table.put(mergedData as any)
+        } else {
+          logger.debug(`Skipping incomplete remote data for ${change.table}:${change.id}`)
+        }
       }
       applied++
 

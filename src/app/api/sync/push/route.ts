@@ -33,6 +33,15 @@ export async function POST(request: Request) {
     // Store changes in D1
     let pushed = 0
     for (const change of changes) {
+      // Validate user data before pushing - skip incomplete records
+      if (change.table === 'users' && !change.deletedAt) {
+        const userData = change.data as Record<string, unknown>
+        if (!userData.name) {
+          logger.debug('Skipping incomplete user record:', change.id)
+          continue
+        }
+      }
+
       const recordId = `sync_${crypto.randomUUID()}`
       const now = new Date().toISOString()
       const operation = change.deletedAt ? 'delete' : 'upsert'

@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
       // Add user to household_members table
       const memberId = `hm_${crypto.randomUUID()}`
-      await db
+      const memberResult = await db
         .prepare(`
           INSERT INTO household_members (
             id, householdId, userId, role, joinedAt,
@@ -84,16 +84,36 @@ export async function POST(request: Request) {
           1  // canDeleteItems
         )
         .run()
+
+      if (!memberResult.success) {
+        logger.error('Failed to create household member:', memberResult.error)
+        return NextResponse.json(
+          { error: 'Failed to join household - database error' },
+          { status: 500 }
+        )
+      }
     }
 
     // Insert user into database (without household if no invite code)
-    await db
+    const userResult = await db
       .prepare(`
         INSERT INTO users (id, email, password, name, householdId, createdAt, updatedAt)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(userId, email, hashedPassword, name, householdId, now, now)
       .run()
+
+    if (!userResult.success) {
+      logger.error('Failed to create user:', userResult.error)
+      // Rollback household_members if invite code was used
+      if (householdId) {
+        await db.prepare('DELETE FROM household_members WHERE userId = ?').bind(userId).run()
+      }
+      return NextResponse.json(
+        { error: 'Failed to create user - database error' },
+        { status: 500 }
+      )
+    }
 
     // Create session token (householdId can be null)
     const token = await createToken({

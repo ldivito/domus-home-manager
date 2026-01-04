@@ -1,6 +1,7 @@
 import common from './common.json';
 import navigation from './navigation.json';
 import home from './home.json';
+import activity from './activity.json';
 import users from './users.json';
 import chores from './chores.json';
 import grocery from './grocery.json';
@@ -29,6 +30,7 @@ const messages = {
   common,
   navigation,
   home,
+  activity,
   users,
   chores,
   grocery,

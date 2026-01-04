@@ -848,6 +848,56 @@ export interface DeletionLog {
   deletedAt: Date
 }
 
+// Activity Log - tracks all user actions across all modules
+export type ActivityAction =
+  // Chores
+  | 'chore_created' | 'chore_completed' | 'chore_updated' | 'chore_deleted' | 'chore_assigned'
+  // Grocery
+  | 'grocery_item_added' | 'grocery_item_purchased' | 'grocery_item_deleted'
+  // Tasks
+  | 'task_created' | 'task_completed' | 'task_updated' | 'task_deleted' | 'task_assigned'
+  // Projects
+  | 'project_created' | 'project_status_changed' | 'project_deleted' | 'project_assigned'
+  // Meals
+  | 'meal_planned' | 'meal_updated' | 'meal_deleted' | 'meal_assigned'
+  // Reminders
+  | 'reminder_created' | 'reminder_dismissed' | 'reminder_deleted'
+  // Keto
+  | 'weight_entry_added' | 'symptom_logged' | 'water_intake_logged'
+  // Finance
+  | 'income_added' | 'expense_added' | 'payment_made'
+  // Subscriptions
+  | 'subscription_created' | 'subscription_payment_recorded' | 'subscription_cancelled'
+  // Pets
+  | 'pet_feeding_logged' | 'pet_medication_given' | 'vet_visit_logged'
+  // Maintenance
+  | 'maintenance_completed' | 'maintenance_assigned'
+  // Documents
+  | 'document_uploaded' | 'document_deleted'
+  // Savings
+  | 'contribution_made' | 'milestone_reached' | 'campaign_created'
+  // Users & Events
+  | 'user_created' | 'user_updated' | 'event_created' | 'event_updated'
+
+export type EntityType =
+  | 'chore' | 'groceryItem' | 'task' | 'homeImprovement' | 'meal'
+  | 'reminder' | 'ketoWeight' | 'ketoSymptom' | 'ketoWater'
+  | 'income' | 'expense' | 'subscription' | 'pet' | 'petFeeding'
+  | 'petMedication' | 'maintenance' | 'document' | 'savings' | 'user' | 'calendarEvent'
+
+export interface ActivityLog {
+  id?: string
+  userId?: string              // Who performed the action
+  action: ActivityAction
+  entityType: EntityType
+  entityId?: string            // ID of affected entity
+  entityTitle: string          // Display name
+  details?: Record<string, unknown>  // Additional context
+  timestamp: Date
+  householdId?: string
+  createdAt: Date
+}
+
 export class DomusDatabase extends Dexie {
   users!: Table<User>
   households!: Table<Household>
@@ -904,6 +954,8 @@ export class DomusDatabase extends Dexie {
   savingsContributions!: Table<SavingsContribution>
   // Sync support
   deletionLog!: Table<DeletionLog>
+  // Activity tracking
+  activityLogs!: Table<ActivityLog>
   private legacyMealIngredientMigrationComplete = false
   private legacyMealIngredientMigrationPromise?: Promise<void>
 
@@ -973,6 +1025,11 @@ export class DomusDatabase extends Dexie {
         }
       }
       dbLogger.debug('Database upgraded to v26 with income source field')
+    })
+
+    // v31: Add activity log for tracking all user actions
+    this.version(31).stores({
+      activityLogs: 'id, userId, action, entityType, entityId, timestamp, householdId, createdAt'
     })
 
     // v30: Add keto body measurements, water tracking, and symptom journal

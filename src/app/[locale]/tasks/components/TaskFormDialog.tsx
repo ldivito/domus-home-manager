@@ -22,6 +22,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { generateId } from '@/lib/utils'
 import { cn } from "@/lib/utils"
 import { logger } from '@/lib/logger'
+import { ActivityLogger } from '@/lib/activity'
 
 interface TaskFormDialogProps {
   open: boolean
@@ -159,6 +160,7 @@ export function TaskFormDialog({ open, onOpenChange, task, users, categories }: 
           ...taskData,
           updatedAt: new Date()
         })
+        await ActivityLogger.taskUpdated(task!.id!, taskData.title, taskData.assignedUserId, task!.householdId)
       } else {
         const newTask: Task = {
           id: generateId('tsk'),
@@ -167,6 +169,7 @@ export function TaskFormDialog({ open, onOpenChange, task, users, categories }: 
           createdAt: new Date()
         }
         await db.tasks.add(newTask)
+        await ActivityLogger.taskCreated(newTask.id!, newTask.title, taskData.assignedUserId, newTask.householdId)
       }
 
       setFormState(initialFormState)

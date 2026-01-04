@@ -15,7 +15,7 @@ CREATE TABLE users (
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   name TEXT,
-  householdId TEXT NOT NULL,
+  householdId TEXT,  -- Nullable: users can register without joining a household
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (householdId) REFERENCES households(id)

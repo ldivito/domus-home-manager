@@ -133,6 +133,7 @@ export function DocumentPreviewDialog({ open, onOpenChange, document }: Document
           {document.fileData && (
             <div className="border rounded-lg overflow-hidden bg-muted/30">
               {isImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={document.fileData}
                   alt={document.name}

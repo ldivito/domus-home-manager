@@ -25,6 +25,12 @@
     "clearAll": "Limpiar filtros",
     "active": "Filtros activos"
   },
+  "stats": {
+    "overallProgress": "Progreso General",
+    "completedThisMonth": "Completadas Este Mes",
+    "overdue": "Vencidas",
+    "highPriority": "Alta Prioridad"
+  },
   "priority": {
     "low": "Baja",
     "medium": "Media",

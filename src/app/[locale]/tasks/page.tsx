@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { db, Task, HomeImprovement, TaskCategory, deleteWithSync } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { TaskFormDialog } from './components/TaskFormDialog'
@@ -45,6 +46,37 @@ export default function TasksPage() {
     []
   )
   const tasks = useMemo(() => tasksData || [], [tasksData])
+
+  const taskStats = useMemo(() => {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const completed = tasks.filter(t => t.isCompleted)
+    const pending = tasks.filter(t => !t.isCompleted)
+
+    const completedThisMonth = completed.filter(t => {
+      const updatedAt = t.updatedAt ? new Date(t.updatedAt) : null
+      return updatedAt && updatedAt >= startOfMonth
+    })
+
+    const overdue = pending.filter(t => {
+      if (!t.dueDate) return false
+      const dueDate = new Date(t.dueDate)
+      dueDate.setHours(23, 59, 59, 999)
+      return dueDate < now
+    })
+
+    const highPriorityPending = pending.filter(t => t.priority === 'high')
+
+    return {
+      total: tasks.length,
+      completed: completed.length,
+      completionRate: tasks.length > 0 ? (completed.length / tasks.length) * 100 : 0,
+      completedThisMonth: completedThisMonth.length,
+      overdue: overdue.length,
+      highPriorityPending: highPriorityPending.length
+    }
+  }, [tasks])
 
   const users = useLiveQuery(
     () => db.users.toArray(),
@@ -199,6 +231,73 @@ export default function TasksPage() {
             </Button>
           </div>
         </div>
+
+        {/* Quick Stats Section */}
+        {tasks.length > 0 && (
+          <div className="mb-4 space-y-3">
+            {/* Overall Progress - Full Width */}
+            <div className="p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('stats.overallProgress')}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {taskStats.completed}/{taskStats.total}
+                </span>
+              </div>
+              <Progress value={taskStats.completionRate} className="h-2" />
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* Completed This Month */}
+              <div className="p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {taskStats.completedThisMonth}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('stats.completedThisMonth')}
+                </div>
+              </div>
+
+              {/* Overdue Tasks */}
+              <div className={`p-3 rounded-lg border ${
+                taskStats.overdue > 0
+                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+              }`}>
+                <div className={`text-2xl font-bold ${
+                  taskStats.overdue > 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {taskStats.overdue}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('stats.overdue')}
+                </div>
+              </div>
+
+              {/* High Priority Pending */}
+              <div className={`p-3 rounded-lg border ${
+                taskStats.highPriorityPending > 0
+                  ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                  : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+              }`}>
+                <div className={`text-2xl font-bold ${
+                  taskStats.highPriorityPending > 0
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {taskStats.highPriorityPending}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('stats.highPriority')}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="mb-4 space-y-2">

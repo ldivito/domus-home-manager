@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,8 @@ import {
   CircleCheckBig,
   Beef,
   Wheat,
-  Salad
+  Salad,
+  Eye
 } from "lucide-react"
 import {
   db,
@@ -183,6 +184,7 @@ export default function MealPrepPage() {
   const t = useTranslations('mealPrep')
   const tMeals = useTranslations('meals')
   const router = useRouter()
+  const locale = useLocale()
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>('setup')
@@ -232,7 +234,6 @@ export default function MealPrepPage() {
 
   // Saved plans view
   const [showSavedPlans, setShowSavedPlans] = useState(false)
-  const [viewingPlanId, setViewingPlanId] = useState<string | null>(null)
 
   // Smart scheduling data
   const [smartSchedule, setSmartSchedule] = useState<SmartScheduleData | null>(null)
@@ -1413,10 +1414,6 @@ export default function MealPrepPage() {
       // Delete the plan itself
       await db.mealPrepPlans.delete(planId)
 
-      if (viewingPlanId === planId) {
-        setViewingPlanId(null)
-      }
-
       toast.success(t('savedPlans.deleted'))
     } catch (error) {
       logger.error('Error deleting plan:', error)
@@ -1434,6 +1431,9 @@ export default function MealPrepPage() {
         // Calculate the dates for each day
         const start = new Date(startDate)
 
+        // Track saved meal names to avoid duplicates
+        const savedMealNames = new Set<string>()
+
         for (const combo of componentCombinations) {
           // Calculate the date for this combination
           const mealDate = new Date(start)
@@ -1445,6 +1445,50 @@ export default function MealPrepPage() {
 
           // Build description from combination suggestion
           const mealDescription = combo.description || components.join(', ')
+
+          // Save as template meal if not already saved (avoid duplicates)
+          if (!savedMealNames.has(mealTitle)) {
+            savedMealNames.add(mealTitle)
+
+            // Check if this meal already exists as a saved meal
+            const existingSaved = await db.savedMeals.where('name').equalsIgnoreCase(mealTitle).first()
+            if (!existingSaved) {
+              // Get the components used in this combination
+              const comboComponents = [combo.protein, combo.carb, combo.vegetable].filter(Boolean) as string[]
+
+              // Get cooking instructions for the components
+              const instructions = mealInstructions
+                .filter(inst =>
+                  comboComponents.some(c => c.toLowerCase() === inst.mealName.toLowerCase())
+                )
+                .map(inst => `${inst.mealName}:\n${inst.instructions}`)
+                .join('\n\n')
+
+              // Build description with components listed
+              const fullDescription = [
+                mealDescription,
+                `Components: ${comboComponents.join(', ')}`,
+                instructions ? `\n${instructions}` : ''
+              ].filter(Boolean).join('\n\n')
+
+              await db.savedMeals.add({
+                id: generateId('smea'),
+                name: mealTitle,
+                description: fullDescription,
+                category: 'Meal Prep',
+                ingredients: [], // Component meals don't track individual ingredients
+                timesUsed: 1,
+                lastUsed: now,
+                createdAt: now
+              })
+            } else {
+              // Update times used
+              await db.savedMeals.update(existingSaved.id!, {
+                timesUsed: (existingSaved.timesUsed || 0) + 1,
+                lastUsed: now
+              })
+            }
+          }
 
           await db.meals.add({
             id: generateId('mea'),
@@ -1905,17 +1949,16 @@ export default function MealPrepPage() {
                         savedPlans.map(plan => {
                           const planItems = savedPlanItems.filter(i => i.mealPrepPlanId === plan.id)
                           const planIngredients = savedPlanIngredients.filter(i => i.mealPrepPlanId === plan.id)
-                          const isViewing = viewingPlanId === plan.id
 
                           return (
                             <div
                               key={plan.id}
-                              className="border rounded-lg overflow-hidden"
+                              className="border rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
                             >
-                              <div className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <div className="flex items-center justify-between p-3">
                                 <div className="flex-1">
                                   <p className="font-medium">{plan.name}</p>
-                                  <div className="flex gap-2 text-xs text-gray-500 mt-1">
+                                  <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
                                     <span className="flex items-center gap-1">
                                       <Calendar className="h-3 w-3" />
                                       {new Date(plan.cookingDate).toLocaleDateString()}
@@ -1932,15 +1975,12 @@ export default function MealPrepPage() {
                                 </div>
                                 <div className="flex gap-1">
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
-                                    onClick={() => setViewingPlanId(isViewing ? null : plan.id!)}
+                                    onClick={() => router.push(`/${locale}/meals/meal-prep/${plan.id}`)}
                                   >
-                                    {isViewing ? (
-                                      <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4" />
-                                    )}
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    {t('savedPlans.viewDetails')}
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -1952,62 +1992,6 @@ export default function MealPrepPage() {
                                   </Button>
                                 </div>
                               </div>
-
-                              {/* Expanded plan details */}
-                              {isViewing && (
-                                <div className="border-t p-4 bg-gray-50 dark:bg-gray-800/50">
-                                  <div className="grid gap-4">
-                                    {/* Date range */}
-                                    <div>
-                                      <h5 className="text-xs font-medium text-gray-500 mb-1">{t('savedPlans.dateRange')}</h5>
-                                      <p className="text-sm">
-                                        {new Date(plan.startDate).toLocaleDateString()} - {new Date(plan.endDate).toLocaleDateString()}
-                                      </p>
-                                    </div>
-
-                                    {/* Meals */}
-                                    <div>
-                                      <h5 className="text-xs font-medium text-gray-500 mb-2">{t('meals.selected')}</h5>
-                                      <div className="space-y-2">
-                                        {planItems.map(item => (
-                                          <div key={item.id} className="p-2 bg-white dark:bg-gray-800 rounded border">
-                                            <div className="flex items-center justify-between">
-                                              <span className="font-medium text-sm">{item.mealName}</span>
-                                              <Badge variant="outline" className="text-xs">{item.quantity} {t('review.servings')}</Badge>
-                                            </div>
-                                            {item.prepInstructions && (
-                                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.prepInstructions}</p>
-                                            )}
-                                            {item.storageType && (
-                                              <div className="flex gap-2 mt-1 text-xs text-gray-400">
-                                                <span>{t(`prep.storageType.${item.storageType}`)}</span>
-                                                {item.storageDays && <span>• {t('prep.days', { count: item.storageDays })}</span>}
-                                              </div>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-
-                                    {/* Ingredients */}
-                                    <div>
-                                      <h5 className="text-xs font-medium text-gray-500 mb-2">{t('review.ingredients')}</h5>
-                                      <div className="grid grid-cols-2 gap-1">
-                                        {planIngredients.slice(0, 10).map(ing => (
-                                          <div key={ing.id} className="text-xs p-1 bg-white dark:bg-gray-800 rounded">
-                                            {ing.name} <span className="text-gray-400">({ing.amount})</span>
-                                          </div>
-                                        ))}
-                                        {planIngredients.length > 10 && (
-                                          <div className="text-xs p-1 text-gray-400 italic">
-                                            +{planIngredients.length - 10} more
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           )
                         })

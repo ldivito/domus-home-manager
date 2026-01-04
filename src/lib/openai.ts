@@ -3,10 +3,9 @@
  * Uses ChatGPT to calculate ingredients, generate prep instructions, and storage guidance
  * All responses in Spanish with metric system (grams, kilograms, liters)
  *
- * Latest models as of December 2025:
- * - gpt-5.2 (GPT-5.2 Thinking) - Most capable, reasoning model
- * - gpt-5.2-pro - Highest quality for complex tasks
- * - gpt-4o - Fallback for compatibility
+ * Using GPT-5-mini - Cost-efficient model for text generation
+ * See: https://platform.openai.com/docs/models/gpt-5-mini
+ * Guide: https://platform.openai.com/docs/guides/text
  */
 
 import { logger } from './logger'
@@ -127,10 +126,11 @@ export interface OpenAIConfig {
   language?: 'es' | 'en'
 }
 
-// Latest models - GPT-5.2 released December 2025
-// Fallback chain: gpt-5.2 -> gpt-4o -> gpt-4o-mini
-const DEFAULT_MODEL = 'gpt-5.2'
-const FALLBACK_MODEL = 'gpt-4o'
+// GPT-5-mini - Cost-efficient model for text generation tasks
+// See: https://platform.openai.com/docs/models/gpt-5-mini
+// Fallback chain: gpt-5-mini -> gpt-4o-mini
+const DEFAULT_MODEL = 'gpt-5-mini'
+const FALLBACK_MODEL = 'gpt-4o-mini'
 const LEGACY_FALLBACK = 'gpt-4o-mini'
 
 // Spanish category translations for ingredients
@@ -186,7 +186,7 @@ function getNextFallback(currentModel: string): string | null {
 
 /**
  * Call OpenAI API with a prompt
- * Uses GPT-5.2 Thinking as default with automatic fallback chain
+ * Uses GPT-5-mini as default with automatic fallback chain
  */
 async function callOpenAI(
   apiKey: string,
@@ -982,7 +982,7 @@ Responde con un objeto JSON en este formato exacto:
   "combinations": [
     {
       "day": 1,
-      "mealType": "almuerzo" | "cena",
+      "mealType": "lunch" | "dinner",
       "protein": "nombre de la proteína",
       "carb": "nombre del carbohidrato",
       "vegetable": "nombre del vegetal",

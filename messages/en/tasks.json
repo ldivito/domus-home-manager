@@ -25,6 +25,12 @@
     "clearAll": "Clear all filters",
     "active": "Active filters"
   },
+  "stats": {
+    "overallProgress": "Overall Progress",
+    "completedThisMonth": "Completed This Month",
+    "overdue": "Overdue",
+    "highPriority": "High Priority"
+  },
   "priority": {
     "low": "Low",
     "medium": "Medium",

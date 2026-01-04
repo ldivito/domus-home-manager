@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Link, usePathname, useRouter } from '@/i18n/navigation'
 import {
   Home,
+  Activity,
   CheckSquare,
   ShoppingCart,
   Calendar,
@@ -118,6 +119,7 @@ export default function Navigation() {
   }
 
   const navigationItems = [
+    { nameKey: 'activity', href: '/activity', icon: Activity },
     { nameKey: 'chores', href: '/chores', icon: CheckSquare },
     { nameKey: 'grocery', href: '/grocery', icon: ShoppingCart },
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },

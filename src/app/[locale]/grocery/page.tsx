@@ -14,6 +14,7 @@ import { AddItemDialog } from './components/AddItemDialog'
 import { ManageCategoriesDialog } from './components/ManageCategoriesDialog'
 import { ManageSavedItemsDialog } from './components/ManageSavedItemsDialog'
 import { logger } from '@/lib/logger'
+import { ActivityLogger } from '@/lib/activity'
 
 type ViewMode = 'list' | 'categories'
 type ViewType = 'current' | 'saved'
@@ -45,21 +46,25 @@ export default function GroceryPage() {
     []
   ) || []
 
-  const handleBought = async (itemId: string) => {
-    await deleteWithSync(db.groceryItems, 'groceryItems', itemId)
+  const handleBought = async (item: GroceryItem) => {
+    if (!item.id) return
+    await deleteWithSync(db.groceryItems, 'groceryItems', item.id)
+    await ActivityLogger.groceryItemPurchased(item.id, item.name, item.addedBy, item.householdId)
   }
 
   const handleAddSavedItem = async (savedItem: SavedGroceryItem) => {
     try {
+      const newItemId = generateId('gri')
       // Always add to current grocery list (allow duplicates)
-    await db.groceryItems.add({
-      id: generateId('gri'),
+      await db.groceryItems.add({
+        id: newItemId,
         name: savedItem.name,
         category: savedItem.category,
         amount: savedItem.amount || '',
         importance: savedItem.importance || 'medium',
         createdAt: new Date()
       })
+      await ActivityLogger.groceryItemAdded(newItemId, savedItem.name, undefined, savedItem.householdId)
 
       // Update usage count in saved items
       await db.savedGroceryItems.update(savedItem.id!, {
@@ -203,7 +208,7 @@ export default function GroceryPage() {
 
               {/* Action button - full width on mobile */}
               <Button
-                onClick={() => isSavedItem ? handleAddSavedItem(savedItem) : handleBought(item.id!)}
+                onClick={() => isSavedItem ? handleAddSavedItem(savedItem) : handleBought(item as GroceryItem)}
                 variant="outline"
                 size="default"
                 className={`w-full sm:w-auto sm:ml-4 h-10 sm:h-12 px-4 sm:px-6 ${
@@ -276,7 +281,7 @@ export default function GroceryPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{item.amount || '\u00A0'}</span>
                         <Button
-                          onClick={() => isSavedItem ? handleAddSavedItem(savedItem) : handleBought(item.id!)}
+                          onClick={() => isSavedItem ? handleAddSavedItem(savedItem) : handleBought(item as GroceryItem)}
                           size="sm"
                           variant="outline"
                           className={`w-full sm:w-auto h-9 ${isSavedItem

@@ -12,6 +12,7 @@ import { Plus } from "lucide-react"
 import { db, GroceryCategory, SavedGroceryItem, GroceryItem } from '@/lib/db'
 import { generateId } from '@/lib/utils'
 import { logger } from '@/lib/logger'
+import { ActivityLogger } from '@/lib/activity'
 
 interface AddItemDialogProps {
   open: boolean
@@ -71,6 +72,7 @@ export function AddItemDialog({ open, onOpenChange, categories }: AddItemDialogP
         createdAt: new Date()
       }
       await db.groceryItems.add(grocery)
+      await ActivityLogger.groceryItemAdded(grocery.id!, grocery.name, grocery.addedBy, grocery.householdId)
 
       // Also add or update in saved grocery items database
       const existingItem = await db.savedGroceryItems

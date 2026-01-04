@@ -19,6 +19,7 @@ import { TaskFormDialog } from './components/TaskFormDialog'
 import { ManageTaskCategoriesDialog } from './components/ManageTaskCategoriesDialog'
 import { ImportTasksDialog } from './components/ImportTasksDialog'
 import { logger } from '@/lib/logger'
+import { ActivityLogger } from '@/lib/activity'
 
 const TASKS_PER_PAGE = 20
 
@@ -117,17 +118,21 @@ export default function TasksPage() {
     return categoryName
   }
 
-  const handleMarkComplete = async (taskId: string) => {
+  const handleMarkComplete = async (task: Task) => {
+    if (!task.id) return
     try {
-      await db.tasks.update(taskId, { isCompleted: true, updatedAt: new Date() })
+      await db.tasks.update(task.id, { isCompleted: true, updatedAt: new Date() })
+      await ActivityLogger.taskCompleted(task.id, task.title, task.assignedUserId, task.householdId)
     } catch (error) {
       logger.error('Error marking task as complete:', error)
     }
   }
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = async (task: Task) => {
+    if (!task.id) return
     try {
-      await deleteWithSync(db.tasks, 'tasks', taskId)
+      await deleteWithSync(db.tasks, 'tasks', task.id)
+      await ActivityLogger.taskDeleted(task.id, task.title, task.assignedUserId, task.householdId)
     } catch (error) {
       logger.error('Error deleting task:', error)
     }
@@ -597,7 +602,7 @@ export default function TasksPage() {
                   <div className="flex items-center gap-2 sm:gap-2 flex-1 min-w-0">
                     {/* Checkbox / Status */}
                     <button
-                      onClick={() => !task.isCompleted && !isBlocked && handleMarkComplete(task.id!)}
+                      onClick={() => !task.isCompleted && !isBlocked && handleMarkComplete(task)}
                       disabled={task.isCompleted || isBlocked}
                       className={`flex-shrink-0 w-5 h-5 sm:w-3.5 sm:h-3.5 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
                         task.isCompleted
@@ -667,7 +672,7 @@ export default function TasksPage() {
                         </button>
                         <button
                           className="p-2 sm:p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50"
-                          onClick={() => handleDeleteTask(task.id!)}
+                          onClick={() => handleDeleteTask(task)}
                         >
                           <Trash2 className="h-4 w-4 sm:h-3 sm:w-3" />
                         </button>
@@ -999,7 +1004,7 @@ export default function TasksPage() {
                       <Button
                         className="flex-1"
                         onClick={() => {
-                          handleMarkComplete(viewingTask.id!)
+                          handleMarkComplete(viewingTask)
                           setDetailsDialogOpen(false)
                         }}
                       >

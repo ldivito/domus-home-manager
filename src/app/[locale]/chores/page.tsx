@@ -17,6 +17,7 @@ import { CompleteChoreModal } from "@/components/CompleteChoreModal"
 import { db, Chore, User as UserType, deleteWithSync } from "@/lib/db"
 import { generateId } from "@/lib/utils"
 import { logger } from '@/lib/logger'
+import { ActivityLogger } from '@/lib/activity'
 
 type FrequencyFilter = 'all' | 'daily' | 'weekly' | 'monthly' | 'custom'
 type StatusFilter = 'all' | 'pending' | 'completed' | 'overdue'
@@ -68,6 +69,7 @@ export default function ChoresPage() {
       }
 
       await db.chores.add(newChore)
+      await ActivityLogger.choreCreated(newChore.id!, newChore.title, choreData.assignedUserId, choreData.householdId)
       await loadData()
     } catch (error) {
       logger.error('Error creating chore:', error)
@@ -89,6 +91,7 @@ export default function ChoresPage() {
     if (!chore.id) return
     try {
       await deleteWithSync(db.chores, 'chores', chore.id)
+      await ActivityLogger.choreDeleted(chore.id, chore.title, undefined, chore.householdId)
       await loadData()
     } catch (error) {
       logger.error('Error deleting chore:', error)
@@ -132,6 +135,7 @@ export default function ChoresPage() {
         isCompleted: true,
         updatedAt: now
       })
+      await ActivityLogger.choreCompleted(selectedChore.id, selectedChore.title, completedByUserId, selectedChore.householdId)
 
       await loadData()
     } catch (error) {

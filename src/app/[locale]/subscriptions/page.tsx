@@ -107,7 +107,7 @@ export default function SubscriptionsPage() {
     // If not found, get the most recent one
     if (!rate) {
       const rates = await db.monthlyExchangeRates
-        .orderBy('[year+month]')
+        .orderBy('[month+year]')
         .reverse()
         .first()
       rate = rates

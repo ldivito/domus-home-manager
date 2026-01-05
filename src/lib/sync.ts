@@ -2,6 +2,15 @@ import { db, getDatabase, DeletionLog } from './db'
 import { checkMigrationNeeded, performMigration } from './migration'
 import { logger } from '@/lib/logger'
 
+// Sync configuration constants
+const PUSH_CHUNK_SIZE = 100       // Records per push request
+const PULL_PAGE_SIZE = 500        // Records per pull request
+const REQUEST_TIMEOUT_MS = 60000  // 60 second timeout
+const MAX_RETRIES = 3
+const RETRY_BASE_DELAY_MS = 1000
+const RETRY_MAX_DELAY_MS = 30000
+const CHECKPOINT_KEY = 'domus_sync_checkpoint'
+
 export interface SyncStatus {
   lastSyncAt: Date | null
   isSyncing: boolean
@@ -27,11 +36,51 @@ export interface SyncResult {
 }
 
 export interface SyncProgress {
-  step: 'migration' | 'collecting' | 'pushing' | 'pulling' | 'applying' | 'complete'
+  step: 'migration' | 'collecting' | 'pushing' | 'pulling' | 'applying' | 'complete' | 'error'
   message: string
   current?: number    // Current item count
   total?: number      // Total items to process
   percent?: number    // 0-100 progress percentage
+  pushProgress?: {
+    chunksCompleted: number
+    totalChunks: number
+    recordsPushed: number
+  }
+  pullProgress?: {
+    pagesFetched: number
+    recordsPulled: number
+  }
+}
+
+interface ChunkedPushResult {
+  success: boolean
+  totalPushed: number
+  failedChunks: number[]
+  error?: string
+}
+
+interface PullResponse {
+  success: boolean
+  changes: SyncRecord[]
+  hasMore: boolean
+  nextCursor: string | null
+  error?: string
+}
+
+interface SyncCheckpoint {
+  syncId: string
+  startedAt: string
+  phase: 'push' | 'pull'
+  push?: {
+    totalChunks: number
+    completedChunks: number[]
+    failedChunks: number[]
+  }
+  pull?: {
+    cursor: string | null
+    pagesFetched: number
+    totalApplied: number
+  }
 }
 
 const SYNC_TABLES = [
@@ -117,6 +166,141 @@ export function setLastSyncTime(date: Date): void {
 export function resetSyncState(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem('lastSyncAt')
+  clearSyncCheckpoint()
+}
+
+// ============ Helper Functions ============
+
+/**
+ * Split an array into chunks of specified size
+ */
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size))
+  }
+  return chunks
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Calculate exponential backoff delay with jitter
+ */
+function calculateBackoffDelay(attempt: number): number {
+  const baseDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt)
+  const jitter = baseDelay * 0.2 * (Math.random() * 2 - 1) // +/- 20%
+  return Math.min(baseDelay + jitter, RETRY_MAX_DELAY_MS)
+}
+
+/**
+ * Fetch with timeout and retry logic
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = MAX_RETRIES
+): Promise<Response> {
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      // Don't retry on client errors (except rate limiting)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response
+      }
+
+      // Retry on server errors and rate limiting
+      if (response.status >= 500 || response.status === 429) {
+        if (attempt < maxRetries) {
+          const delay = calculateBackoffDelay(attempt)
+          logger.warn(`Request failed with ${response.status}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`)
+          await sleep(delay)
+          continue
+        }
+      }
+
+      return response
+    } catch (error) {
+      clearTimeout(timeoutId)
+      lastError = error as Error
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.warn(`Request timeout (attempt ${attempt + 1}/${maxRetries + 1})`)
+      } else {
+        logger.warn(`Request error: ${(error as Error).message} (attempt ${attempt + 1}/${maxRetries + 1})`)
+      }
+
+      if (attempt < maxRetries) {
+        const delay = calculateBackoffDelay(attempt)
+        await sleep(delay)
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries')
+}
+
+// ============ Checkpoint Persistence ============
+
+/**
+ * Load sync checkpoint from localStorage
+ */
+function loadSyncCheckpoint(): SyncCheckpoint | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const data = localStorage.getItem(CHECKPOINT_KEY)
+    return data ? JSON.parse(data) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Save sync checkpoint to localStorage
+ */
+function saveSyncCheckpoint(checkpoint: Partial<SyncCheckpoint>): void {
+  if (typeof window === 'undefined') return
+  try {
+    const existing = loadSyncCheckpoint() || {
+      syncId: crypto.randomUUID(),
+      startedAt: new Date().toISOString(),
+      phase: 'push' as const
+    }
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({
+      ...existing,
+      ...checkpoint
+    }))
+  } catch (error) {
+    logger.error('Failed to save sync checkpoint:', error)
+  }
+}
+
+/**
+ * Clear sync checkpoint from localStorage
+ */
+function clearSyncCheckpoint(): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(CHECKPOINT_KEY)
+  } catch {
+    // Ignore errors
+  }
 }
 
 /**
@@ -286,17 +470,25 @@ async function applyRemoteChangesWithProgress(
 }
 
 /**
- * Push local changes to the server
+ * Push a single chunk of changes to the server
  */
-async function pushChanges(changes: SyncRecord[]): Promise<{ success: boolean; count: number; error?: string }> {
+async function pushChunk(
+  chunk: SyncRecord[],
+  chunkIndex: number,
+  totalChunks: number
+): Promise<{ success: boolean; count: number; error?: string }> {
   try {
-    const response = await fetch('/api/sync/push', {
+    const response = await fetchWithRetry('/api/sync/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ changes }),
-      credentials: 'include' // Include cookies for auth
+      body: JSON.stringify({
+        changes: chunk,
+        chunkIndex,
+        totalChunks
+      }),
+      credentials: 'include'
     })
 
     if (!response.ok) {
@@ -305,7 +497,7 @@ async function pushChanges(changes: SyncRecord[]): Promise<{ success: boolean; c
     }
 
     const result = await response.json()
-    return { success: true, count: result.pushed || changes.length }
+    return { success: true, count: result.pushed || chunk.length }
   } catch (error) {
     return {
       success: false,
@@ -316,30 +508,158 @@ async function pushChanges(changes: SyncRecord[]): Promise<{ success: boolean; c
 }
 
 /**
- * Pull remote changes from the server
+ * Push local changes to the server with chunking
  */
-async function pullChanges(since: Date | null): Promise<{ success: boolean; changes: SyncRecord[]; error?: string }> {
-  try {
-    const url = since
-      ? `/api/sync/pull?since=${since.toISOString()}`
-      : '/api/sync/pull'
+async function pushChangesChunked(
+  changes: SyncRecord[],
+  onProgress?: (chunksCompleted: number, totalChunks: number, recordsPushed: number) => void
+): Promise<ChunkedPushResult> {
+  if (changes.length === 0) {
+    return { success: true, totalPushed: 0, failedChunks: [] }
+  }
 
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'include' // Include cookies for auth
-    })
+  const chunks = chunkArray(changes, PUSH_CHUNK_SIZE)
+  const failedChunks: number[] = []
+  let totalPushed = 0
 
-    if (!response.ok) {
-      const error = await response.text()
-      return { success: false, changes: [], error }
+  // Load checkpoint to resume from last successful chunk
+  const checkpoint = loadSyncCheckpoint()
+  const completedChunks = checkpoint?.push?.completedChunks || []
+  const startChunk = completedChunks.length
+
+  logger.debug(`Pushing ${changes.length} changes in ${chunks.length} chunks (starting from chunk ${startChunk})`)
+
+  for (let i = startChunk; i < chunks.length; i++) {
+    const chunk = chunks[i]
+
+    const result = await pushChunk(chunk, i, chunks.length)
+
+    if (!result.success) {
+      failedChunks.push(i)
+      logger.error(`Push chunk ${i + 1}/${chunks.length} failed: ${result.error}`)
+    } else {
+      totalPushed += result.count
+      completedChunks.push(i)
+
+      // Save checkpoint after each successful chunk
+      saveSyncCheckpoint({
+        phase: 'push',
+        push: {
+          totalChunks: chunks.length,
+          completedChunks: [...completedChunks],
+          failedChunks
+        }
+      })
     }
 
-    const result = await response.json()
-    return { success: true, changes: result.changes || [] }
+    // Report progress
+    if (onProgress) {
+      onProgress(i + 1, chunks.length, totalPushed)
+    }
+  }
+
+  // Retry failed chunks once
+  if (failedChunks.length > 0) {
+    logger.debug(`Retrying ${failedChunks.length} failed chunks`)
+    const stillFailed: number[] = []
+
+    for (const chunkIndex of failedChunks) {
+      const chunk = chunks[chunkIndex]
+      const result = await pushChunk(chunk, chunkIndex, chunks.length)
+
+      if (result.success) {
+        totalPushed += result.count
+      } else {
+        stillFailed.push(chunkIndex)
+      }
+    }
+
+    if (stillFailed.length > 0) {
+      return {
+        success: false,
+        totalPushed,
+        failedChunks: stillFailed,
+        error: `${stillFailed.length} chunks failed after retry`
+      }
+    }
+  }
+
+  return { success: true, totalPushed, failedChunks: [] }
+}
+
+/**
+ * Pull remote changes from the server with pagination
+ */
+async function pullChangesPaginated(
+  since: Date | null,
+  onProgress?: (pagesFetched: number, totalRecords: number) => void
+): Promise<{ success: boolean; changes: SyncRecord[]; error?: string }> {
+  const allChanges: SyncRecord[] = []
+  let cursor: string | null = null
+  let pagesFetched = 0
+
+  // Load checkpoint to resume from last cursor
+  const checkpoint = loadSyncCheckpoint()
+  if (checkpoint?.phase === 'pull' && checkpoint.pull?.cursor) {
+    cursor = checkpoint.pull.cursor
+    pagesFetched = checkpoint.pull.pagesFetched || 0
+    logger.debug(`Resuming pull from cursor: ${cursor}`)
+  }
+
+  try {
+    do {
+      const url = new URL('/api/sync/pull', window.location.origin)
+      if (since) url.searchParams.set('since', since.toISOString())
+      if (cursor) url.searchParams.set('cursor', cursor)
+      url.searchParams.set('limit', String(PULL_PAGE_SIZE))
+
+      const response = await fetchWithRetry(url.toString(), {
+        method: 'GET',
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        return { success: false, changes: allChanges, error }
+      }
+
+      const result: PullResponse = await response.json()
+
+      // Convert date strings back to Date objects
+      const changes = (result.changes || []).map(change => ({
+        ...change,
+        updatedAt: new Date(change.updatedAt),
+        deletedAt: change.deletedAt ? new Date(change.deletedAt) : null
+      }))
+
+      allChanges.push(...changes)
+      cursor = result.nextCursor
+      pagesFetched++
+
+      logger.debug(`Pulled page ${pagesFetched}: ${changes.length} records (hasMore: ${result.hasMore})`)
+
+      // Report progress
+      if (onProgress) {
+        onProgress(pagesFetched, allChanges.length)
+      }
+
+      // Save checkpoint after each page
+      saveSyncCheckpoint({
+        phase: 'pull',
+        pull: {
+          cursor,
+          pagesFetched,
+          totalApplied: 0
+        }
+      })
+
+    } while (cursor)
+
+    return { success: true, changes: allChanges }
   } catch (error) {
     return {
       success: false,
-      changes: [],
+      changes: allChanges,
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
@@ -405,31 +725,52 @@ export async function performSync(
       percent: 30
     })
 
-    // 2. Push local changes to server
+    // 2. Push local changes to server with chunking
     const syncStartTime = new Date()
     if (localChanges.length > 0) {
+      const totalChunks = Math.ceil(localChanges.length / PUSH_CHUNK_SIZE)
       reportProgress({
         step: 'pushing',
-        message: 'Uploading changes...',
+        message: `Uploading changes (0/${totalChunks} chunks)...`,
         current: 0,
         total: localChanges.length,
-        percent: 35
+        percent: 35,
+        pushProgress: {
+          chunksCompleted: 0,
+          totalChunks,
+          recordsPushed: 0
+        }
       })
 
-      const pushResult = await pushChanges(localChanges)
+      const pushResult = await pushChangesChunked(
+        localChanges,
+        (chunksCompleted, totalChunks, recordsPushed) => {
+          const percent = 35 + Math.round((chunksCompleted / totalChunks) * 15)
+          reportProgress({
+            step: 'pushing',
+            message: `Uploading changes (${chunksCompleted}/${totalChunks} chunks)...`,
+            current: recordsPushed,
+            total: localChanges.length,
+            percent,
+            pushProgress: {
+              chunksCompleted,
+              totalChunks,
+              recordsPushed
+            }
+          })
+        }
+      )
+
       if (!pushResult.success) {
         result.error = `Push failed: ${pushResult.error}`
+        reportProgress({
+          step: 'error',
+          message: pushResult.error || 'Push failed',
+          percent: 50
+        })
         return result
       }
-      result.pushed = pushResult.count
-
-      reportProgress({
-        step: 'pushing',
-        message: 'Uploading changes...',
-        current: localChanges.length,
-        total: localChanges.length,
-        percent: 50
-      })
+      result.pushed = pushResult.totalPushed
 
       // Clear deletion log for successfully pushed deletions
       await clearDeletionLog(syncStartTime)
@@ -443,14 +784,28 @@ export async function performSync(
       })
     }
 
-    // 3. Pull remote changes from server
+    // 3. Pull remote changes from server with pagination
     reportProgress({
       step: 'pulling',
       message: 'Downloading updates...',
       percent: 55
     })
 
-    const pullResult = await pullChanges(lastSync)
+    const pullResult = await pullChangesPaginated(
+      lastSync,
+      (pagesFetched, totalRecords) => {
+        reportProgress({
+          step: 'pulling',
+          message: `Downloaded ${totalRecords} records (page ${pagesFetched})...`,
+          percent: 55 + Math.min(pagesFetched * 3, 15),
+          pullProgress: {
+            pagesFetched,
+            recordsPulled: totalRecords
+          }
+        })
+      }
+    )
+
     if (!pullResult.success) {
       result.error = `Pull failed: ${pullResult.error}`
       return result
@@ -458,7 +813,7 @@ export async function performSync(
 
     reportProgress({
       step: 'pulling',
-      message: 'Downloading updates...',
+      message: `Downloaded ${pullResult.changes.length} updates`,
       current: pullResult.changes.length,
       total: pullResult.changes.length,
       percent: 70
@@ -496,8 +851,9 @@ export async function performSync(
       })
     }
 
-    // 5. Update last sync timestamp
+    // 5. Update last sync timestamp and clear checkpoint
     setLastSyncTime(new Date())
+    clearSyncCheckpoint()
     result.success = true
 
     reportProgress({
@@ -509,6 +865,11 @@ export async function performSync(
     return result
   } catch (error) {
     result.error = error instanceof Error ? error.message : 'Unknown sync error'
+    reportProgress({
+      step: 'error',
+      message: result.error,
+      percent: 0
+    })
     return result
   }
 }

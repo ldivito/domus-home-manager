@@ -186,13 +186,97 @@ class CloudflareD1REST implements D1Database {
     return { count: 0, duration: 0 }
   }
 
+  /**
+   * Execute multiple statements in a single batch using D1's native batch API.
+   * This is much faster than sequential execution as it sends all statements
+   * in a single HTTP request.
+   */
   async batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
-    const results: D1Result<T>[] = []
-    for (const stmt of statements) {
-      const result = await stmt.run()
-      results.push(result as D1Result<T>)
+    if (statements.length === 0) {
+      return []
     }
+
+    // Convert statements to SQL objects with params
+    const sqlStatements = statements.map(stmt => {
+      const restStmt = stmt as CloudflareD1RESTStatement
+      return {
+        sql: restStmt.getQuery(),
+        params: restStmt.getParams()
+      }
+    })
+
+    // D1 batch API accepts up to ~100 statements per request
+    // Process in sub-batches of 50 to stay well within limits
+    const BATCH_SIZE = 50
+    const results: D1Result<T>[] = []
+
+    for (let i = 0; i < sqlStatements.length; i += BATCH_SIZE) {
+      const batch = sqlStatements.slice(i, i + BATCH_SIZE)
+      const batchResults = await this.executeBatch<T>(batch)
+      results.push(...batchResults)
+    }
+
     return results
+  }
+
+  /**
+   * Execute a batch of SQL statements using D1's REST API
+   */
+  private async executeBatch<T>(
+    statements: Array<{ sql: string; params: unknown[] }>
+  ): Promise<D1Result<T>[]> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30000) // D1 batch timeout
+
+    try {
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(statements),
+          signal: controller.signal
+        }
+      )
+
+      clearTimeout(timeout)
+
+      const data = await response.json() as {
+        success: boolean
+        result?: Array<{ results: T[], success: boolean, meta: D1Result['meta'] }>
+        errors?: Array<{ message: string }>
+      }
+
+      if (!data.success || !data.result) {
+        const errorMsg = data.errors?.[0]?.message || 'Batch execution failed'
+        logger.error('[Cloudflare D1] Batch failed:', errorMsg)
+        return statements.map(() => ({
+          success: false,
+          error: errorMsg
+        }))
+      }
+
+      return data.result.map(r => ({
+        success: r.success,
+        results: r.results,
+        meta: r.meta
+      }))
+    } catch (error) {
+      clearTimeout(timeout)
+      const errorMsg = error instanceof Error ? error.message : 'Unknown batch error'
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.error('[Cloudflare D1] Batch timeout after 30s')
+      } else {
+        logger.error('[Cloudflare D1] Batch error:', errorMsg)
+      }
+      return statements.map(() => ({
+        success: false,
+        error: errorMsg
+      }))
+    }
   }
 }
 
@@ -207,6 +291,10 @@ class CloudflareD1RESTStatement implements D1PreparedStatement {
     private databaseId: string,
     private apiToken: string
   ) {}
+
+  // Getter methods for batch execution
+  getQuery(): string { return this.query }
+  getParams(): unknown[] { return this.values }
 
   bind(...values: unknown[]): D1PreparedStatement {
     this.values = values

@@ -138,7 +138,9 @@ const SYNC_TABLES = [
   'savingsCampaigns',
   'savingsMilestones',
   'savingsParticipants',
-  'savingsContributions'
+  'savingsContributions',
+  // Activity tracking
+  'activityLogs'
 ] as const
 
 type SyncTable = typeof SYNC_TABLES[number]

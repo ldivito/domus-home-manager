@@ -113,26 +113,32 @@ export async function GET(request: Request) {
 
     // Calculate balances
     const memberMap = new Map<string, string>()
-    const balances: Record<string, number> = {}
+    const balances = {} as Record<string, number>
     
     // Initialize balances for all members
-    (members.results as HouseholdMember[])?.forEach(member => {
-      memberMap.set(member.userId, member.name)
-      balances[member.userId] = 0
-    })
+    const membersList = members.results as HouseholdMember[]
+    if (membersList && Array.isArray(membersList)) {
+      membersList.forEach(member => {
+        memberMap.set(member.userId, member.name)
+        balances[member.userId] = 0
+      })
+    }
 
     // Add payments (money spent by each person)
-    (payments.results as ExpensePayment[])?.forEach(payment => {
-      const userId = payment.paidBy
-      const amount = parseFloat(payment.amount)
-      if (userId && !isNaN(amount)) {
-        balances[userId] += amount
-      }
-    })
+    const paymentsList = payments.results as ExpensePayment[]
+    if (paymentsList && Array.isArray(paymentsList)) {
+      paymentsList.forEach(payment => {
+        const userId = payment.paidBy
+        const amount = parseFloat(payment.amount)
+        if (userId && !isNaN(amount)) {
+          balances[userId] += amount
+        }
+      })
+    }
 
     // Calculate average expense per person
     const totalExpenses = Object.values(balances).reduce((sum, balance) => sum + balance, 0)
-    const averagePerPerson = totalExpenses / (members.results as HouseholdMember[]).length
+    const averagePerPerson = membersList ? totalExpenses / membersList.length : 0
 
     // Calculate who owes what (negative = owes money, positive = owed money)
     Object.keys(balances).forEach(userId => {
@@ -140,13 +146,16 @@ export async function GET(request: Request) {
     })
 
     // Apply settlements (reduce debts)
-    (settlements.results as Settlement[])?.forEach(settlement => {
-      const amount = parseFloat(settlement.amount)
-      if (!isNaN(amount)) {
-        balances[settlement.fromUser] += amount // Person who paid reduces their debt
-        balances[settlement.toUser] -= amount   // Person who received increases their debt
-      }
-    })
+    const settlementsList = settlements.results as Settlement[]
+    if (settlementsList && Array.isArray(settlementsList)) {
+      settlementsList.forEach(settlement => {
+        const amount = parseFloat(settlement.amount)
+        if (!isNaN(amount)) {
+          balances[settlement.fromUser] += amount // Person who paid reduces their debt
+          balances[settlement.toUser] -= amount   // Person who received increases their debt
+        }
+      })
+    }
 
     // Create debt relationships
     const debts: Debt[] = []

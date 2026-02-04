@@ -201,6 +201,7 @@ export default function SettingsPage() {
       } as HomeSettings
 
       if (homeSettings.id) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...updateData } = settingsToSave
         await db.homeSettings.update(homeSettings.id, updateData)
       } else {

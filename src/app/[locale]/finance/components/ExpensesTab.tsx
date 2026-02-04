@@ -23,7 +23,7 @@ interface ExpensesTabProps {
   hideAmounts?: boolean
 }
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string; color?: string; stroke?: string }>> = {
   Home,
   Zap,
   Wifi,
@@ -279,7 +279,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
                               >
                                 <IconComponent
                                   className="h-4 w-4 sm:h-5 sm:w-5"
-                                  style={{ color: getCategoryColor(expense.category) }}
+                                  color={getCategoryColor(expense.category)}
                                 />
                               </div>
                               <div className="min-w-0 flex-1">
@@ -524,7 +524,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
                     return (
                       <SelectItem key={cat.id} value={cat.id!}>
                         <div className="flex items-center gap-2">
-                          {IconComp && <IconComp className="h-4 w-4" style={{ color: cat.color }} />}
+                          {IconComp && <IconComp className="h-4 w-4" color={cat.color} />}
                           {cat.name.startsWith('defaultExpenseCategories.')
                             ? tCat(cat.name.replace('defaultExpenseCategories.', ''))
                             : cat.name

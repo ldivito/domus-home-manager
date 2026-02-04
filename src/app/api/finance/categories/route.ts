@@ -4,6 +4,16 @@ import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 
+interface ExpenseCategory {
+  id: string
+  name: string
+  icon: string
+  color: string
+  isDefault: number
+  updatedAt?: string
+  createdAt?: string
+}
+
 export async function GET(request: Request) {
   try {
     const env = (request as unknown as { env?: CloudflareEnv }).env
@@ -41,7 +51,7 @@ export async function GET(request: Request) {
       .all()
 
     // Include default categories if none exist
-    let categoriesData = categories.results || []
+    let categoriesData = (categories.results as ExpenseCategory[]) || []
     
     if (categoriesData.length === 0) {
       categoriesData = [

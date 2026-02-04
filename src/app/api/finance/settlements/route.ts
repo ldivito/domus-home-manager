@@ -4,6 +4,21 @@ import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 
+interface SettlementPayment {
+  id: string
+  fromUserId: string
+  toUserId: string
+  amount: string
+  month: number
+  year: number
+  paidDate: string
+  notes: string | null
+  fromUserName: string
+  toUserName: string
+  updatedAt: string
+  createdAt: string
+}
+
 export async function GET(request: Request) {
   try {
     const env = (request as unknown as { env?: CloudflareEnv }).env
@@ -60,7 +75,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      settlements: settlements.results || []
+      settlements: (settlements.results as SettlementPayment[]) || []
     })
   } catch (error) {
     logger.error('Get settlements error:', error)

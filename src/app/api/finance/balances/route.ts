@@ -112,7 +112,7 @@ export async function GET(request: Request) {
       .all()
 
     // Calculate balances
-    const memberMap = new Map()
+    const memberMap = new Map<string, string>()
     const balances: Record<string, number> = {}
     
     // Initialize balances for all members

@@ -201,7 +201,8 @@ export default function SettingsPage() {
       } as HomeSettings
 
       if (homeSettings.id) {
-        await db.homeSettings.update(homeSettings.id, settingsToSave)
+        const { id, ...updateData } = settingsToSave
+        await db.homeSettings.update(homeSettings.id, updateData)
       } else {
         await db.homeSettings.add({ ...settingsToSave, id: generateId('hst') })
       }

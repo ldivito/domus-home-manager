@@ -4,6 +4,20 @@ import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 
+interface RecurringExpense {
+  id: string
+  name: string
+  description: string
+  amount: string
+  currency: string
+  category: string
+  frequency: string
+  dueDay: number
+  isActive: boolean
+  updatedAt: string
+  createdAt: string
+}
+
 export async function GET(request: Request) {
   try {
     const env = (request as unknown as { env?: CloudflareEnv }).env
@@ -44,7 +58,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      expenses: expenses.results || []
+      expenses: (expenses.results as RecurringExpense[]) || []
     })
   } catch (error) {
     logger.error('Get recurring expenses error:', error)

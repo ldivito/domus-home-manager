@@ -4,6 +4,21 @@ import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 
+interface ExpensePaymentRecord {
+  id: string
+  recurringExpenseId: string
+  amount: string
+  dueDate: string
+  paidDate: string | null
+  paidByUserId: string | null
+  status: string
+  notes: string | null
+  paidByName: string | null
+  expenseName: string
+  updatedAt: string
+  createdAt: string
+}
+
 export async function GET(request: Request) {
   try {
     const env = (request as unknown as { env?: CloudflareEnv }).env
@@ -49,7 +64,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      payments: payments.results || []
+      payments: (payments.results as ExpensePaymentRecord[]) || []
     })
   } catch (error) {
     logger.error('Get expense payments error:', error)

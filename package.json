@@ -5,9 +5,19 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:prod": "BUILD_MODE=production next build",
+    "build:prod": "NODE_ENV=production BUILD_MODE=production NEXT_TELEMETRY_DISABLED=1 next build",
+    "build:debug": "NODE_ENV=production BUILD_MODE=production NEXT_TELEMETRY_DISABLED=1 DEBUG=1 next build",
+    "build:analyze": "NODE_ENV=production BUILD_MODE=production ANALYZE=true next build",
     "start": "next start",
-    "lint": "next lint"
+    "start:vercel-local": "NODE_ENV=production next start -p 3000",
+    "start:prod": "NODE_ENV=production next start -p 3000 -d .next-prod",
+    "clean": "rm -rf .next .next-prod node_modules/.cache .turbo",
+    "clean:all": "rm -rf .next .next-prod node_modules/.cache .turbo node_modules package-lock.json",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "vercel:build": "../local-vercel-setup.sh",
+    "vercel:dev": "NODE_ENV=development VERCEL=1 next dev",
+    "analyze": "NODE_ENV=production ANALYZE=true npm run build:prod"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -49,15 +59,15 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
+    "@types/node": "25.2.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.4.24",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
-    "postcss": "^8.4.49",
+    "postcss": "^8.5.6",
     "sharp": "^0.34.5",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5"
   }
 }

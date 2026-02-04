@@ -18,17 +18,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No household' }, { status: 404 })
     }
 
+    // Get recurring expenses from sync metadata
     const expenses = await db
       .prepare(`
         SELECT 
-          e.*,
-          u1.name as paidByName,
-          u2.name as createdByName
-        FROM expenses e
-        LEFT JOIN users u1 ON e.paidBy = u1.id
-        LEFT JOIN users u2 ON e.createdBy = u2.id
-        WHERE e.householdId = ?
-        ORDER BY e.date DESC
+          sm.recordId as id,
+          json_extract(sm.data, '$.name') as name,
+          json_extract(sm.data, '$.description') as description,
+          json_extract(sm.data, '$.amount') as amount,
+          json_extract(sm.data, '$.currency') as currency,
+          json_extract(sm.data, '$.category') as category,
+          json_extract(sm.data, '$.frequency') as frequency,
+          json_extract(sm.data, '$.dueDay') as dueDay,
+          json_extract(sm.data, '$.isActive') as isActive,
+          sm.updatedAt,
+          sm.createdAt
+        FROM sync_metadata sm
+        WHERE sm.tableName = 'recurringExpenses' 
+        AND sm.householdId = ?
+        AND sm.deletedAt IS NULL
+        ORDER BY json_extract(sm.data, '$.name')
       `)
       .bind(session.householdId)
       .all()
@@ -38,7 +47,7 @@ export async function GET(request: Request) {
       expenses: expenses.results || []
     })
   } catch (error) {
-    logger.error('Get expenses error:', error)
+    logger.error('Get recurring expenses error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -58,69 +67,56 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { 
-      description, 
-      amount, 
-      currency, 
-      category, 
-      paidBy, 
-      splitBetween, 
-      splitType, 
-      splitData, 
-      date, 
-      notes 
-    } = body
+    const { name, description, amount, currency, category, frequency, dueDay } = body
 
-    if (!description || !amount || !category || !paidBy || !splitBetween || !date) {
+    if (!name || !amount || !category || !frequency || !dueDay) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const expenseId = uuidv4()
-    
+    const now = new Date().toISOString()
+
+    const expenseData = {
+      id: expenseId,
+      name,
+      description,
+      amount,
+      currency: currency || 'ARS',
+      category,
+      frequency,
+      dueDay,
+      isActive: true,
+      householdId: session.householdId,
+      createdAt: now,
+      updatedAt: now
+    }
+
+    // Insert into sync metadata
     await db
       .prepare(`
-        INSERT INTO expenses (
-          id, householdId, description, amount, currency, category, 
-          paidBy, splitBetween, splitType, splitData, date, notes, createdBy
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sync_metadata (
+          id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
-        expenseId,
+        uuidv4(),
+        session.userId,
         session.householdId,
-        description,
-        amount,
-        currency || 'ARS',
-        category,
-        paidBy,
-        JSON.stringify(splitBetween),
-        splitType || 'equal',
-        splitData ? JSON.stringify(splitData) : null,
-        date,
-        notes || null,
-        session.userId
+        'recurringExpenses',
+        expenseId,
+        'insert',
+        JSON.stringify(expenseData),
+        now,
+        now
       )
       .run()
 
-    const newExpense = await db
-      .prepare(`
-        SELECT 
-          e.*,
-          u1.name as paidByName,
-          u2.name as createdByName
-        FROM expenses e
-        LEFT JOIN users u1 ON e.paidBy = u1.id
-        LEFT JOIN users u2 ON e.createdBy = u2.id
-        WHERE e.id = ?
-      `)
-      .bind(expenseId)
-      .first()
-
     return NextResponse.json({
       success: true,
-      expense: newExpense
+      expense: expenseData
     })
   } catch (error) {
-    logger.error('Create expense error:', error)
+    logger.error('Create recurring expense error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

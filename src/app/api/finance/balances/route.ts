@@ -19,6 +19,27 @@ interface Debt {
   currency: string
 }
 
+interface HouseholdMember {
+  userId: string
+  name: string
+}
+
+interface ExpensePayment {
+  paidBy: string
+  amount: string
+  dueDate: string
+  status: string
+  expenseId: string
+}
+
+interface Settlement {
+  fromUser: string
+  toUser: string
+  amount: string
+  settlementMonth: number
+  settlementYear: number
+}
+
 export async function GET(request: Request) {
   try {
     const env = (request as unknown as { env?: CloudflareEnv }).env
@@ -95,13 +116,13 @@ export async function GET(request: Request) {
     const balances: Record<string, number> = {}
     
     // Initialize balances for all members
-    members.results?.forEach(member => {
+    (members.results as HouseholdMember[])?.forEach(member => {
       memberMap.set(member.userId, member.name)
       balances[member.userId] = 0
     })
 
     // Add payments (money spent by each person)
-    payments.results?.forEach(payment => {
+    (payments.results as ExpensePayment[])?.forEach(payment => {
       const userId = payment.paidBy
       const amount = parseFloat(payment.amount)
       if (userId && !isNaN(amount)) {
@@ -111,7 +132,7 @@ export async function GET(request: Request) {
 
     // Calculate average expense per person
     const totalExpenses = Object.values(balances).reduce((sum, balance) => sum + balance, 0)
-    const averagePerPerson = totalExpenses / members.results.length
+    const averagePerPerson = totalExpenses / (members.results as HouseholdMember[]).length
 
     // Calculate who owes what (negative = owes money, positive = owed money)
     Object.keys(balances).forEach(userId => {
@@ -119,7 +140,7 @@ export async function GET(request: Request) {
     })
 
     // Apply settlements (reduce debts)
-    settlements.results?.forEach(settlement => {
+    (settlements.results as Settlement[])?.forEach(settlement => {
       const amount = parseFloat(settlement.amount)
       if (!isNaN(amount)) {
         balances[settlement.fromUser] += amount // Person who paid reduces their debt

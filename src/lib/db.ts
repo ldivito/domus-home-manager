@@ -443,6 +443,124 @@ export interface SettlementPayment {
   createdAt: Date
 }
 
+// Personal Finance Module interfaces
+export interface PersonalWallet {
+  id?: string
+  userId: string               // Owner
+  name: string                 // "Billetera Personal", "Santander Cuenta Corriente"
+  type: 'physical' | 'bank' | 'credit_card'
+  currency: 'ARS' | 'USD'
+  
+  // Balance tracking
+  balance: number              // Current balance (not for credit cards)
+  
+  // Credit Card Specific
+  creditLimit?: number         // Total credit limit
+  closingDay?: number         // Day of month (1-31) 
+  dueDay?: number            // Days after closing (typically 15-20)
+  
+  // Bank Specific
+  accountNumber?: string      // Masked: "****1234"
+  bankName?: string          // "Banco Santander", "BBVA", etc
+  
+  // UI/UX
+  color: string             // Hex color for identification
+  icon: string              // Icon identifier
+  
+  // Status & Metadata
+  isActive: boolean         // Active/Inactive
+  
+  // Audit
+  createdAt: Date
+  updatedAt: Date
+  notes?: string          // User notes about this wallet
+}
+
+export interface PersonalCategory {
+  id?: string
+  userId: string            
+  name: string              // "Comida", "Transporte", "Salud"
+  type: 'income' | 'expense'
+  
+  // UI/UX
+  color: string
+  icon: string
+  
+  // Status
+  isActive: boolean
+  isDefault: boolean       // System default category
+  
+  // Audit
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface PersonalTransaction {
+  id?: string
+  userId: string
+  
+  // Core transaction data
+  type: 'income' | 'expense' | 'transfer'
+  amount: number            // Always positive, use type for direction
+  currency: 'ARS' | 'USD'
+  
+  // Account relationships
+  walletId: string          // Source/destination wallet
+  targetWalletId?: string   // For transfers
+  categoryId: string
+  
+  // Transaction details
+  description: string
+  
+  // Timing
+  date: Date               // Transaction date
+  
+  // Credit Card Integration
+  creditCardStatementId?: string
+  isFromCreditCard: boolean
+  
+  // Household Integration
+  sharedWithHousehold: boolean
+  householdContribution?: number
+  
+  // Status and workflow
+  status: 'pending' | 'completed' | 'cancelled'
+  
+  // Metadata
+  notes?: string
+  
+  // Audit
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreditCardStatement {
+  id?: string
+  userId: string
+  walletId: string          // Credit card wallet
+  
+  // Period definition
+  periodStart: Date
+  periodEnd: Date           // Closing date
+  dueDate: Date            // Payment due date
+  
+  // Financial summary
+  totalCharges: number     // New charges this period
+  totalPayments: number    // Payments received
+  currentBalance: number   // Total amount due
+  minimumPayment: number   // Minimum payment required
+  
+  // Payment tracking
+  paidAmount: number
+  paidDate?: Date
+  
+  // Status workflow
+  status: 'open' | 'closed' | 'paid' | 'overdue'
+  
+  createdAt: Date
+  updatedAt: Date
+}
+
 // Document Vault Module interfaces
 export type DocumentCategory = 'warranty' | 'manual' | 'receipt' | 'contract' | 'insurance' |
   'medical' | 'legal' | 'financial' | 'vehicle' | 'property' | 'pet' | 'other'
@@ -928,6 +1046,11 @@ export class DomusDatabase extends Dexie {
   expenseCategories!: Table<ExpenseCategory>
   expensePayments!: Table<ExpensePayment>
   settlementPayments!: Table<SettlementPayment>
+  // Personal Finance tables
+  personalWallets!: Table<PersonalWallet>
+  personalCategories!: Table<PersonalCategory>
+  personalTransactions!: Table<PersonalTransaction>
+  creditCardStatements!: Table<CreditCardStatement>
   // Document Vault tables
   documents!: Table<Document>
   documentFolders!: Table<DocumentFolder>
@@ -1006,7 +1129,12 @@ export class DomusDatabase extends Dexie {
       petMedications: 'id, petId, name, nextDose, isActive, householdId, createdAt',
       petMedicationLogs: 'id, medicationId, petId, givenDate, givenByUserId, householdId, createdAt',
       petVetVisits: 'id, petId, visitDate, visitType, householdId, createdAt',
-      petVaccinations: 'id, petId, vaccineName, nextDueDate, householdId, createdAt'
+      petVaccinations: 'id, petId, vaccineName, nextDueDate, householdId, createdAt',
+      // Personal Finance tables
+      personalWallets: 'id, userId, type, currency, isActive, createdAt',
+      personalCategories: 'id, userId, type, isActive, isDefault, createdAt',
+      personalTransactions: 'id, userId, walletId, categoryId, type, date, status, createdAt',
+      creditCardStatements: 'id, userId, walletId, status, periodEnd, dueDate, createdAt'
     })
 
     // v26: Add source field to monthly incomes for multiple income entries per user
@@ -1025,6 +1153,14 @@ export class DomusDatabase extends Dexie {
         }
       }
       dbLogger.debug('Database upgraded to v26 with income source field')
+    })
+
+    // v32: Add Personal Finance module tables
+    this.version(32).stores({
+      personalWallets: 'id, userId, type, currency, isActive, createdAt',
+      personalCategories: 'id, userId, type, isActive, isDefault, createdAt',
+      personalTransactions: 'id, userId, walletId, categoryId, type, date, status, createdAt',
+      creditCardStatements: 'id, userId, walletId, status, periodEnd, dueDate, createdAt'
     })
 
     // v31: Add activity log for tracking all user actions

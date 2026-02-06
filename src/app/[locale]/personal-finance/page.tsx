@@ -46,21 +46,6 @@ export default function PersonalFinancePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [loadDashboardData])
-
-  // Memoized calculations for performance
-  const monthlyStatsFormatted = useMemo(() => {
-    const { income, expenses, net } = data.monthlyStats
-    return {
-      income: formatCurrency(income, 'ARS'),
-      expenses: formatCurrency(expenses, 'ARS'),
-      net: formatCurrency(net, 'ARS'),
-      netColor: net >= 0 ? 'text-green-600' : 'text-red-600'
-    }
-  }, [data.monthlyStats])
-
   // Optimize data loading with useCallback
   const loadDashboardData = useCallback(async () => {
     setLoading(true)
@@ -131,6 +116,21 @@ export default function PersonalFinancePage() {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
+
+  // Memoized calculations for performance
+  const monthlyStatsFormatted = useMemo(() => {
+    const { income, expenses, net } = data.monthlyStats
+    return {
+      income: formatCurrency(income, 'ARS'),
+      expenses: formatCurrency(expenses, 'ARS'),
+      net: formatCurrency(net, 'ARS'),
+      netColor: net >= 0 ? 'text-green-600' : 'text-red-600'
+    }
+  }, [data.monthlyStats])
 
   if (loading) {
     return (

@@ -38,18 +38,18 @@ export async function runCreditCardHeartbeat(): Promise<CreditCardHeartbeatResul
     statementsProcessed: {
       closedCount: 0,
       createdCount: 0,
-      errors: []
+      errors: [] as string[]
     },
     notificationsGenerated: {
       totalUsers: 0,
       totalNotifications: 0,
       criticalAlerts: 0,
-      errors: []
+      errors: [] as string[]
     },
     maintenanceTasks: {
       balanceConsistencyChecks: 0,
       dataCleanupTasks: 0,
-      errors: []
+      errors: [] as string[]
     },
     success: false,
     totalErrors: 0
@@ -154,7 +154,7 @@ async function generateNotificationSummary(): Promise<{
     totalUsers: 0,
     totalNotifications: 0,
     criticalAlerts: 0,
-    errors: []
+    errors: [] as string[]
   }
 
   try {
@@ -180,14 +180,14 @@ async function generateNotificationSummary(): Promise<{
         result.criticalAlerts += notifications.filter(n => n.priority === 'critical').length
 
       } catch (error) {
-        result.errors.push(`Failed to generate notifications for user ${userId}: ${error}`)
+        result.errors.push(`Failed to generate notifications for user ${userId}: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
     return result
 
   } catch (error) {
-    result.errors.push(`Failed to get users for notifications: ${error}`)
+    result.errors.push(`Failed to get users for notifications: ${error instanceof Error ? error.message : String(error)}`)
     return result
   }
 }
@@ -205,7 +205,7 @@ async function performMaintenanceTasks(): Promise<MaintenanceResult> {
   const result = {
     balanceConsistencyChecks: 0,
     dataCleanupTasks: 0,
-    errors: []
+    errors: [] as string[]
   }
 
   try {
@@ -218,7 +218,7 @@ async function performMaintenanceTasks(): Promise<MaintenanceResult> {
     return result
 
   } catch (error) {
-    result.errors.push(`Maintenance tasks failed: ${error}`)
+    result.errors.push(`Maintenance tasks failed: ${error instanceof Error ? error.message : String(error)}`)
     return result
   }
 }
@@ -364,7 +364,7 @@ export async function testHeartbeatConnectivity(): Promise<{
     databaseConnected: false,
     functionsAccessible: false,
     estimatedRunTime: 0,
-    errors: []
+    errors: [] as string[]
   }
 
   try {
@@ -383,7 +383,7 @@ export async function testHeartbeatConnectivity(): Promise<{
     return result
 
   } catch (error) {
-    result.errors.push(`Connectivity test failed: ${error}`)
+    result.errors.push(`Connectivity test failed: ${error instanceof Error ? error.message : String(error)}`)
     result.estimatedRunTime = Date.now() - startTime
     return result
   }

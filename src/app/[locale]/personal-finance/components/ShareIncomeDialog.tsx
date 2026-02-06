@@ -58,7 +58,7 @@ export default function ShareIncomeDialog({
   }
 
   const handleShare = async () => {
-    if (!shareEnabled || numericShareAmount <= 0) return
+    if (!shareEnabled || numericShareAmount <= 0 || !transaction || !transaction.id) return
     
     setLoading(true)
     setError(null)

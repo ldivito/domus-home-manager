@@ -85,14 +85,6 @@ export function TransactionList() {
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  useEffect(() => {
-    applyFilters()
-  }, [filters, applyFilters])
-
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -279,6 +271,14 @@ export function TransactionList() {
     )
   }
 
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    applyFilters()
+  }, [filters, applyFilters])
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -459,7 +459,7 @@ export function TransactionList() {
                 </label>
                 <Select
                   value={filters.dateRange}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as 'all' | '7d' | '30d' | '90d' | 'custom' }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as 'all' | 'today' | 'week' | 'month' | 'last-month' | '3-months' }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -482,7 +482,7 @@ export function TransactionList() {
                 <label className="text-sm font-medium">Sort By</label>
                 <Select
                   value={filters.sortBy}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'amount' | 'description' }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'amount' }))}
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue />

@@ -263,7 +263,7 @@ describe('Credit Card Flow - Phase 4', () => {
     })
 
     it('should validate payment amounts correctly', async () => {
-      const currentStatement = await db.creditCardStatements.get(statement.id!)
+      const currentStatement = await db.creditCardStatements.get(statement.id!) // eslint-disable-line @typescript-eslint/no-unused-vars
       
       // Valid payment
       const validResult = await validatePaymentAmount(statement!.id!, 10000)

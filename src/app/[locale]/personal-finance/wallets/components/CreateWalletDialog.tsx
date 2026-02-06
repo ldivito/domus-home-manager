@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { PersonalWallet, WalletFormData, WalletType, CurrencyType } from '@/types/personal-finance'
+import { PersonalWallet, WalletFormData, WalletType } from '@/types/personal-finance'
 import {
   Dialog,
   DialogContent,
@@ -30,13 +30,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { 
   Wallet, 
   CreditCard, 
-  Building, 
-  Plus,
-  Palette
+  Building
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'

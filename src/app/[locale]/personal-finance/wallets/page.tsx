@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { PersonalWallet } from '@/types/personal-finance'
 import { db } from '@/lib/db'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -20,9 +20,7 @@ import {
   Plus, 
   Search, 
   Filter,
-  Wallet,
-  TrendingUp,
-  TrendingDown
+  Wallet
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { formatBalance, calculateTotalBalance } from '@/lib/utils/finance'
@@ -38,7 +36,7 @@ export default function WalletsPage() {
   // Current user (TODO: Get from auth context)
   const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a'
 
-  const loadWallets = async () => {
+  const loadWallets = useCallback(async () => {
     try {
       setLoading(true)
       const fetchedWallets = await db.personalWallets
@@ -61,17 +59,17 @@ export default function WalletsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, toast])
 
   useEffect(() => {
     loadWallets()
-  }, [])
+  }, [loadWallets])
 
   const handleWalletCreated = (newWallet: PersonalWallet) => {
     setWallets(prev => [newWallet, ...prev])
   }
 
-  const handleEditWallet = (wallet: PersonalWallet) => {
+  const handleEditWallet = (wallet: PersonalWallet) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     // TODO: Implement edit functionality
     toast({
       title: 'Edit Wallet',

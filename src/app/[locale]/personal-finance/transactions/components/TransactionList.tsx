@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,8 +30,7 @@ import {
   Trash2,
   Calendar,
   Wallet,
-  Tag,
-  X
+  Tag
 } from 'lucide-react'
 import { db } from '@/lib/db'
 import { 
@@ -88,13 +87,13 @@ export function TransactionList() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   useEffect(() => {
     applyFilters()
-  }, [filters])
+  }, [filters, applyFilters])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       await Promise.all([
@@ -112,7 +111,7 @@ export function TransactionList() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   const loadTransactions = async () => {
     // In a real app, filter by current user
@@ -136,7 +135,7 @@ export function TransactionList() {
     setCategories(userCategories)
   }
 
-  const applyFilters = async () => {
+  const applyFilters = useCallback(async () => {
     let filtered = [...transactions]
 
     // Apply search filter
@@ -185,7 +184,7 @@ export function TransactionList() {
     // Enrich with wallet and category details
     const enriched = await enrichTransactions(filtered)
     setTransactions(enriched)
-  }
+  }, [transactions, filters, wallets, categories])
 
   const enrichTransactions = async (txns: PersonalTransaction[]): Promise<TransactionWithDetails[]> => {
     return txns.map(txn => ({
@@ -363,7 +362,7 @@ export function TransactionList() {
                 </label>
                 <Select
                   value={filters.type}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, type: value as any }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, type: value as TransactionType | 'all' }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -460,7 +459,7 @@ export function TransactionList() {
                 </label>
                 <Select
                   value={filters.dateRange}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as any }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as 'all' | '7d' | '30d' | '90d' | 'custom' }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -483,7 +482,7 @@ export function TransactionList() {
                 <label className="text-sm font-medium">Sort By</label>
                 <Select
                   value={filters.sortBy}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as any }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'amount' | 'description' }))}
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue />
@@ -499,7 +498,7 @@ export function TransactionList() {
                 <label className="text-sm font-medium">Order</label>
                 <Select
                   value={filters.sortOrder}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortOrder: value as any }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortOrder: value as 'asc' | 'desc' }))}
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue />

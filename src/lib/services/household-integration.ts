@@ -129,7 +129,7 @@ export async function shareIncomeWithHousehold(
  */
 export async function getHouseholdContributions(userId?: string): Promise<HouseholdContribution[]> {
   // TODO: Filter by actual user ID from auth context
-  const currentUserId = userId || 'current-user-id'
+  const currentUserId = userId || 'current-user-id' // eslint-disable-line @typescript-eslint/no-unused-vars
 
   try {
     // For now, return empty array since we don't have the table set up yet
@@ -214,7 +214,7 @@ export async function isTransactionSharedWithHousehold(transactionId: string): P
 /**
  * Get household sharing settings for a user
  */
-export async function getHouseholdSharingSettings(userId?: string) {
+export async function getHouseholdSharingSettings(userId?: string) { // eslint-disable-line @typescript-eslint/no-unused-vars
   // TODO: Implement user settings for household sharing
   // For now, return default settings
   return {
@@ -245,7 +245,7 @@ type HouseholdSharingSettings = {
  */
 export async function updateHouseholdSharingSettings(
   settings: HouseholdSharingSettings,
-  userId?: string
+  userId?: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<void> {
   // TODO: Implement settings storage
   console.log('Updating household sharing settings:', settings)

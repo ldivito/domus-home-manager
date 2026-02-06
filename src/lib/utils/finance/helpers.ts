@@ -341,7 +341,7 @@ export function sortWallets(wallets: PersonalWallet[]): PersonalWallet[] {
 export async function validateSufficientFunds(
   walletId: string,
   amount: number,
-  _currency?: CurrencyType
+  _currency?: CurrencyType // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<{ isValid: boolean; error?: string }> {
   try {
     const { db } = await import('@/lib/db')
@@ -368,7 +368,7 @@ export async function validateSufficientFunds(
     }
 
     return { isValid: true }
-  } catch (_error) {
+  } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
     return { isValid: false, error: 'Error checking funds' }
   }
 }
@@ -380,7 +380,7 @@ export async function updateWalletBalanceInDb(
   walletId: string,
   amount: number,
   type: TransactionType,
-  _currency: CurrencyType
+  _currency: CurrencyType // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<PersonalWallet | null> {
   try {
     const { db } = await import('@/lib/db')

@@ -174,11 +174,11 @@ export default function PersonalFinanceSettingsPage() {
     }
   }
 
-  const updatePreference = (path: string, value: any) => {
+  const updatePreference = (path: string, value: string | number | boolean) => {
     setPreferences(prev => {
       const newPrefs = { ...prev }
       const keys = path.split('.')
-      let current = newPrefs as any
+      let current: Record<string, unknown> = newPrefs as Record<string, unknown>
       
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) current[keys[i]] = {}

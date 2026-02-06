@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { formatBalance, getWalletTypeIndicator, calculateAvailableCredit } from '@/lib/utils/finance'
+import { formatBalance, calculateAvailableCredit } from '@/lib/utils/finance'
 import { useState } from 'react'
 import Link from 'next/link'
 

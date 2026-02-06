@@ -512,6 +512,9 @@ export interface PersonalTransaction {
   // Transaction details
   description: string
   
+  // Exchange rate (for currency conversions)
+  exchangeRate?: number
+  
   // Timing
   date: Date               // Transaction date
   
@@ -549,6 +552,7 @@ export interface CreditCardStatement {
   totalPayments: number    // Payments received
   currentBalance: number   // Total amount due
   minimumPayment: number   // Minimum payment required
+  currency: 'ARS' | 'USD'  // Statement currency
   
   // Payment tracking
   paidAmount: number
@@ -556,6 +560,22 @@ export interface CreditCardStatement {
   
   // Status workflow
   status: 'open' | 'closed' | 'paid' | 'overdue'
+  
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreditCardPayment {
+  id?: string
+  userId: string            // Owner of the payment
+  statementId: string       // Reference to CreditCardStatement
+  fromWalletId: string      // Wallet used to make the payment
+  
+  amount: number            // Payment amount
+  currency: 'ARS' | 'USD'   // Payment currency
+  paymentDate: Date         // When the payment was made
+  
+  notes?: string           // Optional payment notes
   
   createdAt: Date
   updatedAt: Date
@@ -1051,6 +1071,7 @@ export class DomusDatabase extends Dexie {
   personalCategories!: Table<PersonalCategory>
   personalTransactions!: Table<PersonalTransaction>
   creditCardStatements!: Table<CreditCardStatement>
+  creditCardPayments!: Table<CreditCardPayment>
   // Document Vault tables
   documents!: Table<Document>
   documentFolders!: Table<DocumentFolder>
@@ -1160,7 +1181,8 @@ export class DomusDatabase extends Dexie {
       personalWallets: 'id, userId, type, currency, isActive, createdAt',
       personalCategories: 'id, userId, type, isActive, isDefault, createdAt',
       personalTransactions: 'id, userId, walletId, categoryId, type, date, status, createdAt',
-      creditCardStatements: 'id, userId, walletId, status, periodEnd, dueDate, createdAt'
+      creditCardStatements: 'id, userId, walletId, status, periodEnd, dueDate, createdAt',
+      creditCardPayments: 'id, userId, statementId, fromWalletId, paymentDate, createdAt'
     })
 
     // v31: Add activity log for tracking all user actions
@@ -1684,6 +1706,78 @@ export class DomusDatabase extends Dexie {
     return this.legacyMealIngredientMigrationPromise
   }
 
+  // Helper method to seed default Personal Finance categories for a user
+  async seedPersonalFinanceCategoriesForUser(userId: string): Promise<void> {
+    try {
+      // Check if user already has personal categories
+      const existingCategories = await this.personalCategories
+        .where('userId').equals(userId)
+        .count()
+      
+      if (existingCategories > 0) return // Already seeded
+
+      const now = new Date()
+
+      // Default income categories
+      const incomeCategories = [
+        { name: 'Salary', icon: 'Briefcase', color: '#22c55e' },
+        { name: 'Freelance', icon: 'Laptop', color: '#3b82f6' },
+        { name: 'Investment', icon: 'TrendingUp', color: '#8b5cf6' },
+        { name: 'Bonus', icon: 'Gift', color: '#f59e0b' },
+        { name: 'Other Income', icon: 'Plus', color: '#6b7280' }
+      ]
+
+      // Default expense categories
+      const expenseCategories = [
+        { name: 'Food & Dining', icon: 'UtensilsCrossed', color: '#ef4444' },
+        { name: 'Transportation', icon: 'Car', color: '#3b82f6' },
+        { name: 'Shopping', icon: 'ShoppingBag', color: '#ec4899' },
+        { name: 'Entertainment', icon: 'Film', color: '#8b5cf6' },
+        { name: 'Health & Medical', icon: 'Heart', color: '#10b981' },
+        { name: 'Bills & Utilities', icon: 'Receipt', color: '#f59e0b' },
+        { name: 'Education', icon: 'GraduationCap', color: '#06b6d4' },
+        { name: 'Personal Care', icon: 'Scissors', color: '#ec4899' },
+        { name: 'Travel', icon: 'Plane', color: '#84cc16' },
+        { name: 'Other Expenses', icon: 'MoreHorizontal', color: '#6b7280' }
+      ]
+
+      // Create income categories
+      const incomeData = incomeCategories.map(cat => ({
+        id: `pc_${crypto.randomUUID()}`,
+        userId,
+        name: cat.name,
+        type: 'income' as const,
+        color: cat.color,
+        icon: cat.icon,
+        isActive: true,
+        isDefault: true,
+        createdAt: now,
+        updatedAt: now
+      }))
+
+      // Create expense categories
+      const expenseData = expenseCategories.map(cat => ({
+        id: `pc_${crypto.randomUUID()}`,
+        userId,
+        name: cat.name,
+        type: 'expense' as const,
+        color: cat.color,
+        icon: cat.icon,
+        isActive: true,
+        isDefault: true,
+        createdAt: now,
+        updatedAt: now
+      }))
+
+      // Add all categories
+      await this.personalCategories.bulkAdd([...incomeData, ...expenseData])
+
+      dbLogger.debug(`Personal Finance categories seeded for user ${userId}`)
+    } catch (error) {
+      dbLogger.error('Error seeding Personal Finance categories:', error)
+    }
+  }
+
   // Helper method to seed default categories for new databases
   async seedDefaultCategoriesIfNeeded(): Promise<void> {
     try {
@@ -1915,7 +2009,13 @@ const SYNCABLE_TABLES = [
   'savingsCampaigns',
   'savingsMilestones',
   'savingsParticipants',
-  'savingsContributions'
+  'savingsContributions',
+  // Personal Finance tables
+  'personalWallets',
+  'personalCategories',
+  'personalTransactions',
+  'creditCardStatements',
+  'creditCardPayments'
 ] as const
 
 /**

@@ -1,0 +1,53 @@
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { Plus, TrendingUp, TrendingDown, ArrowUpDown } from 'lucide-react'
+import Link from 'next/link'
+import { TransactionList } from './components/TransactionList'
+
+export default function TransactionsPage() {
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground">
+            Track your income, expenses, and transfers
+          </p>
+        </div>
+        
+        {/* Quick Actions */}
+        <div className="flex gap-2">
+          <Link href="/personal-finance/transactions/new?type=income">
+            <Button variant="outline" size="sm" className="gap-2">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              Add Income
+            </Button>
+          </Link>
+          <Link href="/personal-finance/transactions/new?type=expense">
+            <Button variant="outline" size="sm" className="gap-2">
+              <TrendingDown className="h-4 w-4 text-red-600" />
+              Add Expense
+            </Button>
+          </Link>
+          <Link href="/personal-finance/transactions/new?type=transfer">
+            <Button variant="outline" size="sm" className="gap-2">
+              <ArrowUpDown className="h-4 w-4 text-blue-600" />
+              Transfer
+            </Button>
+          </Link>
+          <Link href="/personal-finance/transactions/new">
+            <Button size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Transaction
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Transaction List */}
+      <TransactionList />
+    </div>
+  )
+}

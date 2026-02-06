@@ -313,7 +313,7 @@ export function TransactionForm({
       description: data.description,
       date: new Date(data.date),
       notes: data.notes,
-      sharedWithHousehold: data.sharedWithHousehold,
+      sharedWithHousehold: data.sharedWithHousehold || false,
       householdContribution: data.householdContribution,
       isFromCreditCard: false,
       status: 'completed',

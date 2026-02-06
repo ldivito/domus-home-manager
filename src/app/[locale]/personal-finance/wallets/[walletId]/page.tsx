@@ -2,8 +2,8 @@
 
 import React from 'react';
 
-const WalletDetailPage = ({ params }) => {
-  const { walletId } = params;
+const WalletDetailPage = async ({ params }: { params: Promise<{ walletId: string }> }) => {
+  const { walletId } = await params;
 
   return (
     <div>

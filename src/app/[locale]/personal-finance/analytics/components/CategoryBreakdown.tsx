@@ -15,7 +15,7 @@ interface CategoryBreakdownProps {
 export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
   const CustomTooltip = ({ active, payload }: {
     active?: boolean
-    payload?: { value: number; name: string; payload: any }[]
+    payload?: { value: number; name: string; payload: { category: string; color: string; amount: number; percentage: number } }[]
   }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
@@ -38,9 +38,9 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
     return null
   }
 
-  const CustomLabel = (props: any) => {
+  const CustomLabel = (props: { cx?: number; cy?: number; midAngle?: number; innerRadius?: number; outerRadius?: number; percent?: number }) => {
     const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props
-    if (!percent || percent < 0.05) return null // Don't show label for small slices
+    if (!percent || percent < 0.05 || !cx || !cy || midAngle === undefined || !innerRadius || !outerRadius) return null
     
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5

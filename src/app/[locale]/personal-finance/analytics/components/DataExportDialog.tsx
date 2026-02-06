@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils/finance'
+// import { formatCurrency } from '@/lib/utils/finance' // TODO: Used in CSV export
 import { PersonalTransaction, PersonalWallet, PersonalCategory } from '@/types/personal-finance'
 import { toast } from 'sonner'
 
@@ -186,9 +186,9 @@ export default function DataExportDialog({
         expenseCount: number
         transferCount: number
       }
-      transactions?: any[]
-      wallets?: any[]
-      categories?: any[]
+      transactions?: Record<string, unknown>[]
+      wallets?: Record<string, unknown>[]
+      categories?: Record<string, unknown>[]
     }
     
     const exportData: ExportData = {
@@ -301,7 +301,7 @@ export default function DataExportDialog({
   }
 
   const getPreviewInfo = () => {
-    let items = []
+    const items = []
     if (options.includeTransactions) items.push(`${transactions.length} transactions`)
     if (options.includeWallets) items.push('wallet information')
     if (options.includeCategories) items.push('category information')

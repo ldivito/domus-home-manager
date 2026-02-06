@@ -369,11 +369,11 @@ export async function testHeartbeatConnectivity(): Promise<{
 
   try {
     // Test database connectivity
-    const _testCount = await db.personalWallets.count()
+    const _testCount = await db.personalWallets.count() // eslint-disable-line @typescript-eslint/no-unused-vars
     result.databaseConnected = true
 
     // Test function accessibility
-    const _testNotifications = await getAllCreditCardNotifications('test-user', {
+    const _testNotifications = await getAllCreditCardNotifications('test-user', { // eslint-disable-line @typescript-eslint/no-unused-vars
       daysAhead: 1
     })
     result.functionsAccessible = true

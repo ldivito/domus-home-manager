@@ -224,7 +224,7 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean = true) {
 export function useScreenReaderAnnouncement() {
   const [announcement, setAnnouncement] = useState('')
 
-  const announce = (message: string, priority: 'polite' | 'assertive' = 'polite') => {
+  const announce = (message: string, priority: 'polite' | 'assertive' = 'polite') => { // eslint-disable-line @typescript-eslint/no-unused-vars
     setAnnouncement(message)
     
     // Clear announcement after it's been read

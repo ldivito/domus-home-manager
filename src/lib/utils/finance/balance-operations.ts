@@ -1,7 +1,7 @@
 // Balance Operations - Database operations for wallet balances
 
 import { db } from '@/lib/db'
-import { PersonalTransaction } from '@/types/personal-finance'
+import { PersonalTransaction, CurrencyType } from '@/types/personal-finance'
 
 /**
  * Update a wallet's balance in the database
@@ -151,8 +151,8 @@ export async function validateSufficientFunds(
  * Get wallet balance summary for dashboard
  */
 export interface WalletBalanceSummary {
-  totalByWallet: { walletId: string; name: string; balance: number; currency: string }[]
-  totalByCurrency: { currency: string; total: number }[]
+  totalByWallet: { walletId: string; name: string; balance: number; currency: CurrencyType }[]
+  totalByCurrency: { currency: CurrencyType; total: number }[]
   totalWallets: number
   activeWallets: number
 }
@@ -179,7 +179,7 @@ export async function getWalletBalanceSummary(userId: string): Promise<WalletBal
       acc.push({ currency: wallet.currency, total: wallet.balance })
     }
     return acc
-  }, [] as { currency: string; total: number }[])
+  }, [] as { currency: CurrencyType; total: number }[])
   
   return {
     totalByWallet,

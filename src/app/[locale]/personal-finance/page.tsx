@@ -10,9 +10,9 @@ import { db } from '@/lib/db'
 import { 
   formatCurrency, 
   getWalletBalanceSummary,
-  getCurrentMonthRange,
-  filterTransactionsByDateRange,
-  sortTransactionsByDate
+  getCurrentMonthRange
+  // filterTransactionsByDateRange,  // TODO: Used in filtering
+  // sortTransactionsByDate         // TODO: Used in sorting
 } from '@/lib/utils/finance'
 import { 
   PersonalWallet, 
@@ -37,7 +37,7 @@ interface DashboardData {
 }
 
 export default function PersonalFinancePage() {
-  const t = useTranslations('personalFinance')
+  // const t = useTranslations('personalFinance') // TODO: Add translations
   const [data, setData] = useState<DashboardData>({
     totalBalance: [],
     wallets: [],

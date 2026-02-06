@@ -86,7 +86,7 @@ export default function ShareIncomeDialog({
             Share Income with Household
           </DialogTitle>
           <DialogDescription>
-            Share part or all of this income with your household's common pool
+            Share part or all of this income with your household&apos;s common pool
           </DialogDescription>
         </DialogHeader>
 

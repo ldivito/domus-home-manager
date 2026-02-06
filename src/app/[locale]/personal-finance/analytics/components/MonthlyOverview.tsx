@@ -15,9 +15,13 @@ interface MonthlyOverviewProps {
 }
 
 export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps) {
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean
+    payload?: { value: number; name: string; dataKey: string; color: string; payload?: unknown }[]
+    label?: string
+  }) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload
+      const data = payload[0].payload as { income: number; expenses: number; net: number }
       return (
         <div className="bg-background border border-border rounded-lg p-4 shadow-md">
           <p className="font-medium mb-3">{label}</p>

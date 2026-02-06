@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3 } from 'lucide-react'
+import { Download, TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { db } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils/finance'
@@ -46,7 +46,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const t = useTranslations('personalFinance')
+  // const t = useTranslations('personalFinance') // TODO: Add translations
   const [timeRange, setTimeRange] = useState<TimeRange>('last30days')
   const [currency, setCurrency] = useState<'ARS' | 'USD' | 'ALL'>('ALL')
   const [data, setData] = useState<AnalyticsData>({
@@ -91,11 +91,7 @@ export default function AnalyticsPage() {
     return { start, end }
   }
 
-  useEffect(() => {
-    loadAnalyticsData()
-  }, [timeRange, currency])
-
-  const loadAnalyticsData = async () => {
+  const loadAnalyticsData = useCallback(async () => {
     setLoading(true)
     
     try {
@@ -165,7 +161,11 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [timeRange, currency])
+
+  useEffect(() => {
+    loadAnalyticsData()
+  }, [loadAnalyticsData])
 
   const generateMonthlyData = (transactions: (PersonalTransaction & { 
     wallet?: PersonalWallet
@@ -175,7 +175,7 @@ export default function AnalyticsPage() {
     const current = new Date(start)
     
     while (current <= end) {
-      const monthKey = `${current.getFullYear()}-${(current.getMonth() + 1).toString().padStart(2, '0')}`
+      // const monthKey = `${current.getFullYear()}-${(current.getMonth() + 1).toString().padStart(2, '0')}`
       const monthTransactions = transactions.filter(t => {
         const txnDate = new Date(t.date)
         return txnDate.getFullYear() === current.getFullYear() && 

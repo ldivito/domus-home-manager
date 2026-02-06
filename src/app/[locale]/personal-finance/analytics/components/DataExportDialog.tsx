@@ -169,7 +169,29 @@ export default function DataExportDialog({
   }
 
   const exportToJSON = async () => {
-    const exportData: any = {
+    interface ExportData {
+      meta: {
+        exportDate: string
+        period: string
+        currency: string
+        format: string
+        version: string
+      }
+      summary?: {
+        totalIncome: number
+        totalExpenses: number
+        netIncome: number
+        transactionCount: number
+        incomeCount: number
+        expenseCount: number
+        transferCount: number
+      }
+      transactions?: any[]
+      wallets?: any[]
+      categories?: any[]
+    }
+    
+    const exportData: ExportData = {
       meta: {
         exportDate: new Date().toISOString(),
         period: getTimeRangeLabel(timeRange),

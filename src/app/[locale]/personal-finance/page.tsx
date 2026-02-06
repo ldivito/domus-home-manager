@@ -17,12 +17,13 @@ import {
 import { 
   PersonalWallet, 
   PersonalTransaction, 
-  PersonalCategory 
+  PersonalCategory,
+  CurrencyType
 } from '@/types/personal-finance'
 import CreditCardNotifications from './components/CreditCardNotifications'
 
 interface DashboardData {
-  totalBalance: { currency: string; total: number }[]
+  totalBalance: { currency: CurrencyType; total: number }[]
   wallets: PersonalWallet[]
   recentTransactions: (PersonalTransaction & { 
     wallet?: PersonalWallet
@@ -181,7 +182,7 @@ export default function PersonalFinancePage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(balance.total, balance.currency as any)}
+                  {formatCurrency(balance.total, balance.currency)}
                 </div>
               </CardContent>
             </Card>
@@ -441,7 +442,10 @@ export default function PersonalFinancePage() {
                   }
                 }
 
-                const getTransactionAmount = (transaction: any) => {
+                const getTransactionAmount = (transaction: PersonalTransaction & { 
+                  wallet?: PersonalWallet
+                  category?: PersonalCategory 
+                }) => {
                   let sign = ''
                   let colorClass = ''
                   

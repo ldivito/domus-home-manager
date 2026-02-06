@@ -167,7 +167,10 @@ export default function AnalyticsPage() {
     }
   }
 
-  const generateMonthlyData = (transactions: any[], start: Date, end: Date) => {
+  const generateMonthlyData = (transactions: (PersonalTransaction & { 
+    wallet?: PersonalWallet
+    category?: PersonalCategory 
+  })[], start: Date, end: Date) => {
     const months = []
     const current = new Date(start)
     
@@ -200,7 +203,10 @@ export default function AnalyticsPage() {
     return months
   }
 
-  const generateCategoryBreakdown = (expenseTransactions: any[], totalExpenses: number) => {
+  const generateCategoryBreakdown = (expenseTransactions: (PersonalTransaction & { 
+    wallet?: PersonalWallet
+    category?: PersonalCategory 
+  })[], totalExpenses: number) => {
     const categoryTotals = new Map()
     
     expenseTransactions.forEach(txn => {

@@ -14,12 +14,16 @@ interface FinancialTrendsProps {
 }
 
 export default function FinancialTrends({ data, currency }: FinancialTrendsProps) {
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean
+    payload?: { value: number; name: string; color: string; dataKey: string }[]
+    label?: string
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg p-4 shadow-md">
           <p className="font-medium mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry: { value: number; name: string; color: string; dataKey: string }, index: number) => (
             <div key={index} className="flex items-center gap-2 text-sm">
               <div 
                 className="w-3 h-3 rounded-full" 

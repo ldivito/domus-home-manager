@@ -13,7 +13,10 @@ interface CategoryBreakdownProps {
 }
 
 export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: {
+    active?: boolean
+    payload?: { value: number; name: string; payload: any }[]
+  }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -35,8 +38,9 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
     return null
   }
 
-  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }: any) => {
-    if (percentage < 5) return null // Don't show label for small slices
+  const CustomLabel = (props: any) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props
+    if (!percent || percent < 0.05) return null // Don't show label for small slices
     
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
@@ -53,7 +57,7 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
         fontSize={12}
         fontWeight="bold"
       >
-        {`${percentage.toFixed(0)}%`}
+        {`${(percent * 100).toFixed(0)}%`}
       </text>
     )
   }

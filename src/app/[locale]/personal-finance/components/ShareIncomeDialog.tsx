@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ export default function ShareIncomeDialog({
   onOpenChange,
   onShare
 }: ShareIncomeDialogProps) {
+  const t = useTranslations('personalFinance')
   const [shareEnabled, setShareEnabled] = useState(false)
   const [shareAmount, setShareAmount] = useState('')
   const [sharePercentage, setSharePercentage] = useState(100)
@@ -59,10 +61,10 @@ export default function ShareIncomeDialog({
 
   const handleShare = async () => {
     if (!shareEnabled || numericShareAmount <= 0 || !transaction || !transaction.id) return
-    
+
     setLoading(true)
     setError(null)
-    
+
     try {
       await onShare(transaction.id, numericShareAmount, sharePercentage)
       onOpenChange(false)
@@ -71,7 +73,7 @@ export default function ShareIncomeDialog({
       setShareAmount('')
       setSharePercentage(100)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to share income')
+      setError(err instanceof Error ? err.message : t('shareIncome.error'))
     } finally {
       setLoading(false)
     }
@@ -83,10 +85,10 @@ export default function ShareIncomeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Home className="h-5 w-5" />
-            Share Income with Household
+            {t('shareIncome.title')}
           </DialogTitle>
           <DialogDescription>
-            Share part or all of this income with your household's common pool
+            {t('shareIncome.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,7 +97,7 @@ export default function ShareIncomeDialog({
           <div className="p-4 bg-muted rounded-lg">
             <h4 className="font-medium mb-2">{transaction.description}</h4>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total Income</span>
+              <span className="text-sm text-muted-foreground">{t('shareIncome.totalIncome')}</span>
               <span className="font-bold text-green-600">
                 {formatCurrency(transaction.amount, transaction.currency)}
               </span>
@@ -105,9 +107,9 @@ export default function ShareIncomeDialog({
           {/* Share Toggle */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="share-toggle">Share with household</Label>
+              <Label htmlFor="share-toggle">{t('shareIncome.shareToggle')}</Label>
               <p className="text-sm text-muted-foreground">
-                Contribute to common household expenses
+                {t('shareIncome.shareToggleHint')}
               </p>
             </div>
             <Switch
@@ -121,7 +123,7 @@ export default function ShareIncomeDialog({
             <div className="space-y-4">
               {/* Share Amount */}
               <div className="space-y-2">
-                <Label htmlFor="share-amount">Amount to share</Label>
+                <Label htmlFor="share-amount">{t('shareIncome.amountToShare')}</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -140,7 +142,7 @@ export default function ShareIncomeDialog({
 
               {/* Percentage Buttons */}
               <div className="space-y-2">
-                <Label>Quick select percentage</Label>
+                <Label>{t('shareIncome.quickSelectPercentage')}</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {[25, 50, 75, 100].map((pct) => (
                     <Button
@@ -162,7 +164,7 @@ export default function ShareIncomeDialog({
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     <div>
-                      <div className="font-medium">Keep Personal</div>
+                      <div className="font-medium">{t('shareIncome.keepPersonal')}</div>
                       <div className="text-green-600 font-bold">
                         {formatCurrency(maxAmount - numericShareAmount, transaction.currency)}
                       </div>
@@ -171,7 +173,7 @@ export default function ShareIncomeDialog({
                   <div className="flex items-center gap-2">
                     <Home className="h-4 w-4" />
                     <div>
-                      <div className="font-medium">Share with Household</div>
+                      <div className="font-medium">{t('shareIncome.shareWithHousehold')}</div>
                       <div className="text-blue-600 font-bold">
                         {formatCurrency(numericShareAmount, transaction.currency)}
                       </div>
@@ -184,7 +186,7 @@ export default function ShareIncomeDialog({
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Share amount cannot exceed the total income amount
+                    {t('shareIncome.exceedsTotal')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -201,13 +203,13 @@ export default function ShareIncomeDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
+            {t('shareIncome.cancel')}
           </Button>
           <Button
             onClick={handleShare}
             disabled={!shareEnabled || numericShareAmount <= 0 || numericShareAmount > maxAmount || loading}
           >
-            {loading ? 'Sharing...' : 'Share Income'}
+            {loading ? t('shareIncome.sharing') : t('shareIncome.shareIncome')}
           </Button>
         </DialogFooter>
       </DialogContent>

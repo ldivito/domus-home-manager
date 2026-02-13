@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -16,9 +17,9 @@ type TimeRange = 'last7days' | 'last30days' | 'last3months' | 'last6months' | 'c
 interface DataExportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  transactions: (PersonalTransaction & { 
+  transactions: (PersonalTransaction & {
     wallet?: PersonalWallet
-    category?: PersonalCategory 
+    category?: PersonalCategory
   })[]
   timeRange: TimeRange
   currency: 'ARS' | 'USD' | 'ALL'
@@ -32,13 +33,14 @@ interface ExportOptions {
   includeSummary: boolean
 }
 
-export default function DataExportDialog({ 
-  open, 
-  onOpenChange, 
-  transactions, 
-  timeRange, 
-  currency 
+export default function DataExportDialog({
+  open,
+  onOpenChange,
+  transactions,
+  timeRange,
+  currency
 }: DataExportDialogProps) {
+  const t = useTranslations('personalFinance')
   const [options, setOptions] = useState<ExportOptions>({
     format: 'csv',
     includeTransactions: true,
@@ -50,20 +52,20 @@ export default function DataExportDialog({
 
   const handleExport = async () => {
     setIsExporting(true)
-    
+
     try {
       if (options.format === 'csv') {
         await exportToCSV()
       } else {
         await exportToJSON()
       }
-      
-      toast.success('Data exported successfully!')
+
+      toast.success(t('export.success'))
       onOpenChange(false)
-      
+
     } catch (error) {
       console.error('Export failed:', error)
-      toast.error('Failed to export data. Please try again.')
+      toast.error(t('export.error'))
     } finally {
       setIsExporting(false)
     }
@@ -71,13 +73,13 @@ export default function DataExportDialog({
 
   const exportToCSV = async () => {
     let csvContent = ''
-    
+
     // Summary section
     if (options.includeSummary) {
       const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
       const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
       const netIncome = totalIncome - totalExpenses
-      
+
       csvContent += '=== FINANCIAL SUMMARY ===\n'
       csvContent += `Period,${getTimeRangeLabel(timeRange)}\n`
       csvContent += `Currency Filter,${currency}\n`
@@ -91,7 +93,7 @@ export default function DataExportDialog({
     if (options.includeTransactions && transactions.length > 0) {
       csvContent += '=== TRANSACTIONS ===\n'
       csvContent += 'Date,Type,Description,Amount,Currency,Wallet,Category,Notes\n'
-      
+
       transactions.forEach(txn => {
         const row = [
           new Date(txn.date).toISOString().split('T')[0],
@@ -113,11 +115,11 @@ export default function DataExportDialog({
       // Load wallets from database
       const { db } = await import('@/lib/db')
       const wallets = await db.personalWallets.where('isActive').equals(1).toArray()
-      
+
       if (wallets.length > 0) {
         csvContent += '=== WALLETS ===\n'
         csvContent += 'Name,Type,Currency,Balance,Created Date\n'
-        
+
         wallets.forEach(wallet => {
           const row = [
             `"${wallet.name.replace(/"/g, '""')}"`,
@@ -137,11 +139,11 @@ export default function DataExportDialog({
       // Load categories from database
       const { db } = await import('@/lib/db')
       const categories = await db.personalCategories.where('isActive').equals(1).toArray()
-      
+
       if (categories.length > 0) {
         csvContent += '=== CATEGORIES ===\n'
         csvContent += 'Name,Type,Color,Created Date\n'
-        
+
         categories.forEach(category => {
           const row = [
             `"${category.name.replace(/"/g, '""')}"`,
@@ -183,7 +185,7 @@ export default function DataExportDialog({
     if (options.includeSummary) {
       const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
       const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
-      
+
       exportData.summary = {
         totalIncome,
         totalExpenses,
@@ -224,7 +226,7 @@ export default function DataExportDialog({
     if (options.includeWallets) {
       const { db } = await import('@/lib/db')
       const wallets = await db.personalWallets.where('isActive').equals(1).toArray()
-      
+
       exportData.wallets = wallets.map(wallet => ({
         id: wallet.id,
         name: wallet.name,
@@ -240,7 +242,7 @@ export default function DataExportDialog({
     if (options.includeCategories) {
       const { db } = await import('@/lib/db')
       const categories = await db.personalCategories.where('isActive').equals(1).toArray()
-      
+
       exportData.categories = categories.map(category => ({
         id: category.id,
         name: category.name,
@@ -267,23 +269,23 @@ export default function DataExportDialog({
   }
 
   const getTimeRangeLabel = (range: TimeRange): string => {
-    const labels = {
-      last7days: 'Last 7 days',
-      last30days: 'Last 30 days',
-      last3months: 'Last 3 months',
-      last6months: 'Last 6 months',
-      currentyear: 'Current year',
-      lastyear: 'Last year'
+    const labels: Record<TimeRange, string> = {
+      last7days: t('analytics.timeRanges.last7days'),
+      last30days: t('analytics.timeRanges.last30days'),
+      last3months: t('analytics.timeRanges.last3months'),
+      last6months: t('analytics.timeRanges.last6months'),
+      currentyear: t('analytics.timeRanges.currentyear'),
+      lastyear: t('analytics.timeRanges.lastyear')
     }
     return labels[range]
   }
 
   const getPreviewInfo = () => {
-    let items = []
-    if (options.includeTransactions) items.push(`${transactions.length} transactions`)
-    if (options.includeWallets) items.push('wallet information')
-    if (options.includeCategories) items.push('category information')
-    if (options.includeSummary) items.push('financial summary')
+    const items = []
+    if (options.includeTransactions) items.push(`${transactions.length} ${t('export.transactions').toLowerCase()}`)
+    if (options.includeWallets) items.push(t('export.walletInfo').toLowerCase())
+    if (options.includeCategories) items.push(t('export.categoryDefinitions').toLowerCase())
+    if (options.includeSummary) items.push(t('export.summary').toLowerCase())
     return items.join(', ')
   }
 
@@ -291,18 +293,18 @@ export default function DataExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Export Financial Data</DialogTitle>
+          <DialogTitle>{t('export.title')}</DialogTitle>
           <DialogDescription>
-            Choose what data to export and in which format
+            {t('export.description')}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Format Selection */}
           <div className="space-y-3">
-            <label className="text-sm font-medium">Export Format</label>
-            <Select 
-              value={options.format} 
+            <label className="text-sm font-medium">{t('export.format')}</label>
+            <Select
+              value={options.format}
               onValueChange={(value: ExportFormat) => setOptions(prev => ({ ...prev, format: value }))}
             >
               <SelectTrigger>
@@ -312,13 +314,13 @@ export default function DataExportDialog({
                 <SelectItem value="csv">
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
-                    CSV - Excel compatible
+                    {t('export.csvExcel')}
                   </div>
                 </SelectItem>
                 <SelectItem value="json">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    JSON - Complete data
+                    {t('export.jsonComplete')}
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -327,57 +329,57 @@ export default function DataExportDialog({
 
           {/* Data Selection */}
           <div className="space-y-3">
-            <label className="text-sm font-medium">Include Data</label>
+            <label className="text-sm font-medium">{t('export.includeData')}</label>
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="transactions"
                   checked={options.includeTransactions}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setOptions(prev => ({ ...prev, includeTransactions: !!checked }))
                   }
                 />
                 <label htmlFor="transactions" className="text-sm">
-                  Transactions ({transactions.length} items)
+                  {t('export.transactions')} ({t('analytics.items', { count: transactions.length })})
                 </label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="summary"
                   checked={options.includeSummary}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setOptions(prev => ({ ...prev, includeSummary: !!checked }))
                   }
                 />
                 <label htmlFor="summary" className="text-sm">
-                  Financial summary
+                  {t('export.summary')}
                 </label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="wallets"
                   checked={options.includeWallets}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setOptions(prev => ({ ...prev, includeWallets: !!checked }))
                   }
                 />
                 <label htmlFor="wallets" className="text-sm">
-                  Wallet information
+                  {t('export.walletInfo')}
                 </label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="categories"
                   checked={options.includeCategories}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setOptions(prev => ({ ...prev, includeCategories: !!checked }))
                   }
                 />
                 <label htmlFor="categories" className="text-sm">
-                  Category definitions
+                  {t('export.categoryDefinitions')}
                 </label>
               </div>
             </div>
@@ -385,37 +387,37 @@ export default function DataExportDialog({
 
           {/* Preview */}
           <div className="p-4 bg-muted rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Export Preview</h4>
+            <h4 className="font-medium text-sm mb-2">{t('export.preview')}</h4>
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>Period: {getTimeRangeLabel(timeRange)}</p>
-              <p>Currency: {currency === 'ALL' ? 'All currencies' : currency}</p>
-              <p>Format: {options.format.toUpperCase()}</p>
-              <p>Includes: {getPreviewInfo()}</p>
+              <p>{t('export.period')}: {getTimeRangeLabel(timeRange)}</p>
+              <p>{t('export.currency')}: {currency === 'ALL' ? t('export.allCurrencies') : currency}</p>
+              <p>{t('export.format')}: {options.format.toUpperCase()}</p>
+              <p>{t('export.includes')}: {getPreviewInfo()}</p>
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isExporting}
             >
-              Cancel
+              {t('export.cancel')}
             </Button>
-            <Button 
+            <Button
               onClick={handleExport}
               disabled={isExporting || (!options.includeTransactions && !options.includeWallets && !options.includeCategories && !options.includeSummary)}
             >
               {isExporting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Exporting...
+                  {t('export.exporting')}
                 </>
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Export Data
+                  {t('export.exportData')}
                 </>
               )}
             </Button>

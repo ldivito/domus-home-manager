@@ -1,37 +1,30 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  Settings, 
-  Home, 
-  Palette, 
-  Accessibility, 
-  Bell, 
-  Shield, 
-  Download,
-  ChevronRight,
-  CheckCircle,
-  AlertCircle
+import {
+  Settings,
+  Home,
+  Palette,
+  Bell,
+  Shield,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
-// Mock user preferences - in real app, load from auth context
+const STORAGE_KEY = 'personalFinancePreferences'
+
 interface UserPreferences {
-  // General Settings
   defaultCurrency: 'ARS' | 'USD'
   startOfWeek: 'monday' | 'sunday'
   dateFormat: 'dd/mm/yyyy' | 'mm/dd/yyyy' | 'yyyy-mm-dd'
-  
-  // Household Integration
+
   householdIntegration: {
     enabled: boolean
     autoShareIncome: boolean
@@ -44,14 +37,12 @@ interface UserPreferences {
       other: { autoShare: boolean; percentage: number }
     }
   }
-  
-  // UI/UX Preferences
+
   theme: 'light' | 'dark' | 'system'
   compactMode: boolean
   showBalanceOnCards: boolean
   colorScheme: 'default' | 'colorblind' | 'high-contrast'
-  
-  // Notifications
+
   notifications: {
     creditCardDueDates: boolean
     lowBalance: boolean
@@ -60,21 +51,12 @@ interface UserPreferences {
     daysBeforeDue: number
     lowBalanceThreshold: number
   }
-  
-  // Privacy & Security
+
   privacy: {
     showBalancesInNotifications: boolean
     requireConfirmationForLargeTransactions: boolean
     largeTransactionThreshold: number
     dataRetentionMonths: number
-  }
-  
-  // Data Export
-  export: {
-    includeNotes: boolean
-    includeCategories: boolean
-    includeWallets: boolean
-    defaultFormat: 'csv' | 'json'
   }
 }
 
@@ -82,12 +64,12 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   defaultCurrency: 'ARS',
   startOfWeek: 'monday',
   dateFormat: 'dd/mm/yyyy',
-  
+
   householdIntegration: {
     enabled: true,
     autoShareIncome: false,
     defaultSharePercentage: 50,
-    shareThreshold: 10000, // ARS
+    shareThreshold: 10000,
     categories: {
       salary: { autoShare: true, percentage: 60 },
       freelance: { autoShare: false, percentage: 30 },
@@ -95,12 +77,12 @@ const DEFAULT_PREFERENCES: UserPreferences = {
       other: { autoShare: false, percentage: 50 }
     }
   },
-  
+
   theme: 'system',
   compactMode: false,
   showBalanceOnCards: true,
   colorScheme: 'default',
-  
+
   notifications: {
     creditCardDueDates: true,
     lowBalance: true,
@@ -109,64 +91,64 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     daysBeforeDue: 3,
     lowBalanceThreshold: 5000
   },
-  
+
   privacy: {
     showBalancesInNotifications: false,
     requireConfirmationForLargeTransactions: true,
     largeTransactionThreshold: 50000,
     dataRetentionMonths: 24
   },
-  
-  export: {
-    includeNotes: true,
-    includeCategories: true,
-    includeWallets: true,
-    defaultFormat: 'csv'
+}
+
+function loadFromStorage(): UserPreferences {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      return { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) }
+    }
+  } catch {
+    // Ignore parse errors, fall through to defaults
   }
+  return DEFAULT_PREFERENCES
+}
+
+function saveToStorage(prefs: UserPreferences): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
 }
 
 export default function PersonalFinanceSettingsPage() {
+  const t = useTranslations('personalFinance')
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    loadPreferences()
-  }, [])
-
-  const loadPreferences = async () => {
-    setLoading(true)
     try {
-      // TODO: Load from actual API/localStorage
-      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate loading
-      // For now, use defaults
-      setPreferences(DEFAULT_PREFERENCES)
-    } catch (error) {
+      setPreferences(loadFromStorage())
+    } catch {
       toast({
-        title: 'Error loading preferences',
-        description: 'Failed to load your settings. Using defaults.',
+        title: t('settings.messages.loadErrorTitle'),
+        description: t('settings.messages.loadErrorMessage'),
         variant: 'destructive'
       })
     } finally {
       setLoading(false)
     }
-  }
+  }, [t, toast])
 
-  const savePreferences = async () => {
+  const savePreferences = () => {
     setSaving(true)
     try {
-      // TODO: Save to actual API/localStorage
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate saving
-      
+      saveToStorage(preferences)
       toast({
-        title: 'Settings saved',
-        description: 'Your preferences have been updated successfully.'
+        title: t('settings.messages.savedTitle'),
+        description: t('settings.messages.savedMessage')
       })
-    } catch (error) {
+    } catch {
       toast({
-        title: 'Error saving settings',
-        description: 'Failed to save your preferences. Please try again.',
+        title: t('settings.messages.saveErrorTitle'),
+        description: t('settings.messages.saveErrorMessage'),
         variant: 'destructive'
       })
     } finally {
@@ -179,12 +161,12 @@ export default function PersonalFinanceSettingsPage() {
       const newPrefs = { ...prev }
       const keys = path.split('.')
       let current: Record<string, unknown> = newPrefs as Record<string, unknown>
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) current[keys[i]] = {}
         current = current[keys[i]] as Record<string, unknown>
       }
-      
+
       current[keys[keys.length - 1]] = value
       return newPrefs
     })
@@ -220,38 +202,38 @@ export default function PersonalFinanceSettingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Settings className="h-8 w-8" />
-            Personal Finance Settings
+            {t('settings.title')}
           </h1>
           <p className="text-muted-foreground">
-            Configure your personal finance preferences and household integration
+            {t('settings.subtitle')}
           </p>
         </div>
         <Button onClick={savePreferences} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? t('settings.saving') : t('settings.saveChanges')}
         </Button>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="household">Household</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
+          <TabsTrigger value="household">{t('settings.tabs.household')}</TabsTrigger>
+          <TabsTrigger value="appearance">{t('settings.tabs.appearance')}</TabsTrigger>
+          <TabsTrigger value="notifications">{t('settings.tabs.notifications')}</TabsTrigger>
+          <TabsTrigger value="privacy">{t('settings.tabs.privacy')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
+              <CardTitle>{t('settings.general.title')}</CardTitle>
               <CardDescription>
-                Configure basic preferences for your personal finance module
+                {t('settings.general.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="default-currency">Default Currency</Label>
+                  <Label htmlFor="default-currency">{t('settings.general.defaultCurrency')}</Label>
                   <Select
                     value={preferences.defaultCurrency}
                     onValueChange={(value) => updatePreference('defaultCurrency', value)}
@@ -260,14 +242,14 @@ export default function PersonalFinanceSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ARS">Argentine Peso (ARS)</SelectItem>
-                      <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                      <SelectItem value="ARS">{t('settings.general.currencyARS')}</SelectItem>
+                      <SelectItem value="USD">{t('settings.general.currencyUSD')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="date-format">Date Format</Label>
+                  <Label htmlFor="date-format">{t('settings.general.dateFormat')}</Label>
                   <Select
                     value={preferences.dateFormat}
                     onValueChange={(value) => updatePreference('dateFormat', value)}
@@ -276,15 +258,15 @@ export default function PersonalFinanceSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
-                      <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
-                      <SelectItem value="yyyy-mm-dd">YYYY-MM-DD</SelectItem>
+                      <SelectItem value="dd/mm/yyyy">{t('settings.general.dateFormatDMY')}</SelectItem>
+                      <SelectItem value="mm/dd/yyyy">{t('settings.general.dateFormatMDY')}</SelectItem>
+                      <SelectItem value="yyyy-mm-dd">{t('settings.general.dateFormatYMD')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="start-of-week">Start of Week</Label>
+                  <Label htmlFor="start-of-week">{t('settings.general.startOfWeek')}</Label>
                   <Select
                     value={preferences.startOfWeek}
                     onValueChange={(value) => updatePreference('startOfWeek', value)}
@@ -293,8 +275,8 @@ export default function PersonalFinanceSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="monday">Monday</SelectItem>
-                      <SelectItem value="sunday">Sunday</SelectItem>
+                      <SelectItem value="monday">{t('settings.general.monday')}</SelectItem>
+                      <SelectItem value="sunday">{t('settings.general.sunday')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -308,18 +290,18 @@ export default function PersonalFinanceSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Home className="h-5 w-5" />
-                Household Integration
+                {t('settings.household.title')}
               </CardTitle>
               <CardDescription>
-                Configure how your personal income integrates with household expenses
+                {t('settings.household.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Enable Household Integration</Label>
+                  <Label>{t('settings.household.enableIntegration')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Allow sharing personal income with household common pool
+                    {t('settings.household.enableIntegrationHint')}
                   </p>
                 </div>
                 <Switch
@@ -332,9 +314,9 @@ export default function PersonalFinanceSettingsPage() {
                 <div className="space-y-6 pt-4 border-t">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Auto-share Income</Label>
+                      <Label>{t('settings.household.autoShareIncome')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Automatically suggest sharing new income based on category rules
+                        {t('settings.household.autoShareIncomeHint')}
                       </p>
                     </div>
                     <Switch
@@ -345,7 +327,7 @@ export default function PersonalFinanceSettingsPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="default-share-percentage">Default Share Percentage</Label>
+                      <Label htmlFor="default-share-percentage">{t('settings.household.defaultSharePercentage')}</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="default-share-percentage"
@@ -360,7 +342,7 @@ export default function PersonalFinanceSettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="share-threshold">Share Threshold</Label>
+                      <Label htmlFor="share-threshold">{t('settings.household.shareThreshold')}</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="share-threshold"
@@ -372,13 +354,13 @@ export default function PersonalFinanceSettingsPage() {
                         <span className="text-sm text-muted-foreground">{preferences.defaultCurrency}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Only suggest sharing for income above this amount
+                        {t('settings.household.shareThresholdHint')}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <Label>Category-specific Rules</Label>
+                    <Label>{t('settings.household.categoryRules')}</Label>
                     <div className="space-y-3">
                       {Object.entries(preferences.householdIntegration.categories).map(([category, settings]) => (
                         <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
@@ -386,7 +368,7 @@ export default function PersonalFinanceSettingsPage() {
                             <div className="capitalize font-medium">{category}</div>
                             <Switch
                               checked={settings.autoShare}
-                              onCheckedChange={(checked) => 
+                              onCheckedChange={(checked) =>
                                 updatePreference(`householdIntegration.categories.${category}.autoShare`, checked)
                               }
                             />
@@ -397,7 +379,7 @@ export default function PersonalFinanceSettingsPage() {
                               min="0"
                               max="100"
                               value={settings.percentage}
-                              onChange={(e) => 
+                              onChange={(e) =>
                                 updatePreference(`householdIntegration.categories.${category}.percentage`, parseInt(e.target.value) || 0)
                               }
                               className="w-20"
@@ -419,16 +401,16 @@ export default function PersonalFinanceSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Appearance Settings
+                {t('settings.appearance.title')}
               </CardTitle>
               <CardDescription>
-                Customize the look and feel of your personal finance module
+                {t('settings.appearance.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="theme">Theme</Label>
+                  <Label htmlFor="theme">{t('settings.appearance.theme')}</Label>
                   <Select
                     value={preferences.theme}
                     onValueChange={(value) => updatePreference('theme', value)}
@@ -437,15 +419,15 @@ export default function PersonalFinanceSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">{t('settings.appearance.themeLight')}</SelectItem>
+                      <SelectItem value="dark">{t('settings.appearance.themeDark')}</SelectItem>
+                      <SelectItem value="system">{t('settings.appearance.themeSystem')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="color-scheme">Color Scheme</Label>
+                  <Label htmlFor="color-scheme">{t('settings.appearance.colorScheme')}</Label>
                   <Select
                     value={preferences.colorScheme}
                     onValueChange={(value) => updatePreference('colorScheme', value)}
@@ -454,9 +436,9 @@ export default function PersonalFinanceSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="colorblind">Colorblind Friendly</SelectItem>
-                      <SelectItem value="high-contrast">High Contrast</SelectItem>
+                      <SelectItem value="default">{t('settings.appearance.colorDefault')}</SelectItem>
+                      <SelectItem value="colorblind">{t('settings.appearance.colorColorblind')}</SelectItem>
+                      <SelectItem value="high-contrast">{t('settings.appearance.colorHighContrast')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -465,9 +447,9 @@ export default function PersonalFinanceSettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Compact Mode</Label>
+                    <Label>{t('settings.appearance.compactMode')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Show more content in less space
+                      {t('settings.appearance.compactModeHint')}
                     </p>
                   </div>
                   <Switch
@@ -478,9 +460,9 @@ export default function PersonalFinanceSettingsPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Show Balances on Cards</Label>
+                    <Label>{t('settings.appearance.showBalances')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Display wallet balances on overview cards
+                      {t('settings.appearance.showBalancesHint')}
                     </p>
                   </div>
                   <Switch
@@ -498,19 +480,19 @@ export default function PersonalFinanceSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                Notification Settings
+                {t('settings.notifications.title')}
               </CardTitle>
               <CardDescription>
-                Configure when and how you receive notifications
+                {t('settings.notifications.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Credit Card Due Dates</Label>
+                    <Label>{t('settings.notifications.creditCardDueDates')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Notify before credit card payments are due
+                      {t('settings.notifications.creditCardDueDatesHint')}
                     </p>
                   </div>
                   <Switch
@@ -521,7 +503,7 @@ export default function PersonalFinanceSettingsPage() {
 
                 {preferences.notifications.creditCardDueDates && (
                   <div className="ml-6 space-y-2">
-                    <Label htmlFor="days-before-due">Days before due date</Label>
+                    <Label htmlFor="days-before-due">{t('settings.notifications.daysBeforeDue')}</Label>
                     <Input
                       id="days-before-due"
                       type="number"
@@ -536,9 +518,9 @@ export default function PersonalFinanceSettingsPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Low Balance Alerts</Label>
+                    <Label>{t('settings.notifications.lowBalanceAlerts')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Notify when wallet balance is low
+                      {t('settings.notifications.lowBalanceAlertsHint')}
                     </p>
                   </div>
                   <Switch
@@ -549,7 +531,7 @@ export default function PersonalFinanceSettingsPage() {
 
                 {preferences.notifications.lowBalance && (
                   <div className="ml-6 space-y-2">
-                    <Label htmlFor="low-balance-threshold">Low balance threshold</Label>
+                    <Label htmlFor="low-balance-threshold">{t('settings.notifications.lowBalanceThreshold')}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="low-balance-threshold"
@@ -566,9 +548,9 @@ export default function PersonalFinanceSettingsPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Monthly Reports</Label>
+                    <Label>{t('settings.notifications.monthlyReports')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Receive monthly financial summaries
+                      {t('settings.notifications.monthlyReportsHint')}
                     </p>
                   </div>
                   <Switch
@@ -579,9 +561,9 @@ export default function PersonalFinanceSettingsPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Household Sharing</Label>
+                    <Label>{t('settings.notifications.householdSharing')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Notify when income sharing opportunities are available
+                      {t('settings.notifications.householdSharingHint')}
                     </p>
                   </div>
                   <Switch
@@ -599,19 +581,19 @@ export default function PersonalFinanceSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Privacy & Security
+                {t('settings.privacy.title')}
               </CardTitle>
               <CardDescription>
-                Control how your financial data is handled and displayed
+                {t('settings.privacy.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Show Balances in Notifications</Label>
+                    <Label>{t('settings.privacy.showBalancesInNotifications')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Include actual amounts in push notifications
+                      {t('settings.privacy.showBalancesInNotificationsHint')}
                     </p>
                   </div>
                   <Switch
@@ -622,9 +604,9 @@ export default function PersonalFinanceSettingsPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Confirm Large Transactions</Label>
+                    <Label>{t('settings.privacy.confirmLargeTransactions')}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Require additional confirmation for large amounts
+                      {t('settings.privacy.confirmLargeTransactionsHint')}
                     </p>
                   </div>
                   <Switch
@@ -635,7 +617,7 @@ export default function PersonalFinanceSettingsPage() {
 
                 {preferences.privacy.requireConfirmationForLargeTransactions && (
                   <div className="ml-6 space-y-2">
-                    <Label htmlFor="large-transaction-threshold">Large transaction threshold</Label>
+                    <Label htmlFor="large-transaction-threshold">{t('settings.privacy.largeTransactionThreshold')}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="large-transaction-threshold"
@@ -651,7 +633,7 @@ export default function PersonalFinanceSettingsPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="data-retention">Data Retention Period</Label>
+                  <Label htmlFor="data-retention">{t('settings.privacy.dataRetentionPeriod')}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="data-retention"
@@ -662,10 +644,10 @@ export default function PersonalFinanceSettingsPage() {
                       onChange={(e) => updatePreference('privacy.dataRetentionMonths', parseInt(e.target.value) || 24)}
                       className="w-20"
                     />
-                    <span className="text-sm text-muted-foreground">months</span>
+                    <span className="text-sm text-muted-foreground">{t('settings.privacy.dataRetentionMonths')}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    How long to keep your financial data before auto-deletion
+                    {t('settings.privacy.dataRetentionHint')}
                   </p>
                 </div>
               </div>

@@ -1,11 +1,12 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { PersonalCategory } from '@/types/personal-finance'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  MoreHorizontal, 
+import {
+  MoreHorizontal,
   Pencil,
   Trash2,
   Tag,
@@ -33,9 +34,10 @@ export function CategoryList({
   categories,
   onEdit,
   onDelete,
-  emptyMessage = "No categories found",
-  emptyDescription = "Create your first category to get started"
+  emptyMessage,
+  emptyDescription
 }: CategoryListProps) {
+  const t = useTranslations('personalFinance')
   const [editingCategory, setEditingCategory] = useState<PersonalCategory | null>(null)
 
   const handleEditClick = (category: PersonalCategory) => {
@@ -54,9 +56,9 @@ export function CategoryList({
       <Card>
         <CardContent className="p-8 text-center">
           <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">{emptyMessage}</h3>
+          <h3 className="font-semibold mb-2">{emptyMessage || t('categoryList.noCategories')}</h3>
           <p className="text-muted-foreground">
-            {emptyDescription}
+            {emptyDescription || t('categoryList.noCategoriesHint')}
           </p>
         </CardContent>
       </Card>
@@ -72,16 +74,16 @@ export function CategoryList({
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   {/* Color indicator and icon */}
-                  <div 
+                  <div
                     className="p-2 rounded-lg flex-shrink-0"
-                    style={{ 
-                      backgroundColor: `${category.color}20`, 
-                      color: category.color 
+                    style={{
+                      backgroundColor: `${category.color}20`,
+                      color: category.color
                     }}
                   >
                     <Tag className="h-4 w-4" />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium truncate">
@@ -92,33 +94,33 @@ export function CategoryList({
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge 
-                        variant="outline" 
-                        style={{ 
+                      <Badge
+                        variant="outline"
+                        style={{
                           borderColor: category.color,
-                          color: category.color 
+                          color: category.color
                         }}
                         className="text-xs"
                       >
-                        {category.type === 'income' ? 'Income' : 'Expense'}
+                        {category.type === 'income' ? t('categoryList.incomeBadge') : t('categoryList.expenseBadge')}
                       </Badge>
                       {category.isDefault && (
                         <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-800">
-                          System Default
+                          {t('categoryList.systemDefault')}
                         </Badge>
                       )}
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   {/* Color preview */}
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
                     style={{ backgroundColor: category.color }}
                     title={`Color: ${category.color}`}
                   />
-                  
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -128,17 +130,17 @@ export function CategoryList({
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => handleEditClick(category)}>
                         <Pencil className="h-4 w-4 mr-2" />
-                        Edit category
+                        {t('categoryList.editCategory')}
                       </DropdownMenuItem>
                       {!category.isDefault && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => onDelete(category.id!)}
                             className="text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete category
+                            {t('categoryList.deleteCategory')}
                           </DropdownMenuItem>
                         </>
                       )}

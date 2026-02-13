@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { formatCurrency } from '@/lib/utils/finance'
 import { TrendingUp, TrendingDown } from 'lucide-react'
@@ -15,6 +16,8 @@ interface MonthlyOverviewProps {
 }
 
 export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps) {
+  const t = useTranslations('personalFinance')
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
@@ -25,10 +28,10 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-600" />
-                <span className="text-sm">Income:</span>
+                <span className="text-sm">{t('analytics.income')}:</span>
               </div>
               <span className="font-medium text-green-600">
-                {currency === 'ALL' 
+                {currency === 'ALL'
                   ? `${formatCurrency(data.income, 'ARS')}*`
                   : formatCurrency(data.income, currency)
                 }
@@ -37,10 +40,10 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-red-600" />
-                <span className="text-sm">Expenses:</span>
+                <span className="text-sm">{t('analytics.expenses')}:</span>
               </div>
               <span className="font-medium text-red-600">
-                {currency === 'ALL' 
+                {currency === 'ALL'
                   ? `${formatCurrency(data.expenses, 'ARS')}*`
                   : formatCurrency(data.expenses, currency)
                 }
@@ -48,9 +51,9 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
             </div>
             <hr />
             <div className="flex items-center justify-between gap-4">
-              <span className="text-sm font-medium">Net:</span>
+              <span className="text-sm font-medium">{t('analytics.net')}:</span>
               <span className={`font-bold ${data.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {currency === 'ALL' 
+                {currency === 'ALL'
                   ? `${formatCurrency(data.net, 'ARS')}*`
                   : formatCurrency(data.net, currency)
                 }
@@ -58,7 +61,7 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
             </div>
           </div>
           {currency === 'ALL' && (
-            <p className="text-xs text-muted-foreground mt-2">*Mixed currencies shown in ARS</p>
+            <p className="text-xs text-muted-foreground mt-2">{t('analytics.mixedCurrenciesNote')}</p>
           )}
         </div>
       )
@@ -78,8 +81,8 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
     return (
       <div className="h-80 flex items-center justify-center text-muted-foreground">
         <div className="text-center">
-          <p className="text-lg font-medium mb-2">No monthly data</p>
-          <p className="text-sm">Transaction history will appear here</p>
+          <p className="text-lg font-medium mb-2">{t('analytics.noMonthlyData')}</p>
+          <p className="text-sm">{t('analytics.transactionHistoryHere')}</p>
         </div>
       </div>
     )
@@ -102,22 +105,22 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
             margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis 
-              dataKey="month" 
+            <XAxis
+              dataKey="month"
               tick={{ fontSize: 12 }}
               className="fill-muted-foreground"
             />
-            <YAxis 
+            <YAxis
               tick={{ fontSize: 12 }}
               className="fill-muted-foreground"
               tickFormatter={formatYAxisTick}
             />
             <Tooltip content={<CustomTooltip />} />
-            
-            <Bar dataKey="net" name="Net Income" radius={[2, 2, 0, 0]}>
+
+            <Bar dataKey="net" name={t('analytics.metrics.netIncome')} radius={[2, 2, 0, 0]}>
               {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
+                <Cell
+                  key={`cell-${index}`}
                   fill={entry.net >= 0 ? '#10b981' : '#ef4444'}
                 />
               ))}
@@ -130,31 +133,31 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Avg Income:</span>
+            <span className="text-muted-foreground">{t('analytics.avgIncome')}:</span>
             <span className="font-medium text-green-600">
-              {currency === 'ALL' 
+              {currency === 'ALL'
                 ? `${formatCurrency(avgIncome, 'ARS')}*`
                 : formatCurrency(avgIncome, currency)
               }
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Avg Expenses:</span>
+            <span className="text-muted-foreground">{t('analytics.avgExpenses')}:</span>
             <span className="font-medium text-red-600">
-              {currency === 'ALL' 
+              {currency === 'ALL'
                 ? `${formatCurrency(avgExpenses, 'ARS')}*`
                 : formatCurrency(avgExpenses, currency)
               }
             </span>
           </div>
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Best Month:</span>
+            <span className="text-muted-foreground">{t('analytics.bestMonth')}:</span>
             <div className="text-right">
               <div className="font-medium text-green-600">
-                {currency === 'ALL' 
+                {currency === 'ALL'
                   ? `${formatCurrency(bestMonth.net, 'ARS')}*`
                   : formatCurrency(bestMonth.net, currency)
                 }
@@ -163,10 +166,10 @@ export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps
             </div>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Worst Month:</span>
+            <span className="text-muted-foreground">{t('analytics.worstMonth')}:</span>
             <div className="text-right">
               <div className="font-medium text-red-600">
-                {currency === 'ALL' 
+                {currency === 'ALL'
                   ? `${formatCurrency(worstMonth.net, 'ARS')}*`
                   : formatCurrency(worstMonth.net, currency)
                 }

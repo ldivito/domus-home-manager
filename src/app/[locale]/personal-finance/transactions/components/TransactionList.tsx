@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
 import {
   DropdownMenu,
@@ -19,9 +20,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  TrendingUp,
+  TrendingDown,
   ArrowUpDown,
   Search,
   Filter,
@@ -32,8 +43,9 @@ import {
   Wallet,
   Tag
 } from 'lucide-react'
-import { db } from '@/lib/db'
-import { 
+import { db, deleteWithSync } from '@/lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import {
   formatCurrency,
   formatTransactionAmount,
   sortTransactionsByDate,
@@ -42,11 +54,11 @@ import {
   getLastNMonthsRange,
   reverseTransactionBalanceUpdate
 } from '@/lib/utils/finance'
-import { 
-  PersonalTransaction, 
-  PersonalWallet, 
+import {
+  PersonalTransaction,
+  PersonalWallet,
   PersonalCategory,
-  TransactionType 
+  TransactionType
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
 
@@ -77,63 +89,76 @@ interface TransactionWithDetails extends PersonalTransaction {
 }
 
 export function TransactionList() {
+  const t = useTranslations('personalFinance')
   const { toast } = useToast()
-  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([])
-  const [wallets, setWallets] = useState<PersonalWallet[]>([])
-  const [categories, setCategories] = useState<PersonalCategory[]>([])
   const [filters, setFilters] = useState<TransactionFilters>(defaultFilters)
-  const [loading, setLoading] = useState(true)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      await Promise.all([
-        loadTransactions(),
-        loadWallets(),
-        loadCategories()
-      ])
-    } catch (error) {
-      console.error('Error loading data:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load transactions. Please refresh the page.',
-        variant: 'destructive'
-      })
-    } finally {
-      setLoading(false)
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(filters.search), 300)
+    return () => clearTimeout(timer)
+  }, [filters.search])
+
+  // Reactive data loading
+  const rawTransactions = useLiveQuery(
+    () => db.personalTransactions.toArray(),
+    []
+  )
+
+  const wallets = useLiveQuery(
+    () => db.personalWallets.where('isActive').equals(1).toArray(),
+    []
+  )
+
+  const categories = useLiveQuery(
+    () => db.personalCategories.where('isActive').equals(1).toArray(),
+    []
+  )
+
+  const loading = rawTransactions === undefined || wallets === undefined || categories === undefined
+
+  const getDateRangeForFilter = (range: string) => {
+    const now = new Date()
+
+    switch (range) {
+      case 'today':
+        return {
+          start: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+          end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+        }
+      case 'week': {
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - now.getDay())
+        return { start: startOfWeek, end: now }
+      }
+      case 'month':
+        return getCurrentMonthRange()
+      case 'last-month': {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+        return { start: lastMonth, end: endLastMonth }
+      }
+      case '3-months':
+        return getLastNMonthsRange(3)
+      default:
+        return null
     }
-  }, [toast])
-
-  const loadTransactions = async () => {
-    // In a real app, filter by current user
-    const allTransactions = await db.personalTransactions.toArray()
-    setTransactions(allTransactions)
   }
 
-  const loadWallets = async () => {
-    const userWallets = await db.personalWallets
-      .where('isActive')
-      .equals(1)
-      .toArray()
-    setWallets(userWallets)
-  }
+  // Apply filters and enrichment via useMemo
+  const transactions = useMemo(() => {
+    if (!rawTransactions || !wallets || !categories) return []
 
-  const loadCategories = async () => {
-    const userCategories = await db.personalCategories
-      .where('isActive')
-      .equals(1)
-      .toArray()
-    setCategories(userCategories)
-  }
-
-  const applyFilters = useCallback(async () => {
-    let filtered = [...transactions]
+    let filtered = [...rawTransactions]
 
     // Apply search filter
-    if (filters.search.trim()) {
-      const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(t => 
+    if (debouncedSearch.trim()) {
+      const searchLower = debouncedSearch.toLowerCase()
+      filtered = filtered.filter(t =>
         t.description.toLowerCase().includes(searchLower) ||
         (t.notes && t.notes.toLowerCase().includes(searchLower))
       )
@@ -146,7 +171,7 @@ export function TransactionList() {
 
     // Apply wallet filter
     if (filters.walletId !== 'all') {
-      filtered = filtered.filter(t => 
+      filtered = filtered.filter(t =>
         t.walletId === filters.walletId || t.targetWalletId === filters.walletId
       )
     }
@@ -174,74 +199,46 @@ export function TransactionList() {
     }
 
     // Enrich with wallet and category details
-    const enriched = await enrichTransactions(filtered)
-    setTransactions(enriched)
-  }, [transactions, filters, wallets, categories])
-
-  const enrichTransactions = async (txns: PersonalTransaction[]): Promise<TransactionWithDetails[]> => {
-    return txns.map(txn => ({
+    return filtered.map(txn => ({
       ...txn,
       wallet: wallets.find(w => w.id === txn.walletId),
       category: categories.find(c => c.id === txn.categoryId),
       targetWallet: txn.targetWalletId ? wallets.find(w => w.id === txn.targetWalletId) : undefined
-    }))
+    })) as TransactionWithDetails[]
+  }, [rawTransactions, wallets, categories, debouncedSearch, filters])
+
+  const handleDeleteTransaction = (transactionId: string) => {
+    setTransactionToDelete(transactionId)
+    setDeleteDialogOpen(true)
   }
 
-  const getDateRangeForFilter = (range: string) => {
-    const now = new Date()
-    
-    switch (range) {
-      case 'today':
-        return {
-          start: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-          end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-        }
-      case 'week':
-        const startOfWeek = new Date(now)
-        startOfWeek.setDate(now.getDate() - now.getDay())
-        return { start: startOfWeek, end: now }
-      case 'month':
-        return getCurrentMonthRange()
-      case 'last-month':
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-        return { start: lastMonth, end: endLastMonth }
-      case '3-months':
-        return getLastNMonthsRange(3)
-      default:
-        return null
-    }
-  }
-
-  const handleDeleteTransaction = async (transactionId: string) => {
-    if (!confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
-      return
-    }
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return
 
     try {
-      const transaction = transactions.find(t => t.id === transactionId)
+      const transaction = rawTransactions?.find(t => t.id === transactionToDelete)
       if (!transaction) return
 
       // Reverse the transaction's balance effects
       await reverseTransactionBalanceUpdate(transaction)
 
-      // Delete the transaction
-      await db.personalTransactions.delete(transactionId)
-
-      // Reload data
-      await loadData()
+      // Delete the transaction (with sync logging)
+      await deleteWithSync(db.personalTransactions, 'personalTransactions', transactionToDelete)
 
       toast({
-        title: 'Success',
-        description: 'Transaction deleted successfully'
+        title: t('transactionList.deleteSuccessTitle'),
+        description: t('transactionList.deleteSuccessMessage')
       })
     } catch (error) {
       console.error('Error deleting transaction:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to delete transaction',
+        title: t('transactionList.deleteErrorTitle'),
+        description: t('transactionList.deleteErrorMessage'),
         variant: 'destructive'
       })
+    } finally {
+      setDeleteDialogOpen(false)
+      setTransactionToDelete(null)
     }
   }
 
@@ -266,18 +263,10 @@ export function TransactionList() {
   }
 
   const hasActiveFilters = () => {
-    return Object.entries(filters).some(([key, value]) => 
+    return Object.entries(filters).some(([key, value]) =>
       key !== 'sortBy' && key !== 'sortOrder' && value !== defaultFilters[key as keyof TransactionFilters]
     )
   }
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  useEffect(() => {
-    applyFilters()
-  }, [filters, applyFilters])
 
   if (loading) {
     return (
@@ -311,10 +300,10 @@ export function TransactionList() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters
+              {t('transactionList.filters')}
               {hasActiveFilters() && (
                 <Badge variant="secondary" className="ml-2">
-                  Active
+                  {t('transactionList.active')}
                 </Badge>
               )}
             </CardTitle>
@@ -324,7 +313,7 @@ export function TransactionList() {
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
               >
-                {showFilters ? 'Hide' : 'Show'} Filters
+                {showFilters ? t('transactionList.hideFilters') : t('transactionList.showFilters')}
               </Button>
               {hasActiveFilters() && (
                 <Button
@@ -332,20 +321,20 @@ export function TransactionList() {
                   size="sm"
                   onClick={clearFilters}
                 >
-                  Clear All
+                  {t('transactionList.clearAll')}
                 </Button>
               )}
             </div>
           </div>
         </CardHeader>
-        
+
         {showFilters && (
           <CardContent className="space-y-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search transactions..."
+                placeholder={t('transactionList.searchPlaceholder')}
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                 className="pl-10"
@@ -358,7 +347,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Tag className="h-3 w-3" />
-                  Type
+                  {t('transactionList.type')}
                 </label>
                 <Select
                   value={filters.type}
@@ -368,23 +357,23 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="all">{t('transactionList.allTypes')}</SelectItem>
                     <SelectItem value="income">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-green-600" />
-                        Income
+                        {t('transactionList.income')}
                       </div>
                     </SelectItem>
                     <SelectItem value="expense">
                       <div className="flex items-center gap-2">
                         <TrendingDown className="h-4 w-4 text-red-600" />
-                        Expense
+                        {t('transactionList.expense')}
                       </div>
                     </SelectItem>
                     <SelectItem value="transfer">
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4 text-blue-600" />
-                        Transfer
+                        {t('transactionList.transfer')}
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -395,7 +384,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Wallet className="h-3 w-3" />
-                  Wallet
+                  {t('transactionList.wallet')}
                 </label>
                 <Select
                   value={filters.walletId}
@@ -405,11 +394,11 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Wallets</SelectItem>
-                    {wallets.map(wallet => (
+                    <SelectItem value="all">{t('transactionList.allWallets')}</SelectItem>
+                    {wallets?.map(wallet => (
                       <SelectItem key={wallet.id} value={wallet.id!}>
                         <div className="flex items-center gap-2">
-                          <div 
+                          <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: wallet.color }}
                           />
@@ -425,7 +414,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Tag className="h-3 w-3" />
-                  Category
+                  {t('transactionList.category')}
                 </label>
                 <Select
                   value={filters.categoryId}
@@ -435,11 +424,11 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map(category => (
+                    <SelectItem value="all">{t('transactionList.allCategories')}</SelectItem>
+                    {categories?.map(category => (
                       <SelectItem key={category.id} value={category.id!}>
                         <div className="flex items-center gap-2">
-                          <div 
+                          <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: category.color }}
                           />
@@ -455,22 +444,22 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Date Range
+                  {t('transactionList.dateRange')}
                 </label>
                 <Select
                   value={filters.dateRange}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as 'all' | 'today' | 'week' | 'month' | 'last-month' | '3-months' }))}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as TransactionFilters['dateRange'] }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">This Week</SelectItem>
-                    <SelectItem value="month">This Month</SelectItem>
-                    <SelectItem value="last-month">Last Month</SelectItem>
-                    <SelectItem value="3-months">Last 3 Months</SelectItem>
+                    <SelectItem value="all">{t('transactionList.allTime')}</SelectItem>
+                    <SelectItem value="today">{t('transactionList.today')}</SelectItem>
+                    <SelectItem value="week">{t('transactionList.thisWeek')}</SelectItem>
+                    <SelectItem value="month">{t('transactionList.thisMonth')}</SelectItem>
+                    <SelectItem value="last-month">{t('transactionList.lastMonth')}</SelectItem>
+                    <SelectItem value="3-months">{t('transactionList.last3Months')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,7 +468,7 @@ export function TransactionList() {
             {/* Sort Options */}
             <div className="flex gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Sort By</label>
+                <label className="text-sm font-medium">{t('transactionList.sortBy')}</label>
                 <Select
                   value={filters.sortBy}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'amount' }))}
@@ -488,14 +477,14 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="amount">Amount</SelectItem>
+                    <SelectItem value="date">{t('transactionList.date')}</SelectItem>
+                    <SelectItem value="amount">{t('transactionList.amount')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
-                <label className="text-sm font-medium">Order</label>
+                <label className="text-sm font-medium">{t('transactionList.order')}</label>
                 <Select
                   value={filters.sortOrder}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortOrder: value as 'asc' | 'desc' }))}
@@ -504,8 +493,8 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="desc">Newest First</SelectItem>
-                    <SelectItem value="asc">Oldest First</SelectItem>
+                    <SelectItem value="desc">{t('transactionList.newestFirst')}</SelectItem>
+                    <SelectItem value="asc">{t('transactionList.oldestFirst')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -520,11 +509,11 @@ export function TransactionList() {
           <CardContent className="py-12 text-center">
             <div className="text-muted-foreground">
               <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No transactions found</h3>
+              <h3 className="text-lg font-medium mb-2">{t('transactions.noTransactions')}</h3>
               <p>
-                {hasActiveFilters() 
-                  ? "Try adjusting your filters or search terms"
-                  : "Your transaction history will appear here"
+                {hasActiveFilters()
+                  ? t('transactions.noTransactionsFilterHint')
+                  : t('transactions.noTransactionsHint')
                 }
               </p>
             </div>
@@ -552,36 +541,36 @@ export function TransactionList() {
                           {transaction.type}
                         </Badge>
                       </div>
-                      
+
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         {/* Date */}
-                        <span>{transaction.date.toLocaleDateString()}</span>
-                        
+                        <span>{transaction.date instanceof Date ? transaction.date.toLocaleDateString() : new Date(transaction.date).toLocaleDateString()}</span>
+
                         {/* Wallet Info */}
                         <div className="flex items-center gap-1">
-                          <div 
+                          <div
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: transaction.wallet?.color || '#666' }}
                           />
                           <span>{transaction.wallet?.name}</span>
                         </div>
-                        
+
                         {/* Transfer Target */}
                         {transaction.type === 'transfer' && transaction.targetWallet && (
                           <div className="flex items-center gap-1">
                             <ArrowUpDown className="h-3 w-3" />
-                            <div 
+                            <div
                               className="w-2 h-2 rounded-full"
                               style={{ backgroundColor: transaction.targetWallet.color }}
                             />
                             <span>{transaction.targetWallet.name}</span>
                           </div>
                         )}
-                        
+
                         {/* Category */}
                         {transaction.category && (
                           <div className="flex items-center gap-1">
-                            <div 
+                            <div
                               className="w-2 h-2 rounded-full"
                               style={{ backgroundColor: transaction.category.color }}
                             />
@@ -589,7 +578,7 @@ export function TransactionList() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Notes */}
                       {transaction.notes && (
                         <p className="text-sm text-muted-foreground mt-1 truncate">
@@ -605,7 +594,7 @@ export function TransactionList() {
                       </div>
                       {transaction.sharedWithHousehold && transaction.householdContribution && (
                         <div className="text-xs text-muted-foreground">
-                          {formatCurrency(transaction.householdContribution, transaction.currency)} shared
+                          {t('transactions.amountShared', { amount: formatCurrency(transaction.householdContribution, transaction.currency) })}
                         </div>
                       )}
                     </div>
@@ -620,15 +609,15 @@ export function TransactionList() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => console.log('Edit:', transaction.id)}>
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          {t('transactionList.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteTransaction(transaction.id!)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          {t('transactionList.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -639,16 +628,16 @@ export function TransactionList() {
           ))}
         </div>
       )}
-      
+
       {/* Summary */}
       {transactions.length > 0 && (
         <Card>
           <CardContent className="p-4">
             <div className="flex justify-between items-center text-sm text-muted-foreground">
-              <span>Showing {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</span>
+              <span>{t('transactions.showingCount', { count: transactions.length })}</span>
               <div className="flex gap-4">
                 <span className="text-green-600">
-                  Income: {formatCurrency(
+                  {t('transactions.incomeLabel')} {formatCurrency(
                     transactions
                       .filter(t => t.type === 'income')
                       .reduce((sum, t) => sum + t.amount, 0),
@@ -656,7 +645,7 @@ export function TransactionList() {
                   )}
                 </span>
                 <span className="text-red-600">
-                  Expenses: {formatCurrency(
+                  {t('transactions.expensesLabel')} {formatCurrency(
                     transactions
                       .filter(t => t.type === 'expense')
                       .reduce((sum, t) => sum + t.amount, 0),
@@ -668,6 +657,24 @@ export function TransactionList() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteConfirm.areYouSure')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deleteConfirm.deleteTransactionMessage')} {t('deleteConfirm.cannotBeUndone')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteConfirm.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              {t('deleteConfirm.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

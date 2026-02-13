@@ -1,10 +1,15 @@
+'use client'
+
 import React from 'react';
-import CreateWalletDialog from '@/app/[locale]/personal-finance/components/CreateWalletDialog';
+import { useTranslations } from 'next-intl';
+import { CreateWalletDialog } from '../components/CreateWalletDialog';
 
 const NewWalletPage = () => {
+  const t = useTranslations('personalFinance')
+
   return (
     <div>
-      <h1>New Wallet</h1>
+      <h1>{t('walletForm.createTitle')}</h1>
       <CreateWalletDialog />
     </div>
   );

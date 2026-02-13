@@ -1,52 +1,54 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatCurrency } from '@/lib/utils/finance'
 import { PersonalTransaction, PersonalWallet, PersonalCategory } from '@/types/personal-finance'
 import { useMemo } from 'react'
 
 interface ExpenseChartProps {
-  transactions: (PersonalTransaction & { 
+  transactions: (PersonalTransaction & {
     wallet?: PersonalWallet
-    category?: PersonalCategory 
+    category?: PersonalCategory
   })[]
   currency: 'ARS' | 'USD' | 'ALL'
 }
 
 export default function ExpenseChart({ transactions, currency }: ExpenseChartProps) {
-  
+  const t = useTranslations('personalFinance')
+
   const chartData = useMemo(() => {
     if (!transactions.length) return []
-    
+
     // Group transactions by date
     const dailyExpenses = new Map()
-    
+
     transactions.forEach(txn => {
       const dateKey = new Date(txn.date).toISOString().split('T')[0]
       const current = dailyExpenses.get(dateKey) || 0
       dailyExpenses.set(dateKey, current + txn.amount)
     })
-    
+
     // Convert to array and sort by date
     const data = Array.from(dailyExpenses.entries())
       .map(([date, amount]) => ({
-        date: new Date(date).toLocaleDateString('es', { 
-          month: 'short', 
-          day: 'numeric' 
+        date: new Date(date).toLocaleDateString('es', {
+          month: 'short',
+          day: 'numeric'
         }),
         amount,
         fullDate: date
       }))
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
-    
+
     return data
   }, [transactions])
 
   const categoryStats = useMemo(() => {
     if (!transactions.length) return []
-    
+
     const stats = new Map()
-    
+
     transactions.forEach(txn => {
       if (txn.category) {
         const current = stats.get(txn.category.id) || {
@@ -60,7 +62,7 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
         stats.set(txn.category.id, current)
       }
     })
-    
+
     return Array.from(stats.values())
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5) // Top 5 categories
@@ -73,16 +75,16 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
           <p className="font-medium mb-2">{label}</p>
           <div className="flex items-center gap-2 text-sm">
             <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span>Expenses:</span>
+            <span>{t('analytics.expenses')}:</span>
             <span className="font-medium text-red-600">
-              {currency === 'ALL' 
+              {currency === 'ALL'
                 ? `${formatCurrency(payload[0].value, 'ARS')}*`
                 : formatCurrency(payload[0].value, currency)
               }
             </span>
           </div>
           {currency === 'ALL' && (
-            <p className="text-xs text-muted-foreground mt-2">*Mixed currencies shown in ARS</p>
+            <p className="text-xs text-muted-foreground mt-2">{t('analytics.mixedCurrenciesNote')}</p>
           )}
         </div>
       )
@@ -105,12 +107,12 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
               margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
               />
-              <YAxis 
+              <YAxis
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
                 tickFormatter={(value) => {
@@ -132,8 +134,8 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
       ) : (
         <div className="h-64 flex items-center justify-center text-muted-foreground">
           <div className="text-center">
-            <p className="text-lg font-medium mb-2">No expense data</p>
-            <p className="text-sm">Add some expenses to see the chart</p>
+            <p className="text-lg font-medium mb-2">{t('analytics.noExpenseData')}</p>
+            <p className="text-sm">{t('analytics.addExpensesToSeeChart')}</p>
           </div>
         </div>
       )}
@@ -142,52 +144,52 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div className="text-center">
           <div className="font-bold text-lg text-red-600">
-            {currency === 'ALL' 
+            {currency === 'ALL'
               ? `${formatCurrency(totalExpenses, 'ARS')}*`
               : formatCurrency(totalExpenses, currency)
             }
           </div>
-          <div className="text-muted-foreground">Total</div>
+          <div className="text-muted-foreground">{t('analytics.total')}</div>
         </div>
         <div className="text-center">
           <div className="font-bold text-lg">
-            {currency === 'ALL' 
+            {currency === 'ALL'
               ? `${formatCurrency(avgDailyExpense, 'ARS')}*`
               : formatCurrency(avgDailyExpense, currency)
             }
           </div>
-          <div className="text-muted-foreground">Avg/Day</div>
+          <div className="text-muted-foreground">{t('analytics.avgPerDay')}</div>
         </div>
         <div className="text-center">
           <div className="font-bold text-lg">
-            {currency === 'ALL' 
+            {currency === 'ALL'
               ? `${formatCurrency(maxDailyExpense, 'ARS')}*`
               : formatCurrency(maxDailyExpense, currency)
             }
           </div>
-          <div className="text-muted-foreground">Max Day</div>
+          <div className="text-muted-foreground">{t('analytics.maxDay')}</div>
         </div>
       </div>
 
       {/* Top Categories */}
       {categoryStats.length > 0 && (
         <div className="space-y-3">
-          <h4 className="font-medium text-sm text-muted-foreground">Top Expense Categories</h4>
+          <h4 className="font-medium text-sm text-muted-foreground">{t('analytics.topExpenseCategories')}</h4>
           <div className="space-y-2">
             {categoryStats.map((category, index) => (
               <div key={index} className="flex items-center justify-between p-2 rounded border">
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
+                  <div
+                    className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: category.color }}
                   />
                   <span className="font-medium text-sm">{category.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    ({category.count} transactions)
+                    ({t('analytics.transactionsCount', { count: category.count })})
                   </span>
                 </div>
                 <div className="text-sm font-medium text-red-600">
-                  {currency === 'ALL' 
+                  {currency === 'ALL'
                     ? `${formatCurrency(category.amount, 'ARS')}*`
                     : formatCurrency(category.amount, currency)
                   }
@@ -197,9 +199,9 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
           </div>
         </div>
       )}
-      
+
       {currency === 'ALL' && (
-        <p className="text-xs text-muted-foreground">*Mixed currencies shown in ARS</p>
+        <p className="text-xs text-muted-foreground">{t('analytics.mixedCurrenciesNote')}</p>
       )}
     </div>
   )

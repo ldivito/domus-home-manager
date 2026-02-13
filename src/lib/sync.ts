@@ -115,6 +115,12 @@ const SYNC_TABLES = [
   'expenseCategories',
   'expensePayments',
   'settlementPayments',
+  // Personal Finance module
+  'personalWallets',
+  'personalCategories',
+  'personalTransactions',
+  'creditCardStatements',
+  'creditCardPayments',
   // Document Vault module
   'documents',
   'documentFolders',

@@ -24,6 +24,7 @@ import maintenance from './maintenance.json';
 import subscriptions from './subscriptions.json';
 import pets from './pets.json';
 import savings from './savings.json';
+import personalFinance from './personalFinance.json';
 import pwa from './pwa.json';
 
 const messages = {
@@ -53,6 +54,7 @@ const messages = {
   subscriptions,
   pets,
   savings,
+  personalFinance,
   pwa,
 };
 

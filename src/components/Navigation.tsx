@@ -25,7 +25,8 @@ import {
   Wrench,
   CreditCard,
   PawPrint,
-  PiggyBank
+  PiggyBank,
+  Banknote
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -125,6 +126,7 @@ export default function Navigation() {
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },
     { nameKey: 'keto', href: '/keto', icon: Heart },
     { nameKey: 'finance', href: '/finance', icon: Wallet },
+    { nameKey: 'personalFinance', href: '/personal-finance', icon: Banknote },
     { nameKey: 'savings', href: '/savings', icon: PiggyBank },
     { nameKey: 'subscriptions', href: '/subscriptions', icon: CreditCard },
     { nameKey: 'pets', href: '/pets', icon: PawPrint },

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  Bell, 
-  CreditCard, 
+import {
+  Bell,
+  CreditCard,
   Calendar,
   DollarSign,
   AlertTriangle,
@@ -15,8 +16,8 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react'
-import Link from 'next/link'
-import { 
+import { Link } from '@/i18n/navigation'
+import {
   getAllCreditCardNotifications,
   getNotificationSummary,
   formatNotificationForDisplay,
@@ -37,6 +38,7 @@ export default function CreditCardNotifications({
   showAll = false,
   onNotificationClick
 }: CreditCardNotificationsProps) {
+  const t = useTranslations('personalFinance')
   const [notifications, setNotifications] = useState<CreditCardNotification[]>([])
   const [summary, setSummary] = useState({
     total: 0,
@@ -59,12 +61,12 @@ export default function CreditCardNotifications({
   const loadNotifications = async () => {
     try {
       setLoading(true)
-      
+
       const [notifs, summaryData] = await Promise.all([
         getAllCreditCardNotifications(userId),
         getNotificationSummary(userId)
       ])
-      
+
       setNotifications(notifs)
       setSummary(summaryData)
     } catch (error) {
@@ -104,7 +106,7 @@ export default function CreditCardNotifications({
       <Card>
         <CardHeader className="flex flex-row items-center space-y-0 pb-2">
           <Bell className="h-5 w-5 mr-2" />
-          <CardTitle className="text-base">Credit Card Alerts</CardTitle>
+          <CardTitle className="text-base">{t('creditCard.alertsTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -125,7 +127,7 @@ export default function CreditCardNotifications({
       <Card>
         <CardHeader className="flex flex-row items-center space-y-0 pb-2">
           <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-          <CardTitle className="text-base">Credit Card Status</CardTitle>
+          <CardTitle className="text-base">{t('creditCard.statusTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4">
@@ -133,7 +135,7 @@ export default function CreditCardNotifications({
               <CheckCircle className="h-8 w-8 mx-auto" />
             </div>
             <p className="text-sm text-muted-foreground">
-              All credit cards are up to date!
+              {t('creditCard.allUpToDate')}
             </p>
           </div>
         </CardContent>
@@ -141,8 +143,8 @@ export default function CreditCardNotifications({
     )
   }
 
-  const displayNotifications = expanded || showAll 
-    ? notifications 
+  const displayNotifications = expanded || showAll
+    ? notifications
     : notifications.slice(0, compact ? 2 : 5)
 
   return (
@@ -150,7 +152,7 @@ export default function CreditCardNotifications({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center space-x-2">
           <Bell className="h-5 w-5" />
-          <CardTitle className="text-base">Credit Card Alerts</CardTitle>
+          <CardTitle className="text-base">{t('creditCard.alertsTitle')}</CardTitle>
           {summary.total > 0 && (
             <Badge variant="destructive" className="text-xs px-2">
               {summary.total}
@@ -158,12 +160,12 @@ export default function CreditCardNotifications({
           )}
         </div>
         {!showAll && notifications.length > (compact ? 2 : 5) && (
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? 'Show Less' : `Show All (${notifications.length})`}
+            {expanded ? t('creditCard.showLess') : t('creditCard.showAll', { count: notifications.length })}
           </Button>
         )}
       </CardHeader>
@@ -176,13 +178,13 @@ export default function CreditCardNotifications({
             <AlertDescription>
               {summary.critical > 0 && (
                 <span className="font-semibold">
-                  {summary.critical} critical alert{summary.critical > 1 ? 's' : ''} need immediate attention.
+                  {t('creditCard.criticalAlerts', { count: summary.critical })}
                 </span>
               )}
               {summary.critical > 0 && summary.high > 0 && ' '}
               {summary.high > 0 && (
                 <span>
-                  {summary.high} high priority alert{summary.high > 1 ? 's' : ''}.
+                  {t('creditCard.highPriorityAlerts', { count: summary.high })}
                 </span>
               )}
             </AlertDescription>
@@ -193,7 +195,7 @@ export default function CreditCardNotifications({
         <div className="space-y-3">
           {displayNotifications.map((notification) => {
             const displayInfo = formatNotificationForDisplay(notification)
-            
+
             return (
               <div
                 key={notification.id}
@@ -204,7 +206,7 @@ export default function CreditCardNotifications({
                   <div className="flex-shrink-0 text-lg">
                     {displayInfo.icon}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -214,27 +216,27 @@ export default function CreditCardNotifications({
                         <p className="text-sm text-muted-foreground mb-2">
                           {notification.message}
                         </p>
-                        
+
                         <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <CreditCard className="h-3 w-3" />
                             <span>{notification.walletName}</span>
                           </div>
-                          
+
                           {notification.type !== 'minimum_payment_alert' && (
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-3 w-3" />
                               <span>
-                                {notification.daysUntilDue === 0 
-                                  ? 'Today'
-                                  : notification.daysUntilDue < 0 
-                                    ? `${Math.abs(notification.daysUntilDue)} days ago`
-                                    : `${notification.daysUntilDue} days`
+                                {notification.daysUntilDue === 0
+                                  ? t('creditCard.today')
+                                  : notification.daysUntilDue < 0
+                                    ? t('creditCard.daysAgo', { days: Math.abs(notification.daysUntilDue) })
+                                    : t('creditCard.daysRemaining', { days: notification.daysUntilDue })
                                 }
                               </span>
                             </div>
                           )}
-                          
+
                           <div className="flex items-center space-x-1">
                             <DollarSign className="h-3 w-3" />
                             <span>
@@ -243,43 +245,43 @@ export default function CreditCardNotifications({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col items-end space-y-1">
-                        <Badge 
-                          variant={getNotificationColor(notification.priority)} 
+                        <Badge
+                          variant={getNotificationColor(notification.priority)}
                           className="text-xs"
                         >
                           {displayInfo.urgencyText}
                         </Badge>
-                        
+
                         {notification.priority === 'critical' && (
                           <div className="text-xs text-red-600 font-medium">
-                            Action Required
+                            {t('creditCard.actionRequired')}
                           </div>
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Action Suggestion */}
                     {displayInfo.actionSuggestion && !compact && (
                       <div className="mt-2 text-xs text-muted-foreground border-t pt-2">
-                        💡 {displayInfo.actionSuggestion}
+                        {displayInfo.actionSuggestion}
                       </div>
                     )}
                   </div>
                 </div>
-                
+
                 {/* Quick Actions */}
                 {notification.type === 'due_soon' || notification.type === 'overdue' ? (
                   <div className="mt-3 flex space-x-2">
                     <Link href={`/personal-finance/credit-cards/${notification.walletId}/pay`}>
                       <Button size="sm" className="h-7 text-xs">
-                        Pay Now
+                        {t('creditCard.payNow')}
                       </Button>
                     </Link>
                     <Link href={`/personal-finance/credit-cards/${notification.walletId}`}>
                       <Button size="sm" variant="outline" className="h-7 text-xs">
-                        View Details
+                        {t('creditCard.viewDetails')}
                       </Button>
                     </Link>
                   </div>
@@ -295,19 +297,19 @@ export default function CreditCardNotifications({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="text-center p-2 bg-muted rounded">
                 <div className="font-semibold text-red-600">{summary.overdue}</div>
-                <div className="text-muted-foreground">Overdue</div>
+                <div className="text-muted-foreground">{t('creditCard.overdue')}</div>
               </div>
               <div className="text-center p-2 bg-muted rounded">
                 <div className="font-semibold text-orange-600">{summary.dueSoon}</div>
-                <div className="text-muted-foreground">Due Soon</div>
+                <div className="text-muted-foreground">{t('creditCard.dueSoon')}</div>
               </div>
               <div className="text-center p-2 bg-muted rounded">
                 <div className="font-semibold text-blue-600">{summary.closingSoon}</div>
-                <div className="text-muted-foreground">Closing Soon</div>
+                <div className="text-muted-foreground">{t('creditCard.closingSoon')}</div>
               </div>
               <div className="text-center p-2 bg-muted rounded">
                 <div className="font-semibold text-yellow-600">{summary.usageAlerts}</div>
-                <div className="text-muted-foreground">Usage Alerts</div>
+                <div className="text-muted-foreground">{t('creditCard.usageAlerts')}</div>
               </div>
             </div>
           </div>
@@ -318,7 +320,7 @@ export default function CreditCardNotifications({
           <div className="text-center pt-2 border-t">
             <Link href="/personal-finance/credit-cards/notifications">
               <Button variant="ghost" size="sm" className="text-xs">
-                View All Notifications ({notifications.length})
+                {t('creditCard.viewAllNotifications', { count: notifications.length })}
               </Button>
             </Link>
           </div>

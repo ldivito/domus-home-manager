@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { PersonalCategory, CategoryFormData, CategoryType } from '@/types/personal-finance'
 import {
   Dialog,
@@ -29,7 +30,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
+import {
   Plus,
   TrendingUp,
   TrendingDown,
@@ -111,6 +112,7 @@ export function CreateCategoryDialog({
   isEditing = false,
   category
 }: CreateCategoryDialogProps) {
+  const t = useTranslations('personalFinance')
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
@@ -135,7 +137,7 @@ export function CreateCategoryDialog({
     } else {
       setIsOpen(newOpen)
     }
-    
+
     if (!newOpen) {
       form.reset()
     }
@@ -143,18 +145,18 @@ export function CreateCategoryDialog({
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
-    
+
     try {
       // Get current user (in a real app, this would come from auth)
       const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a' // TODO: Get from auth context
-      
+
       // Validate the category data
       const validation = validateCategory(data)
-      
+
       if (!validation.isValid) {
         const firstError = Object.values(validation.errors)[0]?.[0] || 'Validation failed'
         toast({
-          title: 'Validation Error',
+          title: t('transactionForm.validationError'),
           description: firstError,
           variant: 'destructive',
         })
@@ -170,8 +172,8 @@ export function CreateCategoryDialog({
 
       if (existingCategory) {
         toast({
-          title: 'Duplicate Category',
-          description: `A ${data.type} category with this name already exists.`,
+          title: t('categoryForm.duplicateTitle'),
+          description: t('categoryForm.duplicateMessage', { type: data.type }),
           variant: 'destructive',
         })
         return
@@ -213,9 +215,10 @@ export function CreateCategoryDialog({
         onCategoryCreated?.(categoryData)
       }
 
+      const action = isEditing ? 'updated' : 'created'
       toast({
-        title: isEditing ? 'Category Updated' : 'Category Created',
-        description: `${data.name} has been ${isEditing ? 'updated' : 'created'} successfully.`,
+        title: isEditing ? t('categoryForm.updatedTitle') : t('categoryForm.createdTitle'),
+        description: t('categoryForm.successMessage', { name: data.name, action }),
       })
 
       handleOpenChange(false)
@@ -224,8 +227,8 @@ export function CreateCategoryDialog({
     } catch (error) {
       console.error('Error saving category:', error)
       toast({
-        title: 'Error',
-        description: `Failed to ${isEditing ? 'update' : 'create'} category. Please try again.`,
+        title: t('categoryForm.errorTitle'),
+        description: t('categoryForm.errorMessage', { action: isEditing ? 'update' : 'create' }),
         variant: 'destructive',
       })
     } finally {
@@ -252,16 +255,16 @@ export function CreateCategoryDialog({
           {trigger}
         </DialogTrigger>
       )}
-      
+
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Edit Category' : 'Create New Category'}
+            {isEditing ? t('categoryForm.editTitle') : t('categoryForm.createTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? 'Update the category details below.'
-              : 'Create a new category to organize your transactions.'
+            {isEditing
+              ? t('categoryForm.editDescription')
+              : t('categoryForm.createDescription')
             }
           </DialogDescription>
         </DialogHeader>
@@ -276,10 +279,10 @@ export function CreateCategoryDialog({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category Name</FormLabel>
+                      <FormLabel>{t('categoryForm.categoryName')}</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g. Groceries, Salary, Rent"
+                        <Input
+                          placeholder={t('categoryForm.categoryNamePlaceholder')}
                           maxLength={30}
                           {...field}
                         />
@@ -294,7 +297,7 @@ export function CreateCategoryDialog({
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Type</FormLabel>
+                      <FormLabel>{t('categoryForm.type')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -305,13 +308,13 @@ export function CreateCategoryDialog({
                           <SelectItem value="expense">
                             <div className="flex items-center gap-2">
                               <TrendingDown className="h-4 w-4 text-red-600" />
-                              Expense
+                              {t('categoryForm.typeExpense')}
                             </div>
                           </SelectItem>
                           <SelectItem value="income">
                             <div className="flex items-center gap-2">
                               <TrendingUp className="h-4 w-4 text-green-600" />
-                              Income
+                              {t('categoryForm.typeIncome')}
                             </div>
                           </SelectItem>
                         </SelectContent>
@@ -324,14 +327,14 @@ export function CreateCategoryDialog({
 
               {/* Appearance */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">Appearance</h4>
-                
+                <h4 className="text-sm font-medium">{t('categoryForm.appearance')}</h4>
+
                 <FormField
                   control={form.control}
                   name="color"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Color</FormLabel>
+                      <FormLabel>{t('categoryForm.color')}</FormLabel>
                       <FormControl>
                         <div className="space-y-3">
                           <div className="flex gap-2 flex-wrap">
@@ -340,8 +343,8 @@ export function CreateCategoryDialog({
                                 key={color}
                                 type="button"
                                 className={`w-7 h-7 rounded-full border-2 transition-all ${
-                                  selectedColor === color 
-                                    ? 'border-gray-900 scale-110' 
+                                  selectedColor === color
+                                    ? 'border-gray-900 scale-110'
                                     : 'border-gray-300 hover:scale-105'
                                 }`}
                                 style={{ backgroundColor: color }}
@@ -374,7 +377,7 @@ export function CreateCategoryDialog({
                   name="icon"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Icon</FormLabel>
+                      <FormLabel>{t('categoryForm.icon')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -397,13 +400,13 @@ export function CreateCategoryDialog({
 
               {/* Preview */}
               <div className="p-4 border rounded-lg bg-gray-50">
-                <h4 className="text-sm font-medium mb-3">Preview</h4>
+                <h4 className="text-sm font-medium mb-3">{t('categoryForm.preview')}</h4>
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 rounded-lg"
-                    style={{ 
-                      backgroundColor: `${selectedColor}20`, 
-                      color: selectedColor 
+                    style={{
+                      backgroundColor: `${selectedColor}20`,
+                      color: selectedColor
                     }}
                   >
                     <Tag className="h-4 w-4" />
@@ -411,20 +414,20 @@ export function CreateCategoryDialog({
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {form.watch('name') || 'Category Name'}
+                        {form.watch('name') || t('categoryForm.previewFallback')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={`text-xs ${getCategoryTypeColor(selectedType)}`}
-                        style={{ 
+                        style={{
                           borderColor: selectedColor,
-                          color: selectedColor 
+                          color: selectedColor
                         }}
                       >
                         {getCategoryTypeIcon(selectedType)}
-                        {selectedType === 'income' ? 'Income' : 'Expense'}
+                        {selectedType === 'income' ? t('categoryForm.typeIncome') : t('categoryForm.typeExpense')}
                       </Badge>
                     </div>
                   </div>
@@ -439,12 +442,12 @@ export function CreateCategoryDialog({
                 onClick={() => handleOpenChange(false)}
                 disabled={isLoading}
               >
-                Cancel
+                {t('categoryForm.cancel')}
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading 
-                  ? (isEditing ? 'Updating...' : 'Creating...') 
-                  : (isEditing ? 'Update Category' : 'Create Category')
+                {isLoading
+                  ? (isEditing ? t('categoryForm.updating') : t('categoryForm.creating'))
+                  : (isEditing ? t('categoryForm.updateCategory') : t('categoryForm.createCategory'))
                 }
               </Button>
             </DialogFooter>

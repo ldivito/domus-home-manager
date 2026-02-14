@@ -70,14 +70,31 @@ const walletSchema = z.object({
   type: z.enum(['physical', 'bank', 'credit_card'] as const),
   currency: z.enum(['ARS', 'USD'] as const),
   balance: z.number().optional(),
-  creditLimit: z.number().positive().optional(),
-  closingDay: z.number().min(1).max(31).optional(),
-  dueDay: z.number().min(1).max(31).optional(),
+  creditLimit: z.number().optional(),
+  closingDay: z.number().optional(),
+  dueDay: z.number().optional(),
   accountNumber: z.string().optional(),
   bankName: z.string().optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid color format'),
   icon: z.string(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.type === 'credit_card') {
+    if (!data.creditLimit || data.creditLimit <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Credit limit must be positive', path: ['creditLimit'] })
+    }
+    if (!data.closingDay || data.closingDay < 1 || data.closingDay > 31) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Closing day must be 1-31', path: ['closingDay'] })
+    }
+    if (!data.dueDay || data.dueDay < 1 || data.dueDay > 31) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Due day must be 1-31', path: ['dueDay'] })
+    }
+  }
+  if (data.type === 'bank') {
+    if (!data.bankName || data.bankName.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Bank name is required', path: ['bankName'] })
+    }
+  }
 })
 
 type FormData = z.infer<typeof walletSchema>
@@ -109,6 +126,12 @@ export function CreateWalletDialog({
       type: 'physical',
       currency: 'ARS',
       balance: 0,
+      creditLimit: 0,
+      closingDay: 1,
+      dueDay: 10,
+      accountNumber: '',
+      bankName: '',
+      notes: '',
       color: generateWalletColor('physical'),
       icon: 'Wallet',
       ...defaultValues,
@@ -168,7 +191,7 @@ export function CreateWalletDialog({
         bankName: data.type === 'bank' ? data.bankName : undefined,
         color: data.color,
         icon: data.icon,
-        isActive: true,
+        isActive: 1,
         notes: data.notes,
         createdAt: new Date(),
         updatedAt: new Date(),

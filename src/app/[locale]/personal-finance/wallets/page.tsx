@@ -62,7 +62,7 @@ export default function WalletsPage() {
   // Reactive data loading via useLiveQuery
   const wallets = useLiveQuery(
     () => db.personalWallets
-      .where({ userId, isActive: 1 })
+      .where('userId').equals(userId).and(w => w.isActive === 1)
       .toArray()
       .then(w => w.sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -90,7 +90,7 @@ export default function WalletsPage() {
 
     try {
       await db.personalWallets.update(walletToDelete.id, {
-        isActive: false,
+        isActive: 0,
         updatedAt: new Date()
       })
 

@@ -97,8 +97,8 @@ export async function processCreditCardPayment(
         type: 'expense',
         color: '#ef4444',
         icon: 'CreditCard',
-        isActive: true,
-        isDefault: true,
+        isActive: 1,
+        isDefault: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -145,8 +145,8 @@ export async function processCreditCardPayment(
         type: 'income',
         color: '#10b981',
         icon: 'TrendingUp',
-        isActive: true,
-        isDefault: true,
+        isActive: 1,
+        isDefault: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       }

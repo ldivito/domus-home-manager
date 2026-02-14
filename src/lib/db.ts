@@ -1749,8 +1749,8 @@ export class DomusDatabase extends Dexie {
         type: 'income' as const,
         color: cat.color,
         icon: cat.icon,
-        isActive: true,
-        isDefault: true,
+        isActive: 1,
+        isDefault: 1,
         createdAt: now,
         updatedAt: now
       }))
@@ -1763,8 +1763,8 @@ export class DomusDatabase extends Dexie {
         type: 'expense' as const,
         color: cat.color,
         icon: cat.icon,
-        isActive: true,
-        isDefault: true,
+        isActive: 1,
+        isDefault: 1,
         createdAt: now,
         updatedAt: now
       }))

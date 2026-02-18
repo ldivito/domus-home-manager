@@ -270,9 +270,10 @@ export function filterTransactionsByDateRange(
   startDate: Date,
   endDate: Date
 ): PersonalTransaction[] {
-  return transactions.filter(transaction => 
-    transaction.date >= startDate && transaction.date <= endDate
-  )
+  return transactions.filter(transaction => {
+    const txDate = new Date(transaction.date)
+    return txDate >= startDate && txDate <= endDate
+  })
 }
 
 /**
@@ -312,7 +313,7 @@ export function getDaysUntilDue(dueDate: Date): number {
 export function sortTransactionsByDate(
   transactions: PersonalTransaction[]
 ): PersonalTransaction[] {
-  return [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime())
+  return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
 /**

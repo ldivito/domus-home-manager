@@ -105,7 +105,8 @@ export function TransactionList() {
     } finally {
       setLoading(false)
     }
-  }, [toast, t])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // t and toast excluded to prevent infinite re-render loop
 
   const loadTransactions = async () => {
     // In a real app, filter by current user

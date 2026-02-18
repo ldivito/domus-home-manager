@@ -307,6 +307,16 @@
       "deleteError": "No se pudo eliminar la transacción",
       "deleteErrorTitle": "Error",
       "loadError": "No se pudieron cargar las transacciones. Por favor, actualizá la página."
+    },
+    "dateNav": {
+      "prevPeriod": "Período anterior",
+      "nextPeriod": "Período siguiente",
+      "today": "Hoy",
+      "viewDay": "Día",
+      "viewWeek": "Semana",
+      "viewMonth": "Mes",
+      "goToToday": "Hoy",
+      "selectPeriod": "Seleccionar período"
     }
   },
   "categories": {

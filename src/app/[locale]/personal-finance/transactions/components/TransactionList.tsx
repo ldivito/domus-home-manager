@@ -28,7 +28,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Calendar,
   Wallet,
   Tag
 } from 'lucide-react'
@@ -38,8 +37,6 @@ import {
   formatTransactionAmount,
   sortTransactionsByDate,
   filterTransactionsByDateRange,
-  getCurrentMonthRange,
-  getLastNMonthsRange,
   reverseTransactionBalanceUpdate
 } from '@/lib/utils/finance'
 import { 
@@ -50,13 +47,13 @@ import {
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslations } from 'next-intl'
+import { DateNavigator, ViewMode, getDateRangeForView } from './DateNavigator'
 
 interface TransactionFilters {
   search: string
   type: TransactionType | 'all'
   walletId: string | 'all'
   categoryId: string | 'all'
-  dateRange: 'all' | 'today' | 'week' | 'month' | 'last-month' | '3-months'
   sortBy: 'date' | 'amount'
   sortOrder: 'asc' | 'desc'
 }
@@ -66,7 +63,6 @@ const defaultFilters: TransactionFilters = {
   type: 'all',
   walletId: 'all',
   categoryId: 'all',
-  dateRange: 'month',
   sortBy: 'date',
   sortOrder: 'desc'
 }
@@ -87,6 +83,10 @@ export function TransactionList() {
   const [filters, setFilters] = useState<TransactionFilters>(defaultFilters)
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
+
+  // Date navigator state
+  const [view, setView] = useState<ViewMode>('month')
+  const [navigatorDate, setNavigatorDate] = useState<Date>(() => new Date())
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -110,7 +110,6 @@ export function TransactionList() {
   }, []) // t and toast excluded to prevent infinite re-render loop
 
   const loadTransactions = async () => {
-    // In a real app, filter by current user
     const allTransactions = await db.personalTransactions.toArray()
     setRawTransactions(allTransactions)
   }
@@ -131,41 +130,38 @@ export function TransactionList() {
     setCategories(userCategories)
   }
 
+  // applyFilters intentionally depends on rawTransactions (not transactions) to avoid infinite loop
   const applyFilters = useCallback(async () => {
     let filtered = [...rawTransactions]
+
+    // Always apply date range from navigator
+    const { start, end } = getDateRangeForView(view, navigatorDate)
+    filtered = filterTransactionsByDateRange(filtered, start, end)
 
     // Apply search filter
     if (filters.search.trim()) {
       const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(t => 
-        t.description.toLowerCase().includes(searchLower) ||
-        (t.notes && t.notes.toLowerCase().includes(searchLower))
+      filtered = filtered.filter(tx => 
+        tx.description.toLowerCase().includes(searchLower) ||
+        (tx.notes && tx.notes.toLowerCase().includes(searchLower))
       )
     }
 
     // Apply type filter
     if (filters.type !== 'all') {
-      filtered = filtered.filter(t => t.type === filters.type)
+      filtered = filtered.filter(tx => tx.type === filters.type)
     }
 
     // Apply wallet filter
     if (filters.walletId !== 'all') {
-      filtered = filtered.filter(t => 
-        t.walletId === filters.walletId || t.targetWalletId === filters.walletId
+      filtered = filtered.filter(tx => 
+        tx.walletId === filters.walletId || tx.targetWalletId === filters.walletId
       )
     }
 
     // Apply category filter
     if (filters.categoryId !== 'all') {
-      filtered = filtered.filter(t => t.categoryId === filters.categoryId)
-    }
-
-    // Apply date range filter
-    if (filters.dateRange !== 'all') {
-      const dateRange = getDateRangeForFilter(filters.dateRange)
-      if (dateRange) {
-        filtered = filterTransactionsByDateRange(filtered, dateRange.start, dateRange.end)
-      }
+      filtered = filtered.filter(tx => tx.categoryId === filters.categoryId)
     }
 
     // Sort transactions
@@ -180,7 +176,8 @@ export function TransactionList() {
     // Enrich with wallet and category details
     const enriched = await enrichTransactions(filtered)
     setTransactions(enriched)
-  }, [rawTransactions, filters, wallets, categories])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawTransactions, filters, wallets, categories, view, navigatorDate])
 
   const enrichTransactions = async (txns: PersonalTransaction[]): Promise<TransactionWithDetails[]> => {
     return txns.map(txn => ({
@@ -191,33 +188,32 @@ export function TransactionList() {
     }))
   }
 
-  const getDateRangeForFilter = (range: string) => {
-    const now = new Date()
-    
-    switch (range) {
-      case 'today':
-        return {
-          start: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-          end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-        }
-      case 'week': {
-        const startOfWeek = new Date(now)
-        startOfWeek.setDate(now.getDate() - now.getDay())
-        return { start: startOfWeek, end: now }
+  // Navigator handlers
+  const handleNavigate = useCallback((direction: 'prev' | 'next') => {
+    setNavigatorDate(prev => {
+      const d = new Date(prev)
+      if (view === 'month') {
+        d.setMonth(d.getMonth() + (direction === 'next' ? 1 : -1))
+      } else if (view === 'week') {
+        d.setDate(d.getDate() + (direction === 'next' ? 7 : -7))
+      } else {
+        d.setDate(d.getDate() + (direction === 'next' ? 1 : -1))
       }
-      case 'month':
-        return getCurrentMonthRange()
-      case 'last-month': {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-        return { start: lastMonth, end: endLastMonth }
-      }
-      case '3-months':
-        return getLastNMonthsRange(3)
-      default:
-        return null
-    }
-  }
+      return d
+    })
+  }, [view])
+
+  const handleGoToToday = useCallback(() => {
+    setNavigatorDate(new Date())
+  }, [])
+
+  const handleDateChange = useCallback((date: Date) => {
+    setNavigatorDate(date)
+  }, [])
+
+  const handleViewChange = useCallback((newView: ViewMode) => {
+    setView(newView)
+  }, [])
 
   const handleDeleteTransaction = async (transactionId: string) => {
     if (!confirm(t('transactions.list.confirmDelete'))) {
@@ -225,7 +221,7 @@ export function TransactionList() {
     }
 
     try {
-      const transaction = rawTransactions.find(t => t.id === transactionId)
+      const transaction = rawTransactions.find(tx => tx.id === transactionId)
       if (!transaction) return
 
       // Reverse the transaction's balance effects
@@ -283,12 +279,11 @@ export function TransactionList() {
 
   useEffect(() => {
     applyFilters()
-  }, [filters, applyFilters])
+  }, [applyFilters])
 
   if (loading) {
     return (
       <div className="space-y-4">
-        {/* Skeleton loading */}
         {[...Array(5)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4">
@@ -311,6 +306,20 @@ export function TransactionList() {
 
   return (
     <div className="space-y-6">
+      {/* Date Navigator */}
+      <Card>
+        <CardContent className="pt-4 pb-2">
+          <DateNavigator
+            view={view}
+            currentDate={navigatorDate}
+            onViewChange={handleViewChange}
+            onNavigate={handleNavigate}
+            onGoToToday={handleGoToToday}
+            onDateChange={handleDateChange}
+          />
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -361,8 +370,8 @@ export function TransactionList() {
               />
             </div>
 
-            {/* Filter Row 1 */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Filter Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Type Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
@@ -456,30 +465,6 @@ export function TransactionList() {
                         </div>
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Date Range Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {t('transactions.list.dateRange')}
-                </label>
-                <Select
-                  value={filters.dateRange}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as 'all' | 'today' | 'week' | 'month' | 'last-month' | '3-months' }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('transactions.list.allTime')}</SelectItem>
-                    <SelectItem value="today">{t('transactions.list.today')}</SelectItem>
-                    <SelectItem value="week">{t('transactions.list.thisWeek')}</SelectItem>
-                    <SelectItem value="month">{t('transactions.list.thisMonth')}</SelectItem>
-                    <SelectItem value="last-month">{t('transactions.list.lastMonth')}</SelectItem>
-                    <SelectItem value="3-months">{t('transactions.list.last3Months')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -663,16 +648,16 @@ export function TransactionList() {
                 <span className="text-green-600">
                   {t('transactions.list.income')}: {formatCurrency(
                     transactions
-                      .filter(t => t.type === 'income')
-                      .reduce((sum, t) => sum + t.amount, 0),
+                      .filter(tx => tx.type === 'income')
+                      .reduce((sum, tx) => sum + tx.amount, 0),
                     'ARS'
                   )}
                 </span>
                 <span className="text-red-600">
                   {t('transactions.list.expenses')}: {formatCurrency(
                     transactions
-                      .filter(t => t.type === 'expense')
-                      .reduce((sum, t) => sum + t.amount, 0),
+                      .filter(tx => tx.type === 'expense')
+                      .reduce((sum, tx) => sum + tx.amount, 0),
                     'ARS'
                   )}
                 </span>

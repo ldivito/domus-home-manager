@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Plus, TrendingUp, TrendingDown, ArrowUpDown } from 'lucide-react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { TransactionList } from './components/TransactionList'
 

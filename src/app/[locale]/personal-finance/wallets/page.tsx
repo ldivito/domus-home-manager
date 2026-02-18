@@ -23,9 +23,11 @@ import {
   Wallet
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslations } from 'next-intl'
 import { formatBalance, calculateTotalBalance } from '@/lib/utils/finance'
 
 export default function WalletsPage() {
+  const t = useTranslations('personalFinance')
   const [wallets, setWallets] = useState<PersonalWallet[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -52,14 +54,14 @@ export default function WalletsPage() {
     } catch (error) {
       console.error('Error loading wallets:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to load wallets. Please try again.',
+        title: t('common.error'),
+        description: t('wallets.errorLoading'),
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
-  }, [userId, toast])
+  }, [userId, toast, t])
 
   useEffect(() => {
     loadWallets()
@@ -72,13 +74,13 @@ export default function WalletsPage() {
   const handleEditWallet = (wallet: PersonalWallet) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     // TODO: Implement edit functionality
     toast({
-      title: 'Edit Wallet',
-      description: 'Edit functionality coming soon!',
+      title: t('wallets.editTitle'),
+      description: t('wallets.editComingSoon'),
     })
   }
 
   const handleDeleteWallet = async (walletId: string) => {
-    if (!confirm('Are you sure you want to delete this wallet? This action cannot be undone.')) {
+    if (!confirm(t('wallets.confirmDelete'))) {
       return
     }
 
@@ -92,14 +94,14 @@ export default function WalletsPage() {
       setWallets(prev => prev.filter(w => w.id !== walletId))
       
       toast({
-        title: 'Wallet Deleted',
-        description: 'The wallet has been deleted successfully.',
+        title: t('wallets.deleteSuccess'),
+        description: t('wallets.deleteSuccessDesc'),
       })
     } catch (error) {
       console.error('Error deleting wallet:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to delete wallet. Please try again.',
+        title: t('common.error'),
+        description: t('wallets.deleteError'),
         variant: 'destructive',
       })
     }
@@ -121,10 +123,10 @@ export default function WalletsPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Your Wallets</h1>
+          <h1 className="text-2xl font-bold">{t('wallets.title')}</h1>
           <Button disabled>
             <Plus className="h-4 w-4 mr-2" />
-            Add Wallet
+            {t('wallets.addWallet')}
           </Button>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -154,9 +156,9 @@ export default function WalletsPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Your Wallets</h1>
+            <h1 className="text-2xl font-bold">{t('wallets.title')}</h1>
             <p className="text-muted-foreground">
-              Manage your accounts and track your finances
+              {t('wallets.subtitle')}
             </p>
           </div>
           
@@ -164,7 +166,7 @@ export default function WalletsPage() {
             trigger={
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Wallet
+                {t('wallets.addWallet')}
               </Button>
             }
             onWalletCreated={handleWalletCreated}
@@ -178,7 +180,9 @@ export default function WalletsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Total ARS</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {t('dashboard.totalCurrency', { currency: 'ARS' })}
+                  </span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {formatBalance(totalBalances.ARS, 'ARS').formatted}
@@ -190,7 +194,9 @@ export default function WalletsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Total USD</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {t('dashboard.totalCurrency', { currency: 'USD' })}
+                  </span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {formatBalance(totalBalances.USD, 'USD').formatted}
@@ -202,7 +208,9 @@ export default function WalletsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Active Wallets</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {t('wallets.activeWallets')}
+                  </span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {wallets.length}
@@ -221,7 +229,7 @@ export default function WalletsPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search wallets..."
+                  placeholder={t('wallets.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -231,22 +239,22 @@ export default function WalletsPage() {
               <div className="flex gap-2">
                 <Select value={filterType} onValueChange={setFilterType}>
                   <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Type" />
+                    <SelectValue placeholder={t('wallets.allTypes')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="physical">Physical</SelectItem>
-                    <SelectItem value="bank">Bank</SelectItem>
-                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="all">{t('wallets.allTypes')}</SelectItem>
+                    <SelectItem value="physical">{t('wallets.typePhysical')}</SelectItem>
+                    <SelectItem value="bank">{t('wallets.typeBank')}</SelectItem>
+                    <SelectItem value="credit_card">{t('wallets.typeCreditCard')}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={filterCurrency} onValueChange={setFilterCurrency}>
                   <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Currency" />
+                    <SelectValue placeholder={t('wallets.allCurrencies')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Currency</SelectItem>
+                    <SelectItem value="all">{t('wallets.allCurrencies')}</SelectItem>
                     <SelectItem value="ARS">ARS</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                   </SelectContent>
@@ -259,7 +267,7 @@ export default function WalletsPage() {
               <div className="flex gap-2 mt-3 flex-wrap">
                 {searchTerm && (
                   <Badge variant="secondary" className="gap-1">
-                    Search: {searchTerm}
+                    {t('wallets.filterSearchLabel', { term: searchTerm })}
                     <button 
                       onClick={() => setSearchTerm('')}
                       className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
@@ -270,7 +278,7 @@ export default function WalletsPage() {
                 )}
                 {filterType !== 'all' && (
                   <Badge variant="secondary" className="gap-1">
-                    Type: {filterType.replace('_', ' ')}
+                    {t('wallets.filterTypeLabel', { type: filterType.replace('_', ' ') })}
                     <button 
                       onClick={() => setFilterType('all')}
                       className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
@@ -281,7 +289,7 @@ export default function WalletsPage() {
                 )}
                 {filterCurrency !== 'all' && (
                   <Badge variant="secondary" className="gap-1">
-                    Currency: {filterCurrency}
+                    {t('wallets.filterCurrencyLabel', { currency: filterCurrency })}
                     <button 
                       onClick={() => setFilterCurrency('all')}
                       className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
@@ -301,9 +309,9 @@ export default function WalletsPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No wallets match your filters</h3>
+            <h3 className="font-semibold mb-2">{t('wallets.noWalletsFiltered')}</h3>
             <p className="text-muted-foreground mb-4">
-              Try adjusting your search terms or filters
+              {t('wallets.noWalletsFilteredDesc')}
             </p>
             <Button 
               variant="outline" 
@@ -313,7 +321,7 @@ export default function WalletsPage() {
                 setFilterCurrency('all')
               }}
             >
-              Clear Filters
+              {t('wallets.clearFilters')}
             </Button>
           </CardContent>
         </Card>
@@ -321,15 +329,15 @@ export default function WalletsPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No wallets yet</h3>
+            <h3 className="font-semibold mb-2">{t('wallets.noWalletsYet')}</h3>
             <p className="text-muted-foreground mb-4">
-              Create your first wallet to start tracking your finances
+              {t('wallets.createFirstWalletDesc')}
             </p>
             <CreateWalletDialog
               trigger={
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Wallet
+                  {t('wallets.createFirstWallet')}
                 </Button>
               }
               onWalletCreated={handleWalletCreated}
@@ -352,7 +360,7 @@ export default function WalletsPage() {
       {/* Results count */}
       {filteredWallets.length > 0 && (
         <div className="text-center text-sm text-muted-foreground">
-          Showing {filteredWallets.length} of {wallets.length} wallets
+          {t('wallets.showingCount', { showing: filteredWallets.length, total: wallets.length })}
         </div>
       )}
     </div>

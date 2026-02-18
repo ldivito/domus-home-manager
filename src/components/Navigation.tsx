@@ -25,7 +25,8 @@ import {
   Wrench,
   CreditCard,
   PawPrint,
-  PiggyBank
+  PiggyBank,
+  TrendingUp
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -118,8 +119,6 @@ export default function Navigation() {
     }
   }
 
-  // Note: /personal-finance is intentionally excluded from navigation.
-  // The module code exists but is disabled. See personal-finance/layout.tsx.
   const navigationItems = [
     { nameKey: 'activity', href: '/activity', icon: Activity },
     { nameKey: 'chores', href: '/chores', icon: CheckSquare },
@@ -127,6 +126,7 @@ export default function Navigation() {
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },
     { nameKey: 'keto', href: '/keto', icon: Heart },
     { nameKey: 'finance', href: '/finance', icon: Wallet },
+    { nameKey: 'personalFinance', href: '/personal-finance', icon: TrendingUp },
     { nameKey: 'savings', href: '/savings', icon: PiggyBank },
     { nameKey: 'subscriptions', href: '/subscriptions', icon: CreditCard },
     { nameKey: 'pets', href: '/pets', icon: PawPrint },

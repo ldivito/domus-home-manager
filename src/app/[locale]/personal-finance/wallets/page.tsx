@@ -36,34 +36,40 @@ export default function WalletsPage() {
   const { toast } = useToast()
 
   const loadWallets = useCallback(async () => {
+    console.log('[Wallets] loadWallets called')
     try {
       setLoading(true)
-      // Same query pattern as dashboard — where('isActive').equals(1) works
-      // because synced data stores isActive as integer 1, not boolean true
+      console.log('[Wallets] querying db.personalWallets...')
       const fetchedWallets = await db.personalWallets
         .where('isActive')
         .equals(1)
         .toArray()
+      console.log('[Wallets] query result:', fetchedWallets.length, 'records', fetchedWallets)
 
       const sortedWallets = fetchedWallets.sort((a, b) =>
         new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime()
       )
       setWallets(sortedWallets)
+      console.log('[Wallets] setWallets done')
     } catch (error) {
-      console.error('Error loading wallets:', error)
+      console.error('[Wallets] ERROR:', error)
       toast({
         title: t('common.error'),
         description: t('wallets.errorLoading'),
         variant: 'destructive',
       })
     } finally {
+      console.log('[Wallets] finally — setLoading(false)')
       setLoading(false)
     }
   }, [toast, t])
 
   useEffect(() => {
+    console.log('[Wallets] useEffect mount — calling loadWallets')
     loadWallets()
   }, [loadWallets])
+
+  console.log('[Wallets] render — loading:', loading, 'wallets:', wallets.length)
 
   const handleWalletCreated = (newWallet: PersonalWallet) => {
     setWallets(prev => [newWallet, ...prev])

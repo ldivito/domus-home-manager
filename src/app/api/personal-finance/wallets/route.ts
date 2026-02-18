@@ -58,6 +58,10 @@ export async function GET(request: Request) {
         WHERE sm.tableName = 'personalWallets'
         AND sm.userId = ?
         AND sm.deletedAt IS NULL
+        AND sm.updatedAt = (
+          SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2
+          WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalWallets'
+        )
         ORDER BY sm.createdAt ASC
       `)
       .bind(session.userId)

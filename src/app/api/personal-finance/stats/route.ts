@@ -58,6 +58,10 @@ export async function GET(request: Request) {
         AND sm.userId = ?
         AND sm.deletedAt IS NULL
         AND json_extract(sm.data, '$.isActive') = 1
+        AND sm.updatedAt = (
+          SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2
+          WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalWallets'
+        )
       `)
       .bind(session.userId)
       .all()
@@ -88,12 +92,20 @@ export async function GET(request: Request) {
           AND c.tableName = 'personalCategories'
           AND c.userId = t.userId
           AND c.deletedAt IS NULL
+          AND c.updatedAt = (
+            SELECT MAX(c2.updatedAt) FROM sync_metadata c2
+            WHERE c2.recordId = c.recordId AND c2.tableName = 'personalCategories'
+          )
         WHERE t.tableName = 'personalTransactions'
         AND t.userId = ?
         AND t.deletedAt IS NULL
         AND json_extract(t.data, '$.status') != 'cancelled'
         AND json_extract(t.data, '$.date') >= ?
         AND json_extract(t.data, '$.date') <= ?
+        AND t.updatedAt = (
+          SELECT MAX(t2.updatedAt) FROM sync_metadata t2
+          WHERE t2.recordId = t.recordId AND t2.tableName = 'personalTransactions'
+        )
         ORDER BY json_extract(t.data, '$.date') DESC
       `)
       .bind(session.userId, dateFrom, dateTo + 'T23:59:59')
@@ -151,6 +163,10 @@ export async function GET(request: Request) {
         AND sm.userId = ?
         AND sm.deletedAt IS NULL
         AND json_extract(sm.data, '$.status') != 'cancelled'
+        AND sm.updatedAt = (
+          SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2
+          WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalTransactions'
+        )
         ORDER BY json_extract(sm.data, '$.date') DESC
         LIMIT 10
       `)

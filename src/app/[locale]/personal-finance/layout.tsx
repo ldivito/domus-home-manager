@@ -11,11 +11,13 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function PersonalFinanceLayout({
+export default async function PersonalFinanceLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const t = await getTranslations('personalFinance')
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-4 sm:pt-6">
       {/* Skip Navigation */}
@@ -24,28 +26,28 @@ export default function PersonalFinanceLayout({
           href="#main-content" 
           className="block bg-primary text-primary-foreground px-4 py-2 text-sm font-medium focus:absolute focus:top-0 focus:left-0 z-50"
         >
-          Skip to main content
+          {t('layout.skipToMainContent')}
         </a>
         <a 
           href="#navigation" 
           className="block bg-primary text-primary-foreground px-4 py-2 text-sm font-medium focus:absolute focus:top-8 focus:left-0 z-50"
         >
-          Skip to navigation
+          {t('layout.skipToNavigation')}
         </a>
       </div>
 
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Personal Finance</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Manage your personal income, expenses and financial goals
+            {t('description')}
           </p>
         </div>
       </header>
       
       {/* Navigation */}
-      <nav id="navigation" aria-label="Personal Finance Navigation">
+      <nav id="navigation" aria-label={t('layout.navAriaLabel')}>
         <PersonalFinanceNav />
       </nav>
       

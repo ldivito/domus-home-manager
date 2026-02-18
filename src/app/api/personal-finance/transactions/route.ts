@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     // Build dynamic WHERE clauses
     const conditions: string[] = [
       "sm.tableName = 'personalTransactions'",
+      "sm.updatedAt = (SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2 WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalTransactions')",
       'sm.userId = ?',
       'sm.deletedAt IS NULL'
     ]

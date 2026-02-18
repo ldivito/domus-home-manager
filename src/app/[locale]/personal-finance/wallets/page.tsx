@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { PersonalWallet } from '@/types/personal-finance'
+import { db } from '@/lib/db'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -37,21 +38,14 @@ export default function WalletsPage() {
   const loadWallets = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/personal-finance/wallets', { credentials: 'include' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json() as { success: boolean; data: PersonalWallet[] }
-      if (!json.success) throw new Error('API error')
+      // Same query pattern as dashboard — where('isActive').equals(1) works
+      // because synced data stores isActive as integer 1, not boolean true
+      const fetchedWallets = await db.personalWallets
+        .where('isActive')
+        .equals(1)
+        .toArray()
 
-      // Deduplicate by id (keep latest updatedAt), then sort newest first
-      const byId = new Map<string, PersonalWallet>()
-      for (const w of json.data) {
-        if (!w.id) continue
-        const existing = byId.get(w.id)
-        if (!existing || new Date(String(w.updatedAt)).getTime() > new Date(String(existing.updatedAt)).getTime()) {
-          byId.set(w.id, w)
-        }
-      }
-      const sortedWallets = Array.from(byId.values()).sort((a, b) =>
+      const sortedWallets = fetchedWallets.sort((a, b) =>
         new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime()
       )
       setWallets(sortedWallets)
@@ -89,12 +83,10 @@ export default function WalletsPage() {
     }
 
     try {
-      // Soft delete via API
-      const res = await fetch(`/api/personal-finance/wallets/${walletId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+      await db.personalWallets.update(walletId, {
+        isActive: false,
+        updatedAt: new Date(),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       
       setWallets(prev => prev.filter(w => w.id !== walletId))
       

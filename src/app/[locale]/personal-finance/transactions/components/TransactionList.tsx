@@ -80,6 +80,7 @@ interface TransactionWithDetails extends PersonalTransaction {
 export function TransactionList() {
   const { toast } = useToast()
   const t = useTranslations('personalFinance')
+  const [rawTransactions, setRawTransactions] = useState<PersonalTransaction[]>([])
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([])
   const [wallets, setWallets] = useState<PersonalWallet[]>([])
   const [categories, setCategories] = useState<PersonalCategory[]>([])
@@ -111,7 +112,7 @@ export function TransactionList() {
   const loadTransactions = async () => {
     // In a real app, filter by current user
     const allTransactions = await db.personalTransactions.toArray()
-    setTransactions(allTransactions)
+    setRawTransactions(allTransactions)
   }
 
   const loadWallets = async () => {
@@ -131,7 +132,7 @@ export function TransactionList() {
   }
 
   const applyFilters = useCallback(async () => {
-    let filtered = [...transactions]
+    let filtered = [...rawTransactions]
 
     // Apply search filter
     if (filters.search.trim()) {
@@ -179,7 +180,7 @@ export function TransactionList() {
     // Enrich with wallet and category details
     const enriched = await enrichTransactions(filtered)
     setTransactions(enriched)
-  }, [transactions, filters, wallets, categories])
+  }, [rawTransactions, filters, wallets, categories])
 
   const enrichTransactions = async (txns: PersonalTransaction[]): Promise<TransactionWithDetails[]> => {
     return txns.map(txn => ({
@@ -224,7 +225,7 @@ export function TransactionList() {
     }
 
     try {
-      const transaction = transactions.find(t => t.id === transactionId)
+      const transaction = rawTransactions.find(t => t.id === transactionId)
       if (!transaction) return
 
       // Reverse the transaction's balance effects

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { PersonalWallet } from '@/types/personal-finance'
-import { db } from '@/lib/db'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -35,22 +34,26 @@ export default function WalletsPage() {
   const [filterCurrency, setFilterCurrency] = useState<string>('all')
   const { toast } = useToast()
 
-  // Current user (TODO: Get from auth context)
-  const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a'
-
   const loadWallets = useCallback(async () => {
     try {
       setLoading(true)
-      const fetchedWallets = await db.personalWallets
-        .where('userId').equals(userId)
-        .filter(w => w.isActive === true)
-        .toArray()
-      
-      // Sort by creation date (newest first)
-      const sortedWallets = fetchedWallets.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      const res = await fetch('/api/personal-finance/wallets', { credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json() as { success: boolean; data: PersonalWallet[] }
+      if (!json.success) throw new Error('API error')
+
+      // Deduplicate by id (keep latest updatedAt), then sort newest first
+      const byId = new Map<string, PersonalWallet>()
+      for (const w of json.data) {
+        if (!w.id) continue
+        const existing = byId.get(w.id)
+        if (!existing || new Date(String(w.updatedAt)).getTime() > new Date(String(existing.updatedAt)).getTime()) {
+          byId.set(w.id, w)
+        }
+      }
+      const sortedWallets = Array.from(byId.values()).sort((a, b) =>
+        new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime()
       )
-      
       setWallets(sortedWallets)
     } catch (error) {
       console.error('Error loading wallets:', error)
@@ -62,7 +65,7 @@ export default function WalletsPage() {
     } finally {
       setLoading(false)
     }
-  }, [userId, toast, t])
+  }, [toast, t])
 
   useEffect(() => {
     loadWallets()
@@ -86,11 +89,12 @@ export default function WalletsPage() {
     }
 
     try {
-      // Soft delete: mark as inactive instead of removing
-      await db.personalWallets.update(walletId, { 
-        isActive: false, 
-        updatedAt: new Date() 
+      // Soft delete via API
+      const res = await fetch(`/api/personal-finance/wallets/${walletId}`, {
+        method: 'DELETE',
+        credentials: 'include',
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       
       setWallets(prev => prev.filter(w => w.id !== walletId))
       

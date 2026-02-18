@@ -38,8 +38,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { validateWallet, generateWalletId, generateWalletColor } from '@/lib/utils/finance'
-import { db } from '@/lib/db'
+import { generateWalletColor } from '@/lib/utils/finance'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslations } from 'next-intl'
 
@@ -134,55 +133,37 @@ export function CreateWalletDialog({
     setIsLoading(true)
     
     try {
-      // Get current user (in a real app, this would come from auth)
-      const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a' // TODO: Get from auth context
-      
-      // Validate the wallet data
-      const validation = validateWallet({
-        ...data,
-        balance: data.balance || 0,
+      // Save via API (avoids IndexedDB initialization delays)
+      const res = await fetch('/api/personal-finance/wallets', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          type: data.type,
+          currency: data.currency,
+          balance: data.balance || 0,
+          creditLimit: data.type === 'credit_card' ? data.creditLimit : undefined,
+          closingDay: data.type === 'credit_card' ? data.closingDay : undefined,
+          dueDay: data.type === 'credit_card' ? data.dueDay : undefined,
+          accountNumber: data.type === 'bank' ? data.accountNumber : undefined,
+          bankName: data.type === 'bank' ? data.bankName : undefined,
+          color: data.color,
+          icon: data.icon,
+          notes: data.notes,
+        }),
       })
-      
-      if (!validation.isValid) {
-        const firstError = Object.values(validation.errors)[0]?.[0] || t('common.validationError')
-        toast({
-          title: t('wallets.dialog.validationError'),
-          description: firstError,
-          variant: 'destructive',
-        })
-        return
-      }
 
-      // Prepare wallet data
-      const walletData: PersonalWallet = {
-        id: generateWalletId(),
-        userId,
-        name: data.name,
-        type: data.type,
-        currency: data.currency,
-        balance: data.balance || 0,
-        creditLimit: data.type === 'credit_card' ? data.creditLimit : undefined,
-        closingDay: data.type === 'credit_card' ? data.closingDay : undefined,
-        dueDay: data.type === 'credit_card' ? data.dueDay : undefined,
-        accountNumber: data.type === 'bank' ? data.accountNumber : undefined,
-        bankName: data.type === 'bank' ? data.bankName : undefined,
-        color: data.color,
-        icon: data.icon,
-        isActive: true,
-        notes: data.notes,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-
-      // Save to database
-      await db.personalWallets.add(walletData)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json() as { success: boolean; data: PersonalWallet }
+      if (!json.success) throw new Error('API error')
 
       toast({
         title: t('wallets.dialog.walletCreated'),
         description: t('wallets.dialog.walletCreatedDesc', { name: data.name }),
       })
 
-      onWalletCreated?.(walletData)
+      onWalletCreated?.(json.data)
       handleOpenChange(false)
       form.reset()
 

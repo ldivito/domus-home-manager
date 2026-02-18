@@ -487,7 +487,7 @@ export default function PersonalFinancePage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium truncate">{transaction.description}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{transaction.date.toLocaleDateString()}</span>
+                          <span>{new Date(transaction.date).toLocaleDateString()}</span>
                           {transaction.wallet && (
                             <>
                               <span>•</span>

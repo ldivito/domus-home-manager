@@ -563,7 +563,7 @@ export function TransactionList() {
                       
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         {/* Date */}
-                        <span>{transaction.date.toLocaleDateString()}</span>
+                        <span>{new Date(transaction.date).toLocaleDateString()}</span>
                         
                         {/* Wallet Info */}
                         <div className="flex items-center gap-1">

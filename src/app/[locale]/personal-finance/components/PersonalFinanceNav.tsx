@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { 
   Home, 
@@ -15,68 +16,69 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const navigation = [
-  {
-    name: 'Dashboard',
-    href: '/personal-finance',
-    icon: Home,
-    description: 'Overview and quick actions'
-  },
-  {
-    name: 'Wallets',
-    href: '/personal-finance/wallets',
-    icon: Wallet,
-    description: 'Manage your accounts'
-  },
-  {
-    name: 'Transactions',
-    href: '/personal-finance/transactions',
-    icon: ArrowUpDown,
-    description: 'View transaction history'
-  },
-  {
-    name: 'Categories',
-    href: '/personal-finance/categories',
-    icon: Tags,
-    description: 'Organize your expenses'
-  },
-  {
-    name: 'Analytics',
-    href: '/personal-finance/analytics',
-    icon: BarChart3,
-    description: 'Charts and reports'
-  },
-  {
-    name: 'Settings',
-    href: '/personal-finance/settings',
-    icon: Settings,
-    description: 'Configure preferences'
-  }
-]
-
-const quickActions = [
-  {
-    name: 'Add Expense',
-    href: '/personal-finance/transactions/new?type=expense',
-    icon: TrendingUp,
-    variant: 'default' as const
-  },
-  {
-    name: 'Add Income',
-    href: '/personal-finance/transactions/new?type=income',
-    icon: TrendingUp,
-    variant: 'outline' as const
-  },
-  {
-    name: 'New Wallet',
-    href: '/personal-finance/wallets/new',
-    icon: Plus,
-    variant: 'outline' as const
-  }
-]
-
 export default function PersonalFinanceNav() {
   const pathname = usePathname()
+  const t = useTranslations('personalFinance')
+
+  const navigation = [
+    {
+      name: t('navigation.dashboard'),
+      href: '/personal-finance',
+      icon: Home,
+      description: t('navigation.dashboardDesc')
+    },
+    {
+      name: t('navigation.wallets'),
+      href: '/personal-finance/wallets',
+      icon: Wallet,
+      description: t('navigation.walletsDesc')
+    },
+    {
+      name: t('navigation.transactions'),
+      href: '/personal-finance/transactions',
+      icon: ArrowUpDown,
+      description: t('navigation.transactionsDesc')
+    },
+    {
+      name: t('navigation.categories'),
+      href: '/personal-finance/categories',
+      icon: Tags,
+      description: t('navigation.categoriesDesc')
+    },
+    {
+      name: t('navigation.analytics'),
+      href: '/personal-finance/analytics',
+      icon: BarChart3,
+      description: t('navigation.analyticsDesc')
+    },
+    {
+      name: t('navigation.settings'),
+      href: '/personal-finance/settings',
+      icon: Settings,
+      description: t('navigation.settingsDesc')
+    }
+  ]
+
+  const quickActions = [
+    {
+      name: t('dashboard.addExpense'),
+      href: '/personal-finance/transactions/new?type=expense',
+      icon: TrendingUp,
+      variant: 'default' as const
+    },
+    {
+      name: t('dashboard.addIncome'),
+      href: '/personal-finance/transactions/new?type=income',
+      icon: TrendingUp,
+      variant: 'outline' as const
+    },
+    {
+      name: t('dashboard.newWallet'),
+      href: '/personal-finance/wallets/new',
+      icon: Plus,
+      variant: 'outline' as const
+    }
+  ]
 
   const isActive = (href: string) => {
     if (href === '/personal-finance') {
@@ -95,7 +97,7 @@ export default function PersonalFinanceNav() {
           
           return (
             <Button
-              key={item.name}
+              key={item.href}
               asChild
               variant={active ? "default" : "ghost"}
               size="sm"
@@ -116,14 +118,14 @@ export default function PersonalFinanceNav() {
       {/* Quick Actions - Mobile Hidden on Small Screens */}
       <div className="hidden md:flex gap-2">
         <span className="text-sm text-muted-foreground flex items-center mr-2">
-          Quick:
+          {t('navigation.quick')}:
         </span>
         {quickActions.map((action) => {
           const Icon = action.icon
           
           return (
             <Button
-              key={action.name}
+              key={action.href}
               asChild
               variant={action.variant}
               size="sm"

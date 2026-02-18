@@ -37,7 +37,7 @@ interface DashboardData {
 }
 
 export default function PersonalFinancePage() {
-  // const t = useTranslations('personalFinance') // TODO: Add translations
+  const t = useTranslations('personalFinance')
   const [data, setData] = useState<DashboardData>({
     totalBalance: [],
     wallets: [],
@@ -112,11 +112,11 @@ export default function PersonalFinancePage() {
       
     } catch (error) {
       console.error('Error loading dashboard data:', error)
-      setError('Failed to load dashboard data. Please refresh the page.')
+      setError(t('dashboard.errorLoadingData'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     loadDashboardData()
@@ -159,9 +159,9 @@ export default function PersonalFinancePage() {
         <CardContent className="flex items-center justify-center p-6 text-center">
           <div>
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('dashboard.errorLoadingTitle')}</h3>
             <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={loadDashboardData}>Try Again</Button>
+            <Button onClick={loadDashboardData}>{t('common.tryAgain')}</Button>
           </div>
         </CardContent>
       </Card>
@@ -177,7 +177,9 @@ export default function PersonalFinancePage() {
           data.totalBalance.map((balance) => (
             <Card key={balance.currency}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total {balance.currency}</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t('dashboard.totalCurrency', { currency: balance.currency })}
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -191,7 +193,9 @@ export default function PersonalFinancePage() {
           <>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t('dashboard.totalCurrency', { currency: 'ARS' })}
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -200,7 +204,9 @@ export default function PersonalFinancePage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total USD</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t('dashboard.totalCurrency', { currency: 'USD' })}
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -213,7 +219,7 @@ export default function PersonalFinancePage() {
         {/* Active Wallets */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Wallets</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.activeWallets')}</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -224,7 +230,7 @@ export default function PersonalFinancePage() {
         {/* Monthly Net */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.thisMonth')}</CardTitle>
             {data.monthlyStats.net >= 0 ? (
               <TrendingUp className="h-4 w-4 text-green-600" />
             ) : (
@@ -235,7 +241,7 @@ export default function PersonalFinancePage() {
             <div className={`text-2xl font-bold ${monthlyStatsFormatted.netColor}`}>
               {monthlyStatsFormatted.net}
             </div>
-            <p className="text-xs text-muted-foreground">Net Income</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.netLabel')}</p>
           </CardContent>
         </Card>
       </div>
@@ -244,31 +250,31 @@ export default function PersonalFinancePage() {
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>{t('dashboard.quickActions')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Button asChild className="h-20 flex-col">
               <Link href="/personal-finance/transactions/new?type=expense">
                 <TrendingDown className="h-6 w-6 mb-2" />
-                Add Expense
+                {t('dashboard.addExpense')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-20 flex-col">
               <Link href="/personal-finance/transactions/new?type=income">
                 <TrendingUp className="h-6 w-6 mb-2" />
-                Add Income
+                {t('dashboard.addIncome')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-20 flex-col">
               <Link href="/personal-finance/transactions/new?type=transfer">
                 <ArrowUpDown className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                Transfer
+                {t('dashboard.transfer')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 sm:h-20 flex-col text-sm sm:text-base">
               <Link href="/personal-finance/wallets/new">
                 <Plus className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                New Wallet
+                {t('dashboard.newWallet')}
               </Link>
             </Button>
           </CardContent>
@@ -277,31 +283,31 @@ export default function PersonalFinancePage() {
         {/* Analytics Quick Access */}
         <Card>
           <CardHeader>
-            <CardTitle>Insights & Reports</CardTitle>
+            <CardTitle>{t('dashboard.insightsReports')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <Button asChild variant="outline" className="h-16 sm:h-20 flex-col text-sm sm:text-base">
               <Link href="/personal-finance/analytics">
                 <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                View Analytics
+                {t('dashboard.viewAnalytics')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 sm:h-20 flex-col text-sm sm:text-base">
               <Link href="/personal-finance/analytics">
                 <PieChart className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                Expense Breakdown
+                {t('dashboard.expenseBreakdown')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 sm:h-20 flex-col text-sm sm:text-base">
               <Link href="/personal-finance/transactions">
                 <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                All Transactions
+                {t('dashboard.allTransactions')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 sm:h-20 flex-col text-sm sm:text-base">
               <Link href="/personal-finance/wallets">
                 <Wallet className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                Manage Wallets
+                {t('dashboard.manageWallets')}
               </Link>
             </Button>
           </CardContent>
@@ -311,20 +317,20 @@ export default function PersonalFinancePage() {
       {/* Financial Health Snapshot */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Financial Health</CardTitle>
+          <CardTitle>{t('dashboard.financialHealth')}</CardTitle>
           <Link href="/personal-finance/analytics">
-            <Button variant="outline" size="sm">View Details</Button>
+            <Button variant="outline" size="sm">{t('common.viewDetails')}</Button>
           </Link>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold mb-1">{monthlyStatsFormatted.income}</div>
-              <div className="text-sm text-muted-foreground">Monthly Income</div>
+              <div className="text-sm text-muted-foreground">{t('dashboard.monthlyIncome')}</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold mb-1 text-red-600">{monthlyStatsFormatted.expenses}</div>
-              <div className="text-sm text-muted-foreground">Monthly Expenses</div>
+              <div className="text-sm text-muted-foreground">{t('dashboard.monthlyExpenses')}</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
               <div className={`text-2xl font-bold mb-1 ${monthlyStatsFormatted.netColor}`}>
@@ -335,8 +341,8 @@ export default function PersonalFinancePage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 {data.monthlyStats.expenses > 0 
-                  ? 'Income/Expense Ratio'
-                  : 'No Expenses Yet'
+                  ? t('dashboard.incomeExpenseRatio')
+                  : t('dashboard.noExpensesYet')
                 }
               </div>
             </div>
@@ -359,23 +365,23 @@ export default function PersonalFinancePage() {
         {/* Wallets */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Your Wallets</CardTitle>
+            <CardTitle>{t('dashboard.yourWallets')}</CardTitle>
             <Link href="/personal-finance/wallets">
-              <Button variant="outline" size="sm">View All</Button>
+              <Button variant="outline" size="sm">{t('common.viewAll')}</Button>
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
             {data.wallets.length === 0 ? (
               <div className="text-center py-6">
                 <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="font-medium mb-2">No wallets yet</h3>
+                <h3 className="font-medium mb-2">{t('dashboard.noWalletsYet')}</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Create your first wallet to start tracking your finances
+                  {t('dashboard.createFirstWalletDesc')}
                 </p>
                 <Link href="/personal-finance/wallets/new">
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Wallet
+                    {t('dashboard.addWallet')}
                   </Button>
                 </Link>
               </div>
@@ -411,23 +417,23 @@ export default function PersonalFinancePage() {
         {/* Recent Transactions */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Transactions</CardTitle>
+            <CardTitle>{t('dashboard.recentTransactions')}</CardTitle>
             <Link href="/personal-finance/transactions">
-              <Button variant="outline" size="sm">View All</Button>
+              <Button variant="outline" size="sm">{t('common.viewAll')}</Button>
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
             {data.recentTransactions.length === 0 ? (
               <div className="text-center py-6">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="font-medium mb-2">No transactions yet</h3>
+                <h3 className="font-medium mb-2">{t('dashboard.noTransactionsYet')}</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Your transaction history will appear here
+                  {t('dashboard.transactionHistoryDesc')}
                 </p>
                 <Link href="/personal-finance/transactions/new">
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Transaction
+                    {t('dashboard.addTransaction')}
                   </Button>
                 </Link>
               </div>

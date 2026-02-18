@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { 
   Select, 
   SelectContent, 
@@ -31,7 +30,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   Calculator,
-  Wallet
 } from 'lucide-react'
 import { db } from '@/lib/db'
 import { 
@@ -40,7 +38,6 @@ import {
   processTransactionBalanceUpdate,
   validateSufficientFunds,
   formatCurrency,
-  parseAmount
 } from '@/lib/utils/finance'
 import { 
   PersonalWallet, 
@@ -50,16 +47,17 @@ import {
   CurrencyType 
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslations } from 'next-intl'
 
 // Form validation schema
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
-  walletId: z.string().min(1, 'Wallet is required'),
+  walletId: z.string().min(1),
   categoryId: z.string().optional(),
   targetWalletId: z.string().optional(),
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.number().positive(),
   currency: z.enum(['ARS', 'USD']),
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().min(1),
   date: z.string(),
   notes: z.string().optional(),
   sharedWithHousehold: z.boolean().optional(),
@@ -118,6 +116,7 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const t = useTranslations('personalFinance')
   const [wallets, setWallets] = useState<PersonalWallet[]>([])
   const [categories, setCategories] = useState<PersonalCategory[]>([])
   const [loading, setLoading] = useState(false)
@@ -183,8 +182,8 @@ export function TransactionForm({
     } catch (error) {
       console.error('Error loading wallets:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to load wallets. Please refresh the page.',
+        title: t('transactions.form.errorLoadingWalletsTitle'),
+        description: t('transactions.form.errorLoadingWallets'),
         variant: 'destructive'
       })
     }
@@ -245,7 +244,7 @@ export function TransactionForm({
 
       if (!validation.isValid) {
         toast({
-          title: 'Validation Error',
+          title: t('transactions.form.validationError'),
           description: Object.values(validation.errors).flat().join(', '),
           variant: 'destructive'
         })
@@ -262,8 +261,8 @@ export function TransactionForm({
       }
 
       toast({
-        title: 'Success',
-        description: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} recorded successfully!`
+        title: t('transactions.form.success'),
+        description: t('transactions.form.successDesc')
       })
 
       // Reset form or navigate away
@@ -276,8 +275,8 @@ export function TransactionForm({
     } catch (error) {
       console.error('Error saving transaction:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to save transaction. Please try again.',
+        title: t('transactions.form.error'),
+        description: t('transactions.form.saveError'),
         variant: 'destructive'
       })
     } finally {
@@ -291,7 +290,7 @@ export function TransactionForm({
       const validation = await validateSufficientFunds(data.walletId, data.amount)
       if (!validation.isValid) {
         toast({
-          title: 'Insufficient Funds',
+          title: t('transactions.form.insufficientFunds'),
           description: validation.error,
           variant: 'destructive'
         })
@@ -342,7 +341,7 @@ export function TransactionForm({
     const validation = await validateSufficientFunds(data.walletId, data.amount)
     if (!validation.isValid) {
       toast({
-        title: 'Insufficient Funds',
+        title: t('transactions.form.insufficientFunds'),
         description: validation.error,
         variant: 'destructive'
       })
@@ -386,6 +385,15 @@ export function TransactionForm({
     await processTransactionBalanceUpdate(transaction)
   }
 
+  const getFormTitle = () => {
+    switch (watchType) {
+      case 'income': return t('transactions.form.newIncome')
+      case 'expense': return t('transactions.form.newExpense')
+      case 'transfer': return t('transactions.form.newTransfer')
+      default: return t('transactions.form.newExpense')
+    }
+  }
+
   const selectedWallet = wallets.find(w => w.id === watchWalletId)
   const targetWallet = wallets.find(w => w.id === form.getValues('targetWalletId'))
 
@@ -396,7 +404,7 @@ export function TransactionForm({
           {watchType === 'income' && <TrendingUp className="h-5 w-5 text-green-600" />}
           {watchType === 'expense' && <TrendingDown className="h-5 w-5 text-red-600" />}
           {watchType === 'transfer' && <ArrowUpDown className="h-5 w-5 text-blue-600" />}
-          New {watchType.charAt(0).toUpperCase() + watchType.slice(1)}
+          {getFormTitle()}
         </CardTitle>
       </CardHeader>
       
@@ -410,30 +418,30 @@ export function TransactionForm({
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Transaction Type</FormLabel>
+                  <FormLabel>{t('transactions.form.transactionType')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t('transactions.form.selectType')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="income">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-green-600" />
-                          Income
+                          {t('transactions.form.income')}
                         </div>
                       </SelectItem>
                       <SelectItem value="expense">
                         <div className="flex items-center gap-2">
                           <TrendingDown className="h-4 w-4 text-red-600" />
-                          Expense
+                          {t('transactions.form.expense')}
                         </div>
                       </SelectItem>
                       <SelectItem value="transfer">
                         <div className="flex items-center gap-2">
                           <ArrowUpDown className="h-4 w-4 text-blue-600" />
-                          Transfer
+                          {t('transactions.form.transfer')}
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -450,12 +458,15 @@ export function TransactionForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {watchType === 'transfer' ? 'From Wallet' : 'Wallet'}
+                    {watchType === 'transfer' 
+                      ? t('transactions.form.fromWallet') 
+                      : t('transactions.form.wallet')
+                    }
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select wallet" />
+                        <SelectValue placeholder={t('transactions.form.selectWallet')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -483,11 +494,11 @@ export function TransactionForm({
                 name="targetWalletId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>To Wallet</FormLabel>
+                    <FormLabel>{t('transactions.form.toWallet')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select target wallet" />
+                          <SelectValue placeholder={t('transactions.form.selectTargetWallet')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -505,7 +516,10 @@ export function TransactionForm({
                     </Select>
                     {selectedWallet && targetWallet && selectedWallet.currency !== targetWallet.currency && (
                       <p className="text-sm text-amber-600 mt-1">
-                        Converting {selectedWallet.currency} → {targetWallet.currency}
+                        {t('transactions.form.convertingCurrencies', { 
+                          from: selectedWallet.currency, 
+                          to: targetWallet.currency 
+                        })}
                       </p>
                     )}
                     <FormMessage />
@@ -521,11 +535,11 @@ export function TransactionForm({
                 name="categoryId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>{t('transactions.form.category')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder={t('transactions.form.selectCategory')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -554,7 +568,7 @@ export function TransactionForm({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>{t('transactions.form.amount')}</FormLabel>
                   <div className="relative">
                     <FormControl>
                       <Input
@@ -584,13 +598,15 @@ export function TransactionForm({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('transactions.form.descriptionLabel')}</FormLabel>
                   <FormControl>
                     <Input
                       placeholder={
-                        watchType === 'income' ? 'Salary, freelance, etc.' :
-                        watchType === 'expense' ? 'Groceries, rent, etc.' :
-                        'Transfer description'
+                        watchType === 'income' 
+                          ? t('transactions.form.descriptionPlaceholderIncome') 
+                          : watchType === 'expense' 
+                            ? t('transactions.form.descriptionPlaceholderExpense')
+                            : t('transactions.form.descriptionPlaceholderTransfer')
                       }
                       {...field}
                     />
@@ -606,7 +622,7 @@ export function TransactionForm({
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>{t('transactions.form.date')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -621,10 +637,10 @@ export function TransactionForm({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormLabel>{t('transactions.form.notes')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Additional details..."
+                      placeholder={t('transactions.form.notesPlaceholder')}
                       className="resize-none"
                       {...field}
                     />
@@ -649,9 +665,9 @@ export function TransactionForm({
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Share with household</FormLabel>
+                        <FormLabel>{t('transactions.form.shareWithHousehold')}</FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Add part or all of this income to the household budget
+                          {t('transactions.form.shareWithHouseholdDesc')}
                         </p>
                       </div>
                     </FormItem>
@@ -664,7 +680,7 @@ export function TransactionForm({
                     name="householdContribution"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Household contribution amount</FormLabel>
+                        <FormLabel>{t('transactions.form.householdContribution')}</FormLabel>
                         <div className="relative">
                           <FormControl>
                             <Input
@@ -701,7 +717,10 @@ export function TransactionForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Exchange Rate ({selectedWallet.currency} to {targetWallet.currency})
+                      {t('transactions.form.exchangeRate', { 
+                        from: selectedWallet.currency, 
+                        to: targetWallet.currency 
+                      })}
                     </FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
@@ -746,14 +765,17 @@ export function TransactionForm({
                 disabled={loading || calculating}
                 className="flex-1"
               >
-                {loading ? 'Saving...' : `Save ${watchType}`}
+                {loading 
+                  ? t('transactions.form.saving') 
+                  : `${t('transactions.form.save')} ${getFormTitle()}`
+                }
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={onCancel || (() => router.back())}
               >
-                Cancel
+                {t('transactions.form.cancel')}
               </Button>
             </div>
           </form>

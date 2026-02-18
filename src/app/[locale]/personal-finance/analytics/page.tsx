@@ -46,7 +46,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  // const t = useTranslations('personalFinance') // TODO: Add translations
+  const t = useTranslations('personalFinance')
   const [timeRange, setTimeRange] = useState<TimeRange>('last30days')
   const [currency, setCurrency] = useState<'ARS' | 'USD' | 'ALL'>('ALL')
   const [data, setData] = useState<AnalyticsData>({
@@ -253,12 +253,12 @@ export default function AnalyticsPage() {
   }
 
   const timeRangeOptions = [
-    { value: 'last7days', label: 'Last 7 days' },
-    { value: 'last30days', label: 'Last 30 days' },
-    { value: 'last3months', label: 'Last 3 months' },
-    { value: 'last6months', label: 'Last 6 months' },
-    { value: 'currentyear', label: 'Current year' },
-    { value: 'lastyear', label: 'Last year' }
+    { value: 'last7days', label: t('analytics.timeRanges.last7days') },
+    { value: 'last30days', label: t('analytics.timeRanges.last30days') },
+    { value: 'last3months', label: t('analytics.timeRanges.last3months') },
+    { value: 'last6months', label: t('analytics.timeRanges.last6months') },
+    { value: 'currentyear', label: t('analytics.timeRanges.currentyear') },
+    { value: 'lastyear', label: t('analytics.timeRanges.lastyear') }
   ]
 
   if (loading) {
@@ -312,7 +312,7 @@ export default function AnalyticsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
+              <SelectItem value="ALL">{t('analytics.allCurrencies')}</SelectItem>
               <SelectItem value="ARS">ARS</SelectItem>
               <SelectItem value="USD">USD</SelectItem>
             </SelectContent>
@@ -325,7 +325,7 @@ export default function AnalyticsPage() {
           className="w-full sm:w-auto"
         >
           <Download className="h-4 w-4 mr-2" />
-          Export Data
+          {t('analytics.exportData')}
         </Button>
       </div>
 
@@ -333,7 +333,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.totalIncome')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -351,7 +351,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.totalExpenses')}</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -369,7 +369,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Income</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.netIncome')}</CardTitle>
             <DollarSign className={`h-4 w-4 ${data.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`} />
           </CardHeader>
           <CardContent>
@@ -387,7 +387,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Daily Expense</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.avgDailyExpense')}</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -398,7 +398,7 @@ export default function AnalyticsPage() {
               }
             </div>
             <p className="text-xs text-muted-foreground">
-              Per day
+              {t('analytics.perDay')}
             </p>
           </CardContent>
         </Card>
@@ -409,7 +409,7 @@ export default function AnalyticsPage() {
         {/* Income vs Expenses Trend */}
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Financial Trends</CardTitle>
+            <CardTitle>{t('analytics.charts.financialTrends')}</CardTitle>
           </CardHeader>
           <CardContent>
             <FinancialTrends data={data.monthlyData} currency={currency} />
@@ -419,7 +419,7 @@ export default function AnalyticsPage() {
         {/* Category Breakdown */}
         <Card>
           <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
+            <CardTitle>{t('analytics.charts.expensesByCategory')}</CardTitle>
           </CardHeader>
           <CardContent>
             <CategoryBreakdown data={data.categoryBreakdown} />
@@ -429,7 +429,7 @@ export default function AnalyticsPage() {
         {/* Monthly Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Overview</CardTitle>
+            <CardTitle>{t('analytics.charts.monthlyOverview')}</CardTitle>
           </CardHeader>
           <CardContent>
             <MonthlyOverview data={data.monthlyData} currency={currency} />
@@ -439,7 +439,7 @@ export default function AnalyticsPage() {
         {/* Income Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Income Breakdown</CardTitle>
+            <CardTitle>{t('analytics.charts.incomeBreakdown')}</CardTitle>
           </CardHeader>
           <CardContent>
             <IncomeChart 
@@ -452,7 +452,7 @@ export default function AnalyticsPage() {
         {/* Expense Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Expense Details</CardTitle>
+            <CardTitle>{t('analytics.charts.expenseDetails')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ExpenseChart 

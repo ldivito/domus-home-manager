@@ -23,6 +23,7 @@ import {
 import { formatBalance, calculateAvailableCredit } from '@/lib/utils/finance'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 interface WalletCardProps {
   wallet: PersonalWallet
@@ -61,6 +62,7 @@ export function WalletCard({
   onToggleVisibility,
   showBalance: defaultShowBalance = true 
 }: WalletCardProps) {
+  const t = useTranslations('personalFinance')
   const [balanceVisible, setBalanceVisible] = useState(defaultShowBalance)
   
   const balanceInfo = formatBalance(wallet.balance || 0, wallet.currency)
@@ -71,11 +73,20 @@ export function WalletCard({
   const getWalletTypeInfo = (type: string) => {
     switch (type) {
       case 'credit_card':
-        return { displayName: 'Credit Card', badge: 'Credit' }
+        return { 
+          displayName: t('wallets.card.typeCreditCard'), 
+          badge: t('wallets.card.badgeCredit') 
+        }
       case 'bank':
-        return { displayName: 'Bank Account', badge: 'Bank' }
+        return { 
+          displayName: t('wallets.card.typeBank'), 
+          badge: t('wallets.card.badgeBank') 
+        }
       default:
-        return { displayName: 'Physical Wallet', badge: 'Cash' }
+        return { 
+          displayName: t('wallets.card.typePhysical'), 
+          badge: t('wallets.card.badgeCash') 
+        }
     }
   }
   
@@ -146,19 +157,19 @@ export function WalletCard({
                   {balanceVisible ? (
                     <>
                       <EyeOff className="h-4 w-4 mr-2" />
-                      Hide balance
+                      {t('wallets.card.hideBalance')}
                     </>
                   ) : (
                     <>
                       <Eye className="h-4 w-4 mr-2" />
-                      Show balance
+                      {t('wallets.card.showBalance')}
                     </>
                   )}
                 </DropdownMenuItem>
                 {onEdit && (
                   <DropdownMenuItem onClick={() => onEdit(wallet)}>
                     <Pencil className="h-4 w-4 mr-2" />
-                    Edit wallet
+                    {t('wallets.card.editWallet')}
                   </DropdownMenuItem>
                 )}
                 {onDelete && (
@@ -167,7 +178,7 @@ export function WalletCard({
                     className="text-red-600 focus:text-red-600"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete wallet
+                    {t('wallets.card.deleteWallet')}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -181,7 +192,10 @@ export function WalletCard({
           {/* Main Balance */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-muted-foreground">
-              {wallet.type === 'credit_card' ? 'Current Balance' : 'Available Balance'}
+              {wallet.type === 'credit_card' 
+                ? t('wallets.card.currentBalance') 
+                : t('wallets.card.availableBalance')
+              }
             </span>
             <div className="text-right">
               <div className={`text-xl font-bold ${balanceInfo.colorClass}`}>
@@ -194,14 +208,14 @@ export function WalletCard({
           {wallet.type === 'credit_card' && wallet.creditLimit && (
             <div className="space-y-2 pt-2 border-t">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Credit Limit</span>
+                <span className="text-muted-foreground">{t('wallets.card.creditLimit')}</span>
                 <span className="font-medium">
                   {balanceVisible ? formatBalance(wallet.creditLimit, wallet.currency).formatted : '••••••'}
                 </span>
               </div>
               {availableCredit !== null && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Available Credit</span>
+                  <span className="text-muted-foreground">{t('wallets.card.availableCredit')}</span>
                   <span className="font-medium text-green-600">
                     {balanceVisible ? formatBalance(availableCredit, wallet.currency).formatted : '••••••'}
                   </span>
@@ -209,9 +223,9 @@ export function WalletCard({
               )}
               {wallet.dueDay && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Payment Due</span>
+                  <span className="text-muted-foreground">{t('wallets.card.paymentDue')}</span>
                   <span className="font-medium">
-                    Day {wallet.dueDay} of month
+                    {t('wallets.card.dueDay', { day: wallet.dueDay })}
                   </span>
                 </div>
               )}
@@ -221,7 +235,7 @@ export function WalletCard({
           {/* Bank specific info */}
           {wallet.type === 'bank' && wallet.bankName && (
             <div className="flex items-center justify-between text-sm pt-2 border-t">
-              <span className="text-muted-foreground">Bank</span>
+              <span className="text-muted-foreground">{t('wallets.card.bankLabel')}</span>
               <span className="font-medium">{wallet.bankName}</span>
             </div>
           )}
@@ -235,7 +249,7 @@ export function WalletCard({
               className="flex-1"
             >
               <Link href={`/personal-finance/wallets/${wallet.id}`}>
-                View Details
+                {t('common.viewDetails')}
               </Link>
             </Button>
             <Button 
@@ -244,7 +258,7 @@ export function WalletCard({
               className="flex-1"
             >
               <Link href={`/personal-finance/transactions/new?walletId=${wallet.id}`}>
-                New Transaction
+                {t('wallets.card.newTransaction')}
               </Link>
             </Button>
           </div>

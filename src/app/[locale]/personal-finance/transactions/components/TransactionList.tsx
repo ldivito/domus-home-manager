@@ -49,6 +49,7 @@ import {
   TransactionType 
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslations } from 'next-intl'
 
 interface TransactionFilters {
   search: string
@@ -78,6 +79,7 @@ interface TransactionWithDetails extends PersonalTransaction {
 
 export function TransactionList() {
   const { toast } = useToast()
+  const t = useTranslations('personalFinance')
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([])
   const [wallets, setWallets] = useState<PersonalWallet[]>([])
   const [categories, setCategories] = useState<PersonalCategory[]>([])
@@ -96,14 +98,14 @@ export function TransactionList() {
     } catch (error) {
       console.error('Error loading data:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to load transactions. Please refresh the page.',
+        title: t('common.error'),
+        description: t('transactions.list.loadError'),
         variant: 'destructive'
       })
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   const loadTransactions = async () => {
     // In a real app, filter by current user
@@ -196,16 +198,18 @@ export function TransactionList() {
           start: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
           end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
         }
-      case 'week':
+      case 'week': {
         const startOfWeek = new Date(now)
         startOfWeek.setDate(now.getDate() - now.getDay())
         return { start: startOfWeek, end: now }
+      }
       case 'month':
         return getCurrentMonthRange()
-      case 'last-month':
+      case 'last-month': {
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
         const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
         return { start: lastMonth, end: endLastMonth }
+      }
       case '3-months':
         return getLastNMonthsRange(3)
       default:
@@ -214,7 +218,7 @@ export function TransactionList() {
   }
 
   const handleDeleteTransaction = async (transactionId: string) => {
-    if (!confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+    if (!confirm(t('transactions.list.confirmDelete'))) {
       return
     }
 
@@ -232,14 +236,14 @@ export function TransactionList() {
       await loadData()
 
       toast({
-        title: 'Success',
-        description: 'Transaction deleted successfully'
+        title: t('transactions.list.deleteSuccessTitle'),
+        description: t('transactions.list.deleteSuccess')
       })
     } catch (error) {
       console.error('Error deleting transaction:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to delete transaction',
+        title: t('transactions.list.deleteErrorTitle'),
+        description: t('transactions.list.deleteError'),
         variant: 'destructive'
       })
     }
@@ -311,10 +315,10 @@ export function TransactionList() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters
+              {t('transactions.list.filtersTitle')}
               {hasActiveFilters() && (
                 <Badge variant="secondary" className="ml-2">
-                  Active
+                  {t('transactions.list.activeFilters')}
                 </Badge>
               )}
             </CardTitle>
@@ -324,7 +328,10 @@ export function TransactionList() {
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
               >
-                {showFilters ? 'Hide' : 'Show'} Filters
+                {showFilters 
+                  ? t('transactions.list.hideFilters') 
+                  : t('transactions.list.showFilters')
+                }
               </Button>
               {hasActiveFilters() && (
                 <Button
@@ -332,7 +339,7 @@ export function TransactionList() {
                   size="sm"
                   onClick={clearFilters}
                 >
-                  Clear All
+                  {t('transactions.list.clearAll')}
                 </Button>
               )}
             </div>
@@ -345,7 +352,7 @@ export function TransactionList() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search transactions..."
+                placeholder={t('transactions.list.searchPlaceholder')}
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                 className="pl-10"
@@ -358,7 +365,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Tag className="h-3 w-3" />
-                  Type
+                  {t('transactions.list.typeFilter')}
                 </label>
                 <Select
                   value={filters.type}
@@ -368,23 +375,23 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="all">{t('transactions.list.allTypes')}</SelectItem>
                     <SelectItem value="income">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-green-600" />
-                        Income
+                        {t('transactions.list.income')}
                       </div>
                     </SelectItem>
                     <SelectItem value="expense">
                       <div className="flex items-center gap-2">
                         <TrendingDown className="h-4 w-4 text-red-600" />
-                        Expense
+                        {t('transactions.list.expenses')}
                       </div>
                     </SelectItem>
                     <SelectItem value="transfer">
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4 text-blue-600" />
-                        Transfer
+                        {t('transactions.form.transfer')}
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -395,7 +402,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Wallet className="h-3 w-3" />
-                  Wallet
+                  {t('transactions.list.walletFilter')}
                 </label>
                 <Select
                   value={filters.walletId}
@@ -405,7 +412,7 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Wallets</SelectItem>
+                    <SelectItem value="all">{t('transactions.list.allWallets')}</SelectItem>
                     {wallets.map(wallet => (
                       <SelectItem key={wallet.id} value={wallet.id!}>
                         <div className="flex items-center gap-2">
@@ -425,7 +432,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Tag className="h-3 w-3" />
-                  Category
+                  {t('transactions.list.categoryFilter')}
                 </label>
                 <Select
                   value={filters.categoryId}
@@ -435,7 +442,7 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="all">{t('transactions.list.allCategories')}</SelectItem>
                     {categories.map(category => (
                       <SelectItem key={category.id} value={category.id!}>
                         <div className="flex items-center gap-2">
@@ -455,7 +462,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Date Range
+                  {t('transactions.list.dateRange')}
                 </label>
                 <Select
                   value={filters.dateRange}
@@ -465,12 +472,12 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">This Week</SelectItem>
-                    <SelectItem value="month">This Month</SelectItem>
-                    <SelectItem value="last-month">Last Month</SelectItem>
-                    <SelectItem value="3-months">Last 3 Months</SelectItem>
+                    <SelectItem value="all">{t('transactions.list.allTime')}</SelectItem>
+                    <SelectItem value="today">{t('transactions.list.today')}</SelectItem>
+                    <SelectItem value="week">{t('transactions.list.thisWeek')}</SelectItem>
+                    <SelectItem value="month">{t('transactions.list.thisMonth')}</SelectItem>
+                    <SelectItem value="last-month">{t('transactions.list.lastMonth')}</SelectItem>
+                    <SelectItem value="3-months">{t('transactions.list.last3Months')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,7 +486,7 @@ export function TransactionList() {
             {/* Sort Options */}
             <div className="flex gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Sort By</label>
+                <label className="text-sm font-medium">{t('transactions.list.sortBy')}</label>
                 <Select
                   value={filters.sortBy}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'amount' }))}
@@ -488,14 +495,14 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="amount">Amount</SelectItem>
+                    <SelectItem value="date">{t('transactions.list.sortByDate')}</SelectItem>
+                    <SelectItem value="amount">{t('transactions.list.sortByAmount')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Order</label>
+                <label className="text-sm font-medium">{t('transactions.list.order')}</label>
                 <Select
                   value={filters.sortOrder}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortOrder: value as 'asc' | 'desc' }))}
@@ -504,8 +511,8 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="desc">Newest First</SelectItem>
-                    <SelectItem value="asc">Oldest First</SelectItem>
+                    <SelectItem value="desc">{t('transactions.list.newestFirst')}</SelectItem>
+                    <SelectItem value="asc">{t('transactions.list.oldestFirst')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -520,11 +527,11 @@ export function TransactionList() {
           <CardContent className="py-12 text-center">
             <div className="text-muted-foreground">
               <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No transactions found</h3>
+              <h3 className="text-lg font-medium mb-2">{t('transactions.list.noTransactionsFound')}</h3>
               <p>
                 {hasActiveFilters() 
-                  ? "Try adjusting your filters or search terms"
-                  : "Your transaction history will appear here"
+                  ? t('transactions.list.noTransactionsFoundFilterDesc')
+                  : t('transactions.list.noTransactionsDesc')
                 }
               </p>
             </div>
@@ -605,7 +612,9 @@ export function TransactionList() {
                       </div>
                       {transaction.sharedWithHousehold && transaction.householdContribution && (
                         <div className="text-xs text-muted-foreground">
-                          {formatCurrency(transaction.householdContribution, transaction.currency)} shared
+                          {t('transactions.list.shared', { 
+                            amount: formatCurrency(transaction.householdContribution, transaction.currency) 
+                          })}
                         </div>
                       )}
                     </div>
@@ -620,7 +629,7 @@ export function TransactionList() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => console.log('Edit:', transaction.id)}>
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          {t('transactions.list.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -628,7 +637,7 @@ export function TransactionList() {
                           onClick={() => handleDeleteTransaction(transaction.id!)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          {t('transactions.list.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -645,10 +654,12 @@ export function TransactionList() {
         <Card>
           <CardContent className="p-4">
             <div className="flex justify-between items-center text-sm text-muted-foreground">
-              <span>Showing {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</span>
+              <span>
+                {t('transactions.list.showing', { count: transactions.length })}
+              </span>
               <div className="flex gap-4">
                 <span className="text-green-600">
-                  Income: {formatCurrency(
+                  {t('transactions.list.income')}: {formatCurrency(
                     transactions
                       .filter(t => t.type === 'income')
                       .reduce((sum, t) => sum + t.amount, 0),
@@ -656,7 +667,7 @@ export function TransactionList() {
                   )}
                 </span>
                 <span className="text-red-600">
-                  Expenses: {formatCurrency(
+                  {t('transactions.list.expenses')}: {formatCurrency(
                     transactions
                       .filter(t => t.type === 'expense')
                       .reduce((sum, t) => sum + t.amount, 0),

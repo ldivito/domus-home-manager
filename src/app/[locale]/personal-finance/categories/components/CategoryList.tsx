@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { CreateCategoryDialog } from './CreateCategoryDialog'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface CategoryListProps {
   categories: PersonalCategory[]
@@ -33,10 +34,14 @@ export function CategoryList({
   categories,
   onEdit,
   onDelete,
-  emptyMessage = "No categories found",
-  emptyDescription = "Create your first category to get started"
+  emptyMessage,
+  emptyDescription
 }: CategoryListProps) {
+  const t = useTranslations('personalFinance')
   const [editingCategory, setEditingCategory] = useState<PersonalCategory | null>(null)
+
+  const resolvedEmptyMessage = emptyMessage ?? t('categories.noExpenseCategories')
+  const resolvedEmptyDescription = emptyDescription ?? t('categories.noExpenseCategoriesDesc')
 
   const handleEditClick = (category: PersonalCategory) => {
     setEditingCategory(category)
@@ -54,9 +59,9 @@ export function CategoryList({
       <Card>
         <CardContent className="p-8 text-center">
           <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">{emptyMessage}</h3>
+          <h3 className="font-semibold mb-2">{resolvedEmptyMessage}</h3>
           <p className="text-muted-foreground">
-            {emptyDescription}
+            {resolvedEmptyDescription}
           </p>
         </CardContent>
       </Card>
@@ -100,11 +105,14 @@ export function CategoryList({
                         }}
                         className="text-xs"
                       >
-                        {category.type === 'income' ? 'Income' : 'Expense'}
+                        {category.type === 'income' 
+                          ? t('categories.card.income') 
+                          : t('categories.card.expense')
+                        }
                       </Badge>
                       {category.isDefault && (
                         <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-800">
-                          System Default
+                          {t('categories.card.systemDefault')}
                         </Badge>
                       )}
                     </div>
@@ -128,7 +136,7 @@ export function CategoryList({
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => handleEditClick(category)}>
                         <Pencil className="h-4 w-4 mr-2" />
-                        Edit category
+                        {t('categories.card.editCategory')}
                       </DropdownMenuItem>
                       {!category.isDefault && (
                         <>
@@ -138,7 +146,7 @@ export function CategoryList({
                             className="text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete category
+                            {t('categories.card.deleteCategory')}
                           </DropdownMenuItem>
                         </>
                       )}

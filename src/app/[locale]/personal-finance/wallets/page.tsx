@@ -42,7 +42,8 @@ export default function WalletsPage() {
     try {
       setLoading(true)
       const fetchedWallets = await db.personalWallets
-        .where({ userId, isActive: 1 })
+        .where('userId').equals(userId)
+        .filter(w => w.isActive === true)
         .toArray()
       
       // Sort by creation date (newest first)

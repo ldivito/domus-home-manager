@@ -112,7 +112,7 @@ export default function DataExportDialog({
     if (options.includeWallets) {
       // Load wallets from database
       const { db } = await import('@/lib/db')
-      const wallets = await db.personalWallets.where('isActive').equals(1).toArray()
+      const wallets = await db.personalWallets.filter(w => w.isActive === true).toArray()
       
       if (wallets.length > 0) {
         csvContent += '=== WALLETS ===\n'
@@ -136,7 +136,7 @@ export default function DataExportDialog({
     if (options.includeCategories) {
       // Load categories from database
       const { db } = await import('@/lib/db')
-      const categories = await db.personalCategories.where('isActive').equals(1).toArray()
+      const categories = await db.personalCategories.filter(c => c.isActive === true).toArray()
       
       if (categories.length > 0) {
         csvContent += '=== CATEGORIES ===\n'
@@ -245,7 +245,7 @@ export default function DataExportDialog({
     // Wallets
     if (options.includeWallets) {
       const { db } = await import('@/lib/db')
-      const wallets = await db.personalWallets.where('isActive').equals(1).toArray()
+      const wallets = await db.personalWallets.filter(w => w.isActive === true).toArray()
       
       exportData.wallets = wallets.map(wallet => ({
         id: wallet.id,
@@ -261,7 +261,7 @@ export default function DataExportDialog({
     // Categories
     if (options.includeCategories) {
       const { db } = await import('@/lib/db')
-      const categories = await db.personalCategories.where('isActive').equals(1).toArray()
+      const categories = await db.personalCategories.filter(c => c.isActive === true).toArray()
       
       exportData.categories = categories.map(category => ({
         id: category.id,

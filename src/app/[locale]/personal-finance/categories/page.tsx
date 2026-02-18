@@ -36,7 +36,8 @@ export default function CategoriesPage() {
     try {
       setLoading(true)
       const fetchedCategories = await db.personalCategories
-        .where({ userId, isActive: 1 })
+        .where('userId').equals(userId)
+        .filter(c => c.isActive === true)
         .toArray()
       
       // Sort by creation date (newest first), but put default categories first

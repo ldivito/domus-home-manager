@@ -1,18 +1,16 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Wallet, TrendingUp, TrendingDown, Plus, CreditCard, ArrowUpDown, AlertCircle, BarChart3, PieChart } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Plus, CreditCard, ArrowUpDown, BarChart3, PieChart } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { db } from '@/lib/db'
 import { 
   formatCurrency, 
-  getWalletBalanceSummary,
   getCurrentMonthRange
-  // filterTransactionsByDateRange,  // TODO: Used in filtering
-  // sortTransactionsByDate         // TODO: Used in sorting
 } from '@/lib/utils/finance'
 import { 
   PersonalWallet, 
@@ -21,117 +19,94 @@ import {
   CurrencyType
 } from '@/types/personal-finance'
 import CreditCardNotifications from './components/CreditCardNotifications'
-
-interface DashboardData {
-  totalBalance: { currency: CurrencyType; total: number }[]
-  wallets: PersonalWallet[]
-  recentTransactions: (PersonalTransaction & { 
-    wallet?: PersonalWallet
-    category?: PersonalCategory 
-  })[]
-  monthlyStats: {
-    income: number
-    expenses: number
-    net: number
-  }
-}
+import { useSyncContext } from '@/contexts/SyncContext'
 
 export default function PersonalFinancePage() {
   const t = useTranslations('personalFinance')
-  const [data, setData] = useState<DashboardData>({
-    totalBalance: [],
-    wallets: [],
-    recentTransactions: [],
-    monthlyStats: { income: 0, expenses: 0, net: 0 }
-  })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { triggerSync } = useSyncContext()
 
-  // Optimize data loading with useCallback
-  const loadDashboardData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      // In a real app, get current user ID from auth context
-      const userId = 'current-user-id'
-      
-      // Load wallets
-      const wallets = await db.personalWallets
-        .where('isActive')
-        .equals(1)
-        .toArray()
-      
-      // Load categories
-      const categories = await db.personalCategories
-        .where('isActive')
-        .equals(1)
-        .toArray()
-      
-      // Calculate balance summary
-      const balanceSummary = await getWalletBalanceSummary(userId)
-      
-      // Load recent transactions (last 10)
-      const allTransactions = await db.personalTransactions
-        .orderBy('date')
-        .reverse()
-        .limit(10)
-        .toArray()
-      
-      // Enrich transactions with wallet and category info
-      const enrichedTransactions = allTransactions.map(txn => ({
-        ...txn,
-        wallet: wallets.find(w => w.id === txn.walletId),
-        category: categories.find(c => c.id === txn.categoryId)
-      }))
-      
-      // Calculate monthly stats
-      const monthRange = getCurrentMonthRange()
-      const monthTransactions = await db.personalTransactions
-        .where('date')
-        .between(monthRange.start, monthRange.end)
-        .toArray()
-      
-      const monthlyStats = {
-        income: monthTransactions
-          .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0),
-        expenses: monthTransactions
-          .filter(t => t.type === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0),
-        net: 0
-      }
-      monthlyStats.net = monthlyStats.income - monthlyStats.expenses
-      
-      setData({
-        totalBalance: balanceSummary.totalByCurrency,
-        wallets,
-        recentTransactions: enrichedTransactions,
-        monthlyStats
-      })
-      
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-      setError(t('dashboard.errorLoadingData'))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
-
+  // Trigger sync on mount so data is siempre fresco
   useEffect(() => {
-    loadDashboardData()
-  }, [loadDashboardData])
+    triggerSync(false, true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Memoized calculations for performance
+  // Live queries — se actualizan automáticamente cada vez que Dexie cambia (sync, escrituras, etc.)
+  const wallets = useLiveQuery(
+    () => db.personalWallets.where('isActive').equals(1).toArray(),
+    []
+  )
+  const categories = useLiveQuery(
+    () => db.personalCategories.where('isActive').equals(1).toArray(),
+    []
+  )
+  const recentTransactions = useLiveQuery(
+    () => db.personalTransactions.orderBy('date').reverse().limit(10).toArray(),
+    []
+  )
+  const monthTransactions = useLiveQuery(
+    () => {
+      const range = getCurrentMonthRange()
+      return db.personalTransactions
+        .where('date')
+        .between(range.start, range.end)
+        .toArray()
+    },
+    []
+  )
+
+  // Loading: undefined significa que useLiveQuery todavía está cargando
+  const loading = wallets === undefined || categories === undefined ||
+    recentTransactions === undefined || monthTransactions === undefined
+
+  // Derivado: balance total por moneda (calculado desde wallets)
+  const totalBalance = useMemo((): { currency: CurrencyType; total: number }[] => {
+    if (!wallets) return []
+    return wallets.reduce((acc, wallet) => {
+      const existing = acc.find(item => item.currency === wallet.currency)
+      if (existing) {
+        existing.total += wallet.balance
+      } else {
+        acc.push({ currency: wallet.currency as CurrencyType, total: wallet.balance })
+      }
+      return acc
+    }, [] as { currency: CurrencyType; total: number }[])
+  }, [wallets])
+
+  // Derivado: transacciones enriquecidas con wallet y categoría
+  const enrichedTransactions = useMemo(() => {
+    if (!recentTransactions || !wallets || !categories) return []
+    return recentTransactions.map(txn => ({
+      ...txn,
+      wallet: wallets.find(w => w.id === txn.walletId),
+      category: categories.find(c => c.id === txn.categoryId)
+    }))
+  }, [recentTransactions, wallets, categories])
+
+  // Derivado: estadísticas del mes
+  const monthlyStats = useMemo(() => {
+    if (!monthTransactions) return { income: 0, expenses: 0, net: 0 }
+    const income = monthTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0)
+    const expenses = monthTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0)
+    return { income, expenses, net: income - expenses }
+  }, [monthTransactions])
+
+  // Memoized: stats formateadas
   const monthlyStatsFormatted = useMemo(() => {
-    const { income, expenses, net } = data.monthlyStats
+    const { income, expenses, net } = monthlyStats
     return {
       income: formatCurrency(income, 'ARS'),
       expenses: formatCurrency(expenses, 'ARS'),
       net: formatCurrency(net, 'ARS'),
       netColor: net >= 0 ? 'text-green-600' : 'text-red-600'
     }
-  }, [data.monthlyStats])
+  }, [monthlyStats])
+
+  // Dummy state para satisfacer la firma de useState que se usaba antes
+  // (removido — ya no se necesita)
 
   if (loading) {
     return (
@@ -153,28 +128,13 @@ export default function PersonalFinancePage() {
     )
   }
 
-  if (error) {
-    return (
-      <Card className="max-w-md mx-auto">
-        <CardContent className="flex items-center justify-center p-6 text-center">
-          <div>
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t('dashboard.errorLoadingTitle')}</h3>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={loadDashboardData}>{t('common.tryAgain')}</Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <div className="space-y-6">
       {/* Balance Overview */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Currency Balances */}
-        {data.totalBalance.length > 0 ? (
-          data.totalBalance.map((balance) => (
+        {totalBalance.length > 0 ? (
+          totalBalance.map((balance) => (
             <Card key={balance.currency}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -223,7 +183,7 @@ export default function PersonalFinancePage() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.wallets.length}</div>
+            <div className="text-2xl font-bold">{wallets.length}</div>
           </CardContent>
         </Card>
 
@@ -231,7 +191,7 @@ export default function PersonalFinancePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.thisMonth')}</CardTitle>
-            {data.monthlyStats.net >= 0 ? (
+            {monthlyStats.net >= 0 ? (
               <TrendingUp className="h-4 w-4 text-green-600" />
             ) : (
               <TrendingDown className="h-4 w-4 text-red-600" />
@@ -334,13 +294,13 @@ export default function PersonalFinancePage() {
             </div>
             <div className="text-center p-4 border rounded-lg">
               <div className={`text-2xl font-bold mb-1 ${monthlyStatsFormatted.netColor}`}>
-                {data.monthlyStats.expenses > 0 
-                  ? `${((data.monthlyStats.income / data.monthlyStats.expenses) * 100).toFixed(0)}%`
+                {monthlyStats.expenses > 0 
+                  ? `${((monthlyStats.income / monthlyStats.expenses) * 100).toFixed(0)}%`
                   : '∞'
                 }
               </div>
               <div className="text-sm text-muted-foreground">
-                {data.monthlyStats.expenses > 0 
+                {monthlyStats.expenses > 0 
                   ? t('dashboard.incomeExpenseRatio')
                   : t('dashboard.noExpensesYet')
                 }
@@ -371,7 +331,7 @@ export default function PersonalFinancePage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            {data.wallets.length === 0 ? (
+            {wallets.length === 0 ? (
               <div className="text-center py-6">
                 <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="font-medium mb-2">{t('dashboard.noWalletsYet')}</h3>
@@ -386,7 +346,7 @@ export default function PersonalFinancePage() {
                 </Link>
               </div>
             ) : (
-              data.wallets.slice(0, 4).map((wallet) => (
+              wallets.slice(0, 4).map((wallet) => (
                 <div key={wallet.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 rounded-full" style={{ backgroundColor: `${wallet.color}20` }}>
@@ -423,7 +383,7 @@ export default function PersonalFinancePage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            {data.recentTransactions.length === 0 ? (
+            {enrichedTransactions.length === 0 ? (
               <div className="text-center py-6">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="font-medium mb-2">{t('dashboard.noTransactionsYet')}</h3>
@@ -438,7 +398,7 @@ export default function PersonalFinancePage() {
                 </Link>
               </div>
             ) : (
-              data.recentTransactions.map((transaction) => {
+              enrichedTransactions.map((transaction) => {
                 const getTransactionIcon = (type: string) => {
                   switch (type) {
                     case 'income': return <TrendingUp className="h-4 w-4 text-green-600" />

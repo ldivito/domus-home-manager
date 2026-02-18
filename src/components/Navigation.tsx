@@ -118,6 +118,8 @@ export default function Navigation() {
     }
   }
 
+  // Note: /personal-finance is intentionally excluded from navigation.
+  // The module code exists but is disabled. See personal-finance/layout.tsx.
   const navigationItems = [
     { nameKey: 'activity', href: '/activity', icon: Activity },
     { nameKey: 'chores', href: '/chores', icon: CheckSquare },

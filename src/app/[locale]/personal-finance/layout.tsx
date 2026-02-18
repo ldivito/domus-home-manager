@@ -1,7 +1,10 @@
 import { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import PersonalFinanceNav from './components/PersonalFinanceNav'
+import { redirect } from 'next/navigation'
 
+// Personal Finance module is disabled — not exposed in the sidebar.
+// The code is kept for future use. To re-enable, remove the redirect below
+// and restore PersonalFinanceNav in the layout.
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('personalFinance')
   
@@ -16,6 +19,9 @@ export default function PersonalFinanceLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Module disabled: redirect to home
+  redirect('/')
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-4 sm:pt-6">
       {/* Skip Navigation */}

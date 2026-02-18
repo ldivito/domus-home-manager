@@ -32,6 +32,7 @@ export async function GET(request: Request) {
 
     const conditions: string[] = [
       "sm.tableName = 'personalCategories'",
+      "sm.updatedAt = (SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2 WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalCategories')",
       'sm.userId = ?',
       'sm.deletedAt IS NULL'
     ]

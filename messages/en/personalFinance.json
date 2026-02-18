@@ -307,6 +307,16 @@
       "deleteError": "Failed to delete transaction",
       "deleteErrorTitle": "Error",
       "loadError": "Failed to load transactions. Please refresh the page."
+    },
+    "dateNav": {
+      "prevPeriod": "Previous period",
+      "nextPeriod": "Next period",
+      "today": "Today",
+      "viewDay": "Day",
+      "viewWeek": "Week",
+      "viewMonth": "Month",
+      "goToToday": "Today",
+      "selectPeriod": "Select period"
     }
   },
   "categories": {

@@ -676,6 +676,11 @@ export async function performSync(
   forceFullSync: boolean = false,
   onProgress?: (progress: SyncProgress) => void
 ): Promise<SyncResult> {
+  // When forcing a full sync, clear any stale checkpoint so pullChangesPaginated
+  // starts from the beginning instead of resuming from a stale cursor.
+  if (forceFullSync) {
+    clearSyncCheckpoint()
+  }
   const lastSync = forceFullSync ? null : getLastSyncTime()
   const result: SyncResult = {
     success: false,

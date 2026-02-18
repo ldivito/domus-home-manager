@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import PersonalFinanceNav from './components/PersonalFinanceNav'
+import PersonalFinanceSyncTrigger from './components/PersonalFinanceSyncTrigger'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('personalFinance')
@@ -53,6 +54,7 @@ export default async function PersonalFinanceLayout({
       
       {/* Main Content */}
       <main id="main-content" role="main" className="space-y-6">
+        <PersonalFinanceSyncTrigger />
         {children}
       </main>
       

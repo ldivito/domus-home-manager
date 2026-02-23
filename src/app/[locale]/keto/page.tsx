@@ -364,7 +364,13 @@ export default function KetoPage() {
             updatedAt: new Date()
           })
         } else if (existingDay.status === 'cheat') {
-          await deleteWithSync(db.ketoDays, 'ketoDays', existingDay.id!)
+          // Important: don't delete cheat days.
+          // Auto-marking will recreate missing past days as cheat,
+          // making it look like click did nothing.
+          await db.ketoDays.update(existingDay.id!, {
+            status: 'success',
+            updatedAt: new Date()
+          })
         }
       }
 

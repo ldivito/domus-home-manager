@@ -21,7 +21,7 @@ interface BalanceTabProps {
   users: User[]
   payments: ExpensePayment[]
   incomes: MonthlyIncome[]
-  expenses: RecurringExpense[]
+  expenses?: RecurringExpense[]
   exchangeRate?: MonthlyExchangeRate
   selectedMonth: number
   selectedYear: number
@@ -72,10 +72,9 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
   ) || []
 
   // Filter payments for the selected month
-  const monthPayments = payments.filter(p => {
-    const dueDate = new Date(p.dueDate)
-    return dueDate.getMonth() + 1 === selectedMonth && dueDate.getFullYear() === selectedYear
-  })
+  const monthPayments = payments.filter(
+    p => p.month === selectedMonth && p.year === selectedYear
+  )
 
   // Calculate total household income in ARS
   const totalIncomeARS = incomes.reduce((sum, inc) => {

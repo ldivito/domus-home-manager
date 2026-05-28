@@ -98,8 +98,8 @@ export function PaymentsTab({
         // Check if payment already exists in database for this month
         const existingPayment = payments.find(p =>
           p.recurringExpenseId === expense.id &&
-          new Date(p.dueDate).getMonth() + 1 === currentMonth &&
-          new Date(p.dueDate).getFullYear() === currentYear
+          p.month === currentMonth &&
+          p.year === currentYear
         )
 
         if (!existingPayment) {

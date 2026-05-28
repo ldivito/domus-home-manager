@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { User, MonthlyIncome, RecurringExpense, ExpensePayment, MonthlyExchangeRate } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { formatARS } from '@/lib/utils'
-import { getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
+import { getMonthlyAmountARS, resolveDefaultForMonth } from '@/lib/utils/finance/monthlyValues'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   BarChart,
@@ -139,24 +139,13 @@ export function AnalysisTab({
 
     return last12Months.map(({ month, year, label }) => {
       const rate = getExchangeRate(month, year)
-      const startOfMonth = new Date(year, month - 1, 1)
-      const endOfMonth = new Date(year, month, 0)
-
       const dataPoint: Record<string, string | number> = { name: label }
 
       activeExpenses.forEach(expense => {
-        const payment = allPayments.find(p => {
-          const dueDate = new Date(p.dueDate)
-          return p.recurringExpenseId === expense.id &&
-                 dueDate >= startOfMonth &&
-                 dueDate <= endOfMonth &&
-                 p.status === 'paid'
-        })
-
-        const currency = payment?.currency ?? expense.currency ?? 'ARS'
-        const amount = payment?.amount ?? expense.amount
-        const value = currency === 'USD' ? amount * rate : amount
-        dataPoint[expense.name] = value
+        const payment = allPayments.find(
+          p => p.recurringExpenseId === expense.id && p.month === month && p.year === year
+        )
+        dataPoint[expense.name] = payment ? getMonthlyAmountARS(payment, rate) : 0
       })
 
       return dataPoint
@@ -218,12 +207,17 @@ export function AnalysisTab({
 
     allExpenses.filter(e => e.isActive).forEach(expense => {
       const category = expense.category || 'Other'
-      const amount = expense.currency === 'USD' ? expense.amount * rate : expense.amount
-      categoryTotals[category] = (categoryTotals[category] || 0) + amount
+      const stored = allPayments.find(
+        p => p.recurringExpenseId === expense.id && p.month === currentMonth && p.year === currentYear
+      )
+      const seed = stored
+        ? { amount: stored.amount, currency: stored.currency ?? 'ARS' as const }
+        : resolveDefaultForMonth(expense, currentMonth, currentYear, allPayments)
+      categoryTotals[category] = (categoryTotals[category] || 0) + getMonthlyAmountARS(seed, rate)
     })
 
     return Object.entries(categoryTotals).map(([name, value]) => ({ name, value }))
-  }, [allExpenses, currentMonth, currentYear, getExchangeRate])
+  }, [allExpenses, allPayments, currentMonth, currentYear, getExchangeRate])
 
   // 7. Income share by member (current month)
   const incomeShareData = useMemo(() => {
@@ -305,6 +299,7 @@ export function AnalysisTab({
   // Selected service: month-over-month percentage variation
   const serviceVariationData = useMemo(() => {
     return serviceTrendData.map((d, i) => {
+      // First month in the 12-month window has no in-window predecessor, so 0%.
       if (i === 0) return { name: d.name, variation: 0 }
       const prev = serviceTrendData[i - 1].value
       const variation = prev > 0 ? ((d.value - prev) / prev) * 100 : 0

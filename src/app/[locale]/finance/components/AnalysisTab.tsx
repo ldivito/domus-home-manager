@@ -1,10 +1,12 @@
 'use client'
 
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { User, MonthlyIncome, RecurringExpense, ExpensePayment, MonthlyExchangeRate } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { formatARS } from '@/lib/utils'
+import { getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   BarChart,
   Bar,
@@ -72,6 +74,10 @@ export function AnalysisTab({
   void _hideAmounts
   const t = useTranslations('finance.analysis')
 
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string>('')
+  const activeExpenses = useMemo(() => allExpenses.filter(e => e.isActive), [allExpenses])
+  const effectiveExpenseId = selectedExpenseId || activeExpenses[0]?.id || ''
+
   // Get exchange rate for a specific month/year
   const getExchangeRate = useCallback((month: number, year: number): number => {
     const rate = allExchangeRates.find(r => r.month === month && r.year === year)
@@ -120,15 +126,12 @@ export function AnalysisTab({
       })
 
       const total = monthPayments.reduce((sum, p) => {
-        const expense = allExpenses.find(e => e.id === p.recurringExpenseId)
-        const amount = p.amount || expense?.amount || 0
-        const currency = expense?.currency || 'ARS'
-        return sum + (currency === 'USD' ? amount * rate : amount)
+        return sum + getMonthlyAmountARS(p, rate)
       }, 0)
 
       return { name: label, value: total, month, year }
     })
-  }, [allPayments, allExpenses, last12Months, getExchangeRate])
+  }, [allPayments, last12Months, getExchangeRate])
 
   // 3. Each service/expense progression over time
   const expenseProgressionData = useMemo(() => {
@@ -150,8 +153,9 @@ export function AnalysisTab({
                  p.status === 'paid'
         })
 
-        const amount = payment?.amount || expense.amount
-        const value = expense.currency === 'USD' ? amount * rate : amount
+        const currency = payment?.currency ?? expense.currency ?? 'ARS'
+        const amount = payment?.amount ?? expense.amount
+        const value = currency === 'USD' ? amount * rate : amount
         dataPoint[expense.name] = value
       })
 
@@ -200,15 +204,12 @@ export function AnalysisTab({
       })
 
       const expenses = monthPayments.reduce((sum, p) => {
-        const expense = allExpenses.find(e => e.id === p.recurringExpenseId)
-        const amount = p.amount || expense?.amount || 0
-        const currency = expense?.currency || 'ARS'
-        return sum + (currency === 'USD' ? amount * rate : amount)
+        return sum + getMonthlyAmountARS(p, rate)
       }, 0)
 
       return { name: label, income, expenses, savings: income - expenses }
     })
-  }, [allIncomes, allPayments, allExpenses, last12Months, getExchangeRate])
+  }, [allIncomes, allPayments, last12Months, getExchangeRate])
 
   // 6. Expense categories breakdown (current month)
   const expenseCategoryData = useMemo(() => {
@@ -288,6 +289,28 @@ export function AnalysisTab({
       return { name: label, rate: rate > 1 ? rate : null }
     })
   }, [last12Months, getExchangeRate])
+
+  // Selected service: stored monthly value across the last 12 months (billed value, paid or not)
+  const serviceTrendData = useMemo(() => {
+    return last12Months.map(({ month, year, label }) => {
+      const rate = getExchangeRate(month, year)
+      const payment = allPayments.find(
+        p => p.recurringExpenseId === effectiveExpenseId && p.month === month && p.year === year
+      )
+      const value = payment ? getMonthlyAmountARS(payment, rate) : 0
+      return { name: label, value }
+    })
+  }, [allPayments, effectiveExpenseId, last12Months, getExchangeRate])
+
+  // Selected service: month-over-month percentage variation
+  const serviceVariationData = useMemo(() => {
+    return serviceTrendData.map((d, i) => {
+      if (i === 0) return { name: d.name, variation: 0 }
+      const prev = serviceTrendData[i - 1].value
+      const variation = prev > 0 ? ((d.value - prev) / prev) * 100 : 0
+      return { name: d.name, variation: Math.round(variation * 10) / 10 }
+    })
+  }, [serviceTrendData])
 
   // Get active expense names for the legend
   const activeExpenseNames = allExpenses.filter(e => e.isActive).slice(0, 5).map(e => e.name)
@@ -423,6 +446,54 @@ export function AnalysisTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Row 2.5: Per-service trend (selectable) and monthly % variation */}
+      <Card>
+        <CardHeader className="pb-2 px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
+              {t('charts.serviceTrend')}
+            </CardTitle>
+            <Select value={effectiveExpenseId} onValueChange={setSelectedExpenseId}>
+              <SelectTrigger className="h-9 w-full sm:w-[220px]">
+                <SelectValue placeholder={t('charts.selectService')} />
+              </SelectTrigger>
+              <SelectContent>
+                {activeExpenses.map(exp => (
+                  <SelectItem key={exp.id} value={exp.id!}>{exp.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="px-2 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
+              <LineChart data={serviceTrendData}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={35} />
+                <Tooltip formatter={formatTooltipValue} />
+                <Line type="monotone" dataKey="value" stroke={CHART_COLORS.primary} strokeWidth={2} dot={{ r: 2 }} name={t('charts.serviceTrend')} />
+              </LineChart>
+            </ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
+              <BarChart data={serviceVariationData}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} width={40} />
+                <Tooltip formatter={(value) => [`${value}%`, t('charts.variation')]} />
+                <Bar dataKey="variation" radius={[4, 4, 0, 0]} name={t('charts.variation')}>
+                  {serviceVariationData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.variation >= 0 ? CHART_COLORS.expense : CHART_COLORS.income} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Row 3: Income vs Expenses and Savings Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

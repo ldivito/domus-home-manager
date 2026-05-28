@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { db, RecurringExpense, ExpenseCategory, MonthlyExchangeRate, deleteWithSync } from '@/lib/db'
+import { db, RecurringExpense, ExpenseCategory, ExpensePayment, MonthlyExchangeRate, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
+import { resolveDefaultForMonth, getMonthlyAmountARS, MonthlyValueSeed } from '@/lib/utils/finance/monthlyValues'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -12,13 +13,16 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Receipt, Trash2, Edit, Home, Zap, Wifi, Shield, FileText, Tv, Wrench, MoreHorizontal } from 'lucide-react'
+import { Plus, Receipt, Trash2, Edit, Home, Zap, Wifi, Shield, FileText, Tv, Wrench, MoreHorizontal, CalendarClock } from 'lucide-react'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 
 interface ExpensesTabProps {
   expenses: RecurringExpense[]
   categories: ExpenseCategory[]
+  payments: ExpensePayment[]
+  selectedMonth: number
+  selectedYear: number
   exchangeRate?: MonthlyExchangeRate
   hideAmounts?: boolean
 }
@@ -36,7 +40,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; color?: 
 
 const frequencies = ['monthly', 'bimonthly', 'quarterly', 'yearly'] as const
 
-export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _hideAmounts }: ExpensesTabProps) {
+export function ExpensesTab({ expenses, categories, payments, selectedMonth, selectedYear, exchangeRate, hideAmounts: _hideAmounts }: ExpensesTabProps) {
   // Note: _hideAmounts is reserved for future implementation
   void _hideAmounts
   const t = useTranslations('finance.expenses')
@@ -47,6 +51,8 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
   const [showDialog, setShowDialog] = useState(false)
   const [editingExpense, setEditingExpense] = useState<RecurringExpense | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingMonthExpense, setEditingMonthExpense] = useState<RecurringExpense | null>(null)
+  const [monthAmount, setMonthAmount] = useState('')
 
   // Form state
   const [name, setName] = useState('')
@@ -59,13 +65,22 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
 
   const rate = exchangeRate?.rate || 1
 
-  // Calculate expense in ARS
-  const getAmountInARS = (expense: RecurringExpense): number => {
-    if (expense.currency === 'USD') {
-      return expense.amount * rate
-    }
-    return expense.amount
+  // Find the stored payment record for an expense in the selected month
+  const getMonthPayment = (expenseId: string): ExpensePayment | undefined =>
+    payments.find(
+      p => p.recurringExpenseId === expenseId && p.month === selectedMonth && p.year === selectedYear
+    )
+
+  // Resolve the monthly value (stored record if present, otherwise the default)
+  const getMonthlyValue = (expense: RecurringExpense): MonthlyValueSeed => {
+    const existing = getMonthPayment(expense.id!)
+    if (existing) return { amount: existing.amount, currency: existing.currency ?? 'ARS' }
+    return resolveDefaultForMonth(expense, selectedMonth, selectedYear, payments)
   }
+
+  // Monthly value converted to ARS
+  const getAmountInARS = (expense: RecurringExpense): number =>
+    getMonthlyAmountARS(getMonthlyValue(expense), rate)
 
   const resetForm = () => {
     setName('')
@@ -169,6 +184,51 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
       toast.success(tMessages('expenseDeleted'))
     } catch (error) {
       logger.error('Error deleting expense:', error)
+      toast.error(tMessages('error'))
+    }
+  }
+
+  const openMonthEditor = (expense: RecurringExpense) => {
+    const { amount } = getMonthlyValue(expense)
+    setEditingMonthExpense(expense)
+    setMonthAmount(amount.toString())
+  }
+
+  const saveMonthlyValue = async () => {
+    if (!editingMonthExpense) return
+    const value = parseFloat(monthAmount)
+    if (isNaN(value) || value < 0) {
+      toast.error(tMessages('error'))
+      return
+    }
+    try {
+      const existing = getMonthPayment(editingMonthExpense.id!)
+      if (existing) {
+        await db.expensePayments.update(existing.id!, {
+          amount: value,
+          updatedAt: new Date()
+        })
+      } else {
+        const { currency } = getMonthlyValue(editingMonthExpense)
+        const dueDate = new Date(selectedYear, selectedMonth - 1, editingMonthExpense.dueDay)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        await db.expensePayments.add({
+          id: generateId('pay'),
+          recurringExpenseId: editingMonthExpense.id!,
+          amount: value,
+          currency,
+          month: selectedMonth,
+          year: selectedYear,
+          dueDate,
+          status: dueDate < today ? 'overdue' : 'pending',
+          createdAt: new Date()
+        })
+      }
+      toast.success(tMessages('monthlyValueSaved'))
+      setEditingMonthExpense(null)
+    } catch (error) {
+      logger.error('Error saving monthly value:', error)
       toast.error(tMessages('error'))
     }
   }
@@ -318,6 +378,15 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
                                   checked={expense.isActive}
                                   onCheckedChange={() => handleToggleActive(expense)}
                                 />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 sm:h-9 sm:w-9"
+                                  onClick={() => openMonthEditor(expense)}
+                                  title={t('editMonthlyValue')}
+                                >
+                                  <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -473,6 +542,7 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="amount">{t('dialog.amount')}</Label>
+                <p className="text-xs text-muted-foreground">{t('dialog.amountSeedHint')}</p>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                     {currency === 'USD' ? 'USD' : '$'}
@@ -571,6 +641,44 @@ export function ExpensesTab({ expenses, categories, exchangeRate, hideAmounts: _
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Monthly Value Dialog */}
+      <Dialog open={!!editingMonthExpense} onOpenChange={(open) => { if (!open) setEditingMonthExpense(null) }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{t('editMonthlyValue')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">{t('editMonthlyValueDescription')}</p>
+            <div className="space-y-2">
+              <Label htmlFor="monthAmount">{t('dialog.amount')}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                  {editingMonthExpense ? getMonthlyValue(editingMonthExpense).currency : '$'}
+                </span>
+                <Input
+                  id="monthAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={monthAmount}
+                  onChange={(e) => setMonthAmount(e.target.value)}
+                  className="h-12 pl-14"
+                  autoFocus
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setEditingMonthExpense(null)} className="h-12">
+              {t('dialog.cancel')}
+            </Button>
+            <Button type="button" onClick={saveMonthlyValue} className="h-12">
+              {t('dialog.save')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

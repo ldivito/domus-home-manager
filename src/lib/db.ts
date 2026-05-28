@@ -419,7 +419,10 @@ export interface ExpenseCategory {
 export interface ExpensePayment {
   id?: string
   recurringExpenseId: string  // Reference to RecurringExpense
-  amount: number              // Actual amount paid
+  amount: number              // Monthly value of the service (source of truth for the month)
+  currency: 'ARS' | 'USD'     // Snapshot of the currency for this month
+  month: number               // 1-12 (denormalized from dueDate)
+  year: number                // e.g., 2026 (denormalized from dueDate)
   dueDate: Date               // When it was due
   paidDate?: Date             // When it was actually paid
   paidByUserId?: string       // Who paid it
@@ -1392,6 +1395,30 @@ export class DomusDatabase extends Dexie {
       recurringExpenses: 'id, name, category, frequency, isActive, householdId, createdAt',
       expenseCategories: 'id, name, isDefault, householdId, createdAt',
       expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt'
+    })
+
+    // v18: per-month value for expense payments (month/year/currency + compound index)
+    this.version(18).stores({
+      expensePayments: 'id, recurringExpenseId, dueDate, status, paidByUserId, householdId, createdAt, [recurringExpenseId+year+month]'
+    })
+
+    this.version(18).upgrade(async (tx) => {
+      const expenses = await tx.table('recurringExpenses').toArray()
+      const currencyByExpense = new Map<string, 'ARS' | 'USD'>()
+      for (const e of expenses) {
+        currencyByExpense.set(e.id, (e.currency as 'ARS' | 'USD') ?? 'ARS')
+      }
+
+      const expensePayments = await tx.table('expensePayments').toArray()
+      for (const p of expensePayments) {
+        const due = new Date(p.dueDate)
+        await tx.table('expensePayments').update(p.id, {
+          month: due.getMonth() + 1,
+          year: due.getFullYear(),
+          currency: p.currency ?? currencyByExpense.get(p.recurringExpenseId) ?? 'ARS',
+        })
+      }
+      dbLogger.debug('Database upgraded to v18 with per-month expense payment values')
     })
 
     // v17 upgrade: add default currency to existing expenses

@@ -54,7 +54,7 @@ export default function CategoriesPage() {
   // Reactive data loading via useLiveQuery
   const categories = useLiveQuery(
     () => db.personalCategories
-      .where('userId').equals(userId).and(c => c.isActive === 1)
+      .where('userId').equals(userId).and(c => c.isActive)
       .toArray()
       .then(cats => cats.sort((a, b) => {
         if (a.isDefault && !b.isDefault) return -1
@@ -112,7 +112,7 @@ export default function CategoriesPage() {
 
     try {
       await db.personalCategories.update(categoryToDelete, {
-        isActive: 0,
+        isActive: false,
         updatedAt: new Date()
       })
 

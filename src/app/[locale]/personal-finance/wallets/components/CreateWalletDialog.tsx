@@ -191,7 +191,7 @@ export function CreateWalletDialog({
         bankName: data.type === 'bank' ? data.bankName : undefined,
         color: data.color,
         icon: data.icon,
-        isActive: 1,
+        isActive: true,
         notes: data.notes,
         createdAt: new Date(),
         updatedAt: new Date(),

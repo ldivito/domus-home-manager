@@ -204,8 +204,8 @@ export function CreateCategoryDialog({
           type: data.type,
           color: data.color,
           icon: data.icon,
-          isActive: 1,
-          isDefault: 0,
+          isActive: true,
+          isDefault: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         }

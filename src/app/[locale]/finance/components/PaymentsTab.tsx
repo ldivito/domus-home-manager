@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { db, RecurringExpense, ExpensePayment, User, MonthlyIncome, MonthlyExchangeRate, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
+import { resolveDefaultForMonth, getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -81,15 +82,6 @@ export function PaymentsTab({
     return (userIncomeARS / totalIncomeARS) * 100
   }
 
-  // Get expense amount in ARS
-  const getExpenseAmountARS = (expense: RecurringExpense | undefined): number => {
-    if (!expense) return 0
-    if (expense.currency === 'USD') {
-      return expense.amount * rate
-    }
-    return expense.amount
-  }
-
   // Auto-generate payments for active expenses (only once per expense per month)
   useEffect(() => {
     const generatePayments = async () => {
@@ -106,8 +98,8 @@ export function PaymentsTab({
         // Check if payment already exists in database for this month
         const existingPayment = payments.find(p =>
           p.recurringExpenseId === expense.id &&
-          new Date(p.dueDate).getMonth() + 1 === currentMonth &&
-          new Date(p.dueDate).getFullYear() === currentYear
+          p.month === currentMonth &&
+          p.year === currentYear
         )
 
         if (!existingPayment) {
@@ -126,10 +118,14 @@ export function PaymentsTab({
           }
 
           try {
+            const seed = resolveDefaultForMonth(expense, currentMonth, currentYear, payments)
             await db.expensePayments.add({
               id: generateId('pay'),
               recurringExpenseId: expense.id!,
-              amount: expense.amount,
+              amount: seed.amount,
+              currency: seed.currency,
+              month: currentMonth,
+              year: currentYear,
               dueDate,
               status,
               createdAt: new Date()
@@ -189,10 +185,8 @@ export function PaymentsTab({
   )
 
   const handleMarkPaid = (payment: ExpensePayment) => {
-    const expense = expenses.find(e => e.id === payment.recurringExpenseId)
-    const amountARS = expense ? getExpenseAmountARS(expense) : payment.amount
     setSelectedPayment(payment)
-    setActualAmount(amountARS.toString())
+    setActualAmount(payment.amount.toString())
     setPaidByUserId('')
     setNotes('')
     setShowMarkPaidDialog(true)
@@ -359,7 +353,7 @@ export function PaymentsTab({
             <div className="space-y-3 sm:space-y-4">
               {sortedPayments.map(payment => {
                 const expense = getExpense(payment.recurringExpenseId)
-                const amountARS = expense ? getExpenseAmountARS(expense) : payment.amount
+                const amountARS = getMonthlyAmountARS(payment, rate)
 
                 return (
                   <div

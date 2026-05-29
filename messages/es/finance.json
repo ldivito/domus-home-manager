@@ -88,6 +88,8 @@
     "title": "Gastos Recurrentes",
     "subtitle": "Gestiona facturas y pagos recurrentes del hogar",
     "addExpense": "Agregar Gasto",
+    "editMonthlyValue": "Editar valor del mes",
+    "editMonthlyValueDescription": "Este valor aplica solo al mes seleccionado. No afecta a otros meses.",
     "noExpenses": "No hay gastos recurrentes",
     "noExpensesDescription": "Agrega tu primer gasto recurrente como renta, servicios o suscripciones",
     "active": "Activo",
@@ -110,6 +112,7 @@
       "currency": "Moneda",
       "amount": "Monto",
       "amountPlaceholder": "Ingresa el monto",
+      "amountSeedHint": "Valor inicial, se usa como base para los meses siguientes.",
       "category": "Categoría",
       "selectCategory": "Seleccionar categoría",
       "frequency": "Frecuencia",
@@ -236,7 +239,8 @@
     "paymentDeleted": "Pago eliminado exitosamente",
     "settlementMarkedPaid": "Liquidación registrada exitosamente",
     "settlementUnmarked": "Liquidación desmarcada exitosamente",
-    "error": "Ocurrió un error"
+    "error": "Ocurrió un error",
+    "monthlyValueSaved": "Valor del mes actualizado"
   },
   "analysis": {
     "title": "Análisis Financiero",
@@ -259,7 +263,10 @@
       "paid": "Pagado",
       "pending": "Pendiente",
       "overdue": "Vencido",
-      "noPaymentData": "Sin datos de pagos para este mes"
+      "noPaymentData": "Sin datos de pagos para este mes",
+      "serviceTrend": "Tendencia por servicio",
+      "selectService": "Seleccionar servicio",
+      "variation": "Variación"
     }
   }
 }

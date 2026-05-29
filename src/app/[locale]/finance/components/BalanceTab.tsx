@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, User, ExpensePayment, MonthlyIncome, MonthlyExchangeRate, RecurringExpense, SettlementPayment, deleteWithSync } from '@/lib/db'
 import { formatARS, generateId } from '@/lib/utils'
+import { getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,7 @@ interface BalanceTabProps {
   users: User[]
   payments: ExpensePayment[]
   incomes: MonthlyIncome[]
-  expenses: RecurringExpense[]
+  expenses?: RecurringExpense[]
   exchangeRate?: MonthlyExchangeRate
   selectedMonth: number
   selectedYear: number
@@ -47,7 +48,7 @@ interface Settlement {
   amount: number
 }
 
-export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, selectedMonth, selectedYear, hideAmounts: _hideAmounts }: BalanceTabProps) {
+export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMonth, selectedYear, hideAmounts: _hideAmounts }: BalanceTabProps) {
   // Note: _hideAmounts is reserved for future implementation
   void _hideAmounts
   const t = useTranslations('finance.balance')
@@ -71,10 +72,9 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
   ) || []
 
   // Filter payments for the selected month
-  const monthPayments = payments.filter(p => {
-    const dueDate = new Date(p.dueDate)
-    return dueDate.getMonth() + 1 === selectedMonth && dueDate.getFullYear() === selectedYear
-  })
+  const monthPayments = payments.filter(
+    p => p.month === selectedMonth && p.year === selectedYear
+  )
 
   // Calculate total household income in ARS
   const totalIncomeARS = incomes.reduce((sum, inc) => {
@@ -87,19 +87,9 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
   // Get paid payments only (filtered by selected month)
   const paidPayments = monthPayments.filter(p => p.status === 'paid')
 
-  // Get expense amount in ARS
-  const getExpenseAmountARS = (expenseId: string, fallbackAmount: number): number => {
-    const expense = expenses.find(e => e.id === expenseId)
-    if (!expense) return fallbackAmount
-    if (expense.currency === 'USD') {
-      return expense.amount * rate
-    }
-    return expense.amount
-  }
-
   // Calculate total expenses paid in ARS
   const totalExpensesPaidARS = paidPayments.reduce((sum, p) => {
-    return sum + getExpenseAmountARS(p.recurringExpenseId, p.amount)
+    return sum + getMonthlyAmountARS(p, rate)
   }, 0)
 
   // Calculate balances for each user
@@ -119,7 +109,7 @@ export function BalanceTab({ users, payments, incomes, expenses, exchangeRate, s
     // Calculate what they actually paid in ARS
     const totalPaid = paidPayments
       .filter(p => p.paidByUserId === user.id)
-      .reduce((sum, p) => sum + getExpenseAmountARS(p.recurringExpenseId, p.amount), 0)
+      .reduce((sum, p) => sum + getMonthlyAmountARS(p, rate), 0)
 
     // Net balance: positive means others owe them
     const netBalance = totalPaid - totalOwed

@@ -88,6 +88,8 @@
     "title": "Recurring Expenses",
     "subtitle": "Manage household bills and recurring payments",
     "addExpense": "Add Expense",
+    "editMonthlyValue": "Edit month value",
+    "editMonthlyValueDescription": "This value applies only to the selected month. Other months are not affected.",
     "noExpenses": "No recurring expenses",
     "noExpensesDescription": "Add your first recurring expense like rent, utilities, or subscriptions",
     "active": "Active",
@@ -110,6 +112,7 @@
       "currency": "Currency",
       "amount": "Amount",
       "amountPlaceholder": "Enter amount",
+      "amountSeedHint": "Initial value, used as the base for future months.",
       "category": "Category",
       "selectCategory": "Select category",
       "frequency": "Frequency",
@@ -236,7 +239,8 @@
     "paymentDeleted": "Payment deleted successfully",
     "settlementMarkedPaid": "Settlement recorded successfully",
     "settlementUnmarked": "Settlement unmarked successfully",
-    "error": "An error occurred"
+    "error": "An error occurred",
+    "monthlyValueSaved": "Monthly value updated"
   },
   "analysis": {
     "title": "Financial Analysis",
@@ -259,7 +263,10 @@
       "paid": "Paid",
       "pending": "Pending",
       "overdue": "Overdue",
-      "noPaymentData": "No payment data for this month"
+      "noPaymentData": "No payment data for this month",
+      "serviceTrend": "Service trend",
+      "selectService": "Select service",
+      "variation": "Change"
     }
   }
 }

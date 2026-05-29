@@ -14,6 +14,7 @@ import { PaymentsTab } from './components/PaymentsTab'
 import { BalanceTab } from './components/BalanceTab'
 import { AnalysisTab } from './components/AnalysisTab'
 import { formatARS } from '@/lib/utils'
+import { resolveDefaultForMonth, getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
 
 export default function FinancePage() {
   const t = useTranslations('finance')
@@ -117,10 +118,13 @@ export default function FinancePage() {
     return sum + inc.amount
   }, 0)
   const totalMonthlyExpenses = activeExpenses.reduce((sum, exp) => {
-    if (exp.currency === 'USD') {
-      return sum + (exp.amount * exchangeRate)
-    }
-    return sum + exp.amount
+    const stored = payments.find(
+      p => p.recurringExpenseId === exp.id && p.month === selectedMonth && p.year === selectedYear
+    )
+    const seed = stored
+      ? { amount: stored.amount, currency: stored.currency ?? 'ARS' as const }
+      : resolveDefaultForMonth(exp, selectedMonth, selectedYear, payments)
+    return sum + getMonthlyAmountARS(seed, exchangeRate)
   }, 0)
 
   // Helper function to display amounts
@@ -321,6 +325,9 @@ export default function FinancePage() {
             <ExpensesTab
               expenses={recurringExpenses}
               categories={expenseCategories}
+              payments={payments}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
               exchangeRate={selectedExchangeRate}
               hideAmounts={hideAmounts}
             />

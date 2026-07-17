@@ -237,6 +237,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // exchangeRate is client-provided and moves real balances on transfers:
+    // when present it must be a positive finite number
+    if (exchangeRate != null && (typeof exchangeRate !== 'number' || !Number.isFinite(exchangeRate) || exchangeRate <= 0)) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: { exchangeRate: ['Exchange rate must be a positive number'] } },
+        { status: 400 }
+      )
+    }
+
     // Validate source wallet exists and is not deleted BEFORE inserting
     const sourceWalletRow = await db
       .prepare(`

@@ -5,7 +5,9 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Domus - Home Management',
     short_name: 'Domus',
     description: 'A tablet-first home management app for families',
-    start_url: '/es',
+    // Locale-neutral start URL: the next-intl middleware redirects to the
+    // right locale based on the NEXT_LOCALE cookie / Accept-Language header
+    start_url: '/',
     display: 'standalone',
     background_color: '#0a0a1a',
     theme_color: '#7c3aed',

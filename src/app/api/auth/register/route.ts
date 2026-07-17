@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hashPassword, createToken, createSessionCookie, storeSession } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { isRateLimited, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
@@ -27,6 +28,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // Throttle registration attempts per IP (also slows email enumeration)
+    const ip = getClientIp(request)
+    if (isRateLimited(`register:${ip}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     // Check if user already exists
     const existingUser = await db
       .prepare('SELECT id FROM users WHERE email = ?')
@@ -34,9 +44,10 @@ export async function POST(request: Request) {
       .first()
 
     if (existingUser) {
+      // Generic message and status: avoid confirming which emails are registered
       return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 409 }
+        { error: 'Unable to register with the provided details' },
+        { status: 400 }
       )
     }
 

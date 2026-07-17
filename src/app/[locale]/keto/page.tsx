@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useLiveQuery } from "dexie-react-hooks"
+import { addMonths, subMonths } from "date-fns"
 import {
   db,
   KetoSettings,
@@ -933,7 +934,7 @@ export default function KetoPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
+                          onClick={() => setCurrentDate(subMonths(currentDate, 1))}
                           className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0"
                         >
                           <span>←</span>
@@ -955,7 +956,7 @@ export default function KetoPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
+                          onClick={() => setCurrentDate(addMonths(currentDate, 1))}
                           className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0"
                         >
                           <span>→</span>

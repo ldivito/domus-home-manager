@@ -1,5 +1,6 @@
-// Basic toast hook for development
-// TODO: Replace with a proper toast implementation (e.g., sonner, react-hot-toast)
+// Toast hook backed by sonner (same library used across the rest of the app)
+
+import { toast as sonnerToast } from 'sonner'
 
 interface ToastOptions {
   title: string
@@ -9,16 +10,10 @@ interface ToastOptions {
 
 export function useToast() {
   const toast = ({ title, description, variant }: ToastOptions) => {
-    const message = description ? `${title}\n${description}` : title
-    
     if (variant === 'destructive') {
-      // Use console.error for destructive toasts
-      console.error(`❌ ${message}`)
-      alert(`❌ ${title}${description ? `\n${description}` : ''}`)
+      sonnerToast.error(title, { description })
     } else {
-      // Use console.log for normal toasts
-      console.log(`✅ ${message}`)
-      alert(`✅ ${title}${description ? `\n${description}` : ''}`)
+      sonnerToast.success(title, { description })
     }
   }
 

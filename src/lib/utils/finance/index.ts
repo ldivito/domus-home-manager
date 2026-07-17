@@ -1,5 +1,11 @@
 // Personal Finance utilities - centralized exports
 
+// Current user (placeholder until real auth wiring)
+export {
+  PERSONAL_FINANCE_USER_ID,
+  getCurrentUserId
+} from './current-user'
+
 // Formatters
 export {
   formatCurrency,
@@ -87,8 +93,9 @@ export {
   getCreditCardPaymentHistory,
   getSuggestedPayments,
   validatePaymentAmount,
-  getCreditCardPaymentStats,
-  scheduleAutomaticPayment
+  getCreditCardPaymentStats
+  // NOTE: scheduleAutomaticPayment intentionally NOT exported — it is an
+  // unimplemented placeholder. Re-add once real scheduling exists.
 } from './credit-card-payments'
 
 // Credit Card Notifications

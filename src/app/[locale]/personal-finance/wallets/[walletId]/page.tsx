@@ -59,8 +59,9 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
     [walletId]
   )
 
+  // NOTE: booleans are not indexable in IndexedDB, so isActive is filtered in memory
   const categories = useLiveQuery(
-    () => db.personalCategories.where('isActive').equals(1).toArray(),
+    () => db.personalCategories.filter(c => c.isActive !== false).toArray(),
     []
   )
 
@@ -105,8 +106,10 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
   }
 
   const balanceInfo = formatBalance(wallet.balance || 0, wallet.currency)
+  // calculateAvailableCredit expects the signed balance (negative for debt):
+  // passing Math.abs() here inflated available credit instead of reducing it
   const availableCredit = wallet.type === 'credit_card' && wallet.creditLimit
-    ? calculateAvailableCredit(wallet.creditLimit, Math.abs(wallet.balance || 0))
+    ? calculateAvailableCredit(wallet.creditLimit, wallet.balance || 0)
     : null
 
   const getTransactionIcon = (type: string) => {

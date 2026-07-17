@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -30,9 +29,7 @@ import {
 import {
   ArrowUpDown,
   TrendingUp,
-  TrendingDown,
-  Calculator,
-  Wallet
+  TrendingDown
 } from 'lucide-react'
 import { db } from '@/lib/db'
 import {
@@ -41,14 +38,13 @@ import {
   processTransactionBalanceUpdate,
   validateSufficientFunds,
   formatCurrency,
-  parseAmount
+  getCurrentUserId
 } from '@/lib/utils/finance'
 import {
   PersonalWallet,
   PersonalCategory,
   PersonalTransaction,
-  TransactionType,
-  CurrencyType
+  TransactionType
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
 
@@ -63,8 +59,6 @@ const transactionSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   date: z.string(),
   notes: z.string().optional(),
-  sharedWithHousehold: z.boolean().optional(),
-  householdContribution: z.number().optional(),
   exchangeRate: z.number().optional()
 }).superRefine((data, ctx) => {
   // Validate category for non-transfer transactions
@@ -93,15 +87,6 @@ const transactionSchema = z.object({
       path: ['targetWalletId']
     })
   }
-
-  // Validate household contribution
-  if (data.sharedWithHousehold && data.householdContribution && data.householdContribution > data.amount) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Household contribution cannot exceed transaction amount',
-      path: ['householdContribution']
-    })
-  }
 })
 
 type TransactionFormData = z.infer<typeof transactionSchema>
@@ -123,7 +108,6 @@ export function TransactionForm({
   const [wallets, setWallets] = useState<PersonalWallet[]>([])
   const [categories, setCategories] = useState<PersonalCategory[]>([])
   const [loading, setLoading] = useState(false)
-  const [calculating, setCalculating] = useState(false)
 
   // Form setup
   const form = useForm<TransactionFormData>({
@@ -134,8 +118,7 @@ export function TransactionForm({
       currency: 'ARS',
       description: '',
       date: new Date().toISOString().split('T')[0],
-      notes: '',
-      sharedWithHousehold: false
+      notes: ''
     }
   })
 
@@ -143,7 +126,6 @@ export function TransactionForm({
   const watchWalletId = form.watch('walletId')
   const watchCurrency = form.watch('currency')
   const watchAmount = form.watch('amount')
-  const watchSharedWithHousehold = form.watch('sharedWithHousehold')
 
   // Load wallets and categories
   useEffect(() => {
@@ -161,19 +143,12 @@ export function TransactionForm({
     }
   }, [watchWalletId, wallets])
 
-  // Auto-set household contribution for income
-  useEffect(() => {
-    if (watchType === 'income' && watchSharedWithHousehold && watchAmount > 0) {
-      form.setValue('householdContribution', watchAmount)
-    }
-  }, [watchType, watchSharedWithHousehold, watchAmount])
-
   const loadWallets = async () => {
     try {
       // In a real app, this would filter by current user
+      // NOTE: booleans are not indexable in IndexedDB, so filter in memory
       const userWallets = await db.personalWallets
-        .where('isActive')
-        .equals(1)
+        .filter(w => w.isActive !== false)
         .toArray()
 
       setWallets(userWallets)
@@ -194,9 +169,9 @@ export function TransactionForm({
 
   const loadCategories = async () => {
     try {
+      // NOTE: booleans are not indexable in IndexedDB, so filter in memory
       const userCategories = await db.personalCategories
-        .where('isActive')
-        .equals(1)
+        .filter(c => c.isActive !== false)
         .toArray()
 
       setCategories(userCategories)
@@ -214,19 +189,14 @@ export function TransactionForm({
     return wallets.filter(wallet => wallet.id !== watchWalletId)
   }
 
-  const calculateExchangeRate = async (fromCurrency: CurrencyType, toCurrency: CurrencyType) => {
-    if (fromCurrency === toCurrency) return 1
-
-    setCalculating(true)
-    try {
-      // In a real app, you'd call an exchange rate API
-      // For now, using a mock rate
-      const mockRate = fromCurrency === 'USD' ? 1000 : 0.001
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-      return mockRate
-    } finally {
-      setCalculating(false)
-    }
+  /**
+   * Parse the YYYY-MM-DD string from <input type="date"> as a LOCAL date.
+   * new Date('YYYY-MM-DD') would be interpreted as UTC midnight, shifting the
+   * date one day back in negative-offset timezones (e.g. Argentina, UTC-3).
+   */
+  const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
   }
 
   const handleSubmit = async (data: TransactionFormData) => {
@@ -240,9 +210,10 @@ export function TransactionForm({
         currency: data.currency,
         walletId: data.walletId,
         categoryId: data.categoryId || '',
+        targetWalletId: data.targetWalletId,
         description: data.description,
-        date: new Date(data.date),
-        sharedWithHousehold: data.sharedWithHousehold || false
+        date: parseLocalDate(data.date),
+        sharedWithHousehold: false
       })
 
       if (!validation.isValid) {
@@ -254,13 +225,17 @@ export function TransactionForm({
         return
       }
 
-      // Get current user ID (in a real app, from auth context)
-      const userId = 'current-user-id' // TODO: Replace with actual user ID
+      // Get current user ID (placeholder until real auth context is wired)
+      const userId = getCurrentUserId()
 
-      if (data.type === 'transfer') {
-        await handleTransfer(data, userId)
-      } else {
-        await handleBasicTransaction(data, userId)
+      const saved = data.type === 'transfer'
+        ? await handleTransfer(data, userId)
+        : await handleBasicTransaction(data, userId)
+
+      // Do not show success or navigate away if nothing was saved
+      // (e.g. insufficient funds or missing exchange rate)
+      if (!saved) {
+        return
       }
 
       const typeLabel = data.type.charAt(0).toUpperCase() + data.type.slice(1)
@@ -288,7 +263,10 @@ export function TransactionForm({
     }
   }
 
-  const handleBasicTransaction = async (data: TransactionFormData, userId: string) => {
+  /**
+   * @returns true if the transaction was saved, false otherwise
+   */
+  const handleBasicTransaction = async (data: TransactionFormData, userId: string): Promise<boolean> => {
     // Validate sufficient funds for expenses
     if (data.type === 'expense') {
       const validation = await validateSufficientFunds(data.walletId, data.amount)
@@ -298,13 +276,15 @@ export function TransactionForm({
           description: validation.error,
           variant: 'destructive'
         })
-        return
+        return false
       }
     }
 
     const transactionId = generateTransactionId()
 
     // Create transaction record
+    // NOTE: household sharing is disabled until the household integration
+    // actually exists (the previous flag was persisted but never acted upon)
     const transaction: PersonalTransaction = {
       id: transactionId,
       userId,
@@ -314,30 +294,29 @@ export function TransactionForm({
       amount: data.amount,
       currency: data.currency,
       description: data.description,
-      date: new Date(data.date),
+      date: parseLocalDate(data.date),
       notes: data.notes,
-      sharedWithHousehold: data.sharedWithHousehold || false,
-      householdContribution: data.householdContribution,
+      sharedWithHousehold: false,
+      householdContribution: undefined,
       isFromCreditCard: false,
       status: 'completed',
       createdAt: new Date(),
       updatedAt: new Date()
     }
 
-    // Save transaction
-    await db.personalTransactions.add(transaction)
+    // Save transaction and update wallet balance atomically
+    await db.transaction('rw', [db.personalTransactions, db.personalWallets], async () => {
+      await db.personalTransactions.add(transaction)
+      await processTransactionBalanceUpdate(transaction)
+    })
 
-    // Update wallet balance
-    await processTransactionBalanceUpdate(transaction)
-
-    // If shared with household, create household income record
-    if (data.sharedWithHousehold && data.householdContribution) {
-      // TODO: Integrate with household system
-      console.log('Would create household income:', data.householdContribution)
-    }
+    return true
   }
 
-  const handleTransfer = async (data: TransactionFormData, userId: string) => {
+  /**
+   * @returns true if the transfer was saved, false otherwise
+   */
+  const handleTransfer = async (data: TransactionFormData, userId: string): Promise<boolean> => {
     const sourceWallet = wallets.find(w => w.id === data.walletId)!
     const targetWallet = wallets.find(w => w.id === data.targetWalletId)!
 
@@ -349,14 +328,24 @@ export function TransactionForm({
         description: validation.error,
         variant: 'destructive'
       })
-      return
+      return false
     }
 
     let exchangeRate = 1
 
-    // Handle currency conversion
+    // Cross-currency transfers require an explicit, user-provided exchange rate.
+    // There is no exchange rate API integration yet, and silently applying a
+    // made-up rate would corrupt wallet balances.
     if (sourceWallet.currency !== targetWallet.currency) {
-      exchangeRate = data.exchangeRate || await calculateExchangeRate(sourceWallet.currency, targetWallet.currency)
+      if (!data.exchangeRate || !Number.isFinite(data.exchangeRate) || data.exchangeRate <= 0) {
+        toast({
+          title: t('transactionForm.validationError'),
+          description: t('transactionForm.exchangeRateRequired'),
+          variant: 'destructive'
+        })
+        return false
+      }
+      exchangeRate = data.exchangeRate
     }
 
     const transactionId = generateTransactionId()
@@ -371,7 +360,7 @@ export function TransactionForm({
       amount: data.amount,
       currency: sourceWallet.currency,
       description: data.description,
-      date: new Date(data.date),
+      date: parseLocalDate(data.date),
       notes: data.notes,
       targetWalletId: data.targetWalletId,
       exchangeRate,
@@ -382,11 +371,13 @@ export function TransactionForm({
       updatedAt: new Date()
     }
 
-    // Save transaction
-    await db.personalTransactions.add(transaction)
+    // Save transaction and update both wallet balances atomically
+    await db.transaction('rw', [db.personalTransactions, db.personalWallets], async () => {
+      await db.personalTransactions.add(transaction)
+      await processTransactionBalanceUpdate(transaction)
+    })
 
-    // Update both wallet balances
-    await processTransactionBalanceUpdate(transaction)
+    return true
   }
 
   const selectedWallet = wallets.find(w => w.id === watchWalletId)
@@ -637,63 +628,9 @@ export function TransactionForm({
               )}
             />
 
-            {/* Household Sharing (only for income) */}
-            {watchType === 'income' && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                <FormField
-                  control={form.control}
-                  name="sharedWithHousehold"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>{t('transactionForm.shareWithHousehold')}</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          {t('transactionForm.shareHint')}
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                {watchSharedWithHousehold && (
-                  <FormField
-                    control={form.control}
-                    name="householdContribution"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('transactionForm.householdContribution')}</FormLabel>
-                        <div className="relative">
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max={watchAmount}
-                              placeholder="0.00"
-                              className="pl-12"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <span className="text-muted-foreground">
-                              {watchCurrency === 'USD' ? 'US$' : '$'}
-                            </span>
-                          </div>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-            )}
+            {/* NOTE: household sharing UI removed until the household
+                integration exists — the toggle previously stored a flag that
+                was never reflected in household finances (misleading data) */}
 
             {/* Exchange Rate (for cross-currency transfers) */}
             {watchType === 'transfer' && selectedWallet && targetWallet &&
@@ -706,30 +643,16 @@ export function TransactionForm({
                     <FormLabel>
                       {t('transactionForm.exchangeRate', { from: selectedWallet.currency, to: targetWallet.currency })}
                     </FormLabel>
-                    <div className="flex gap-2">
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.0001"
-                          min="0"
-                          placeholder="1.0000"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={async () => {
-                          const rate = await calculateExchangeRate(selectedWallet.currency, targetWallet.currency)
-                          form.setValue('exchangeRate', rate)
-                        }}
-                        disabled={calculating}
-                      >
-                        <Calculator className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        placeholder="1.0000"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
                     {field.value && watchAmount > 0 && (
                       <p className="text-sm text-muted-foreground">
                         {formatCurrency(watchAmount, selectedWallet.currency)} = {' '}
@@ -746,7 +669,7 @@ export function TransactionForm({
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                disabled={loading || calculating}
+                disabled={loading}
                 className="flex-1"
               >
                 {loading ? t('transactionForm.saving') : t('transactionForm.saveType', { type: watchType })}

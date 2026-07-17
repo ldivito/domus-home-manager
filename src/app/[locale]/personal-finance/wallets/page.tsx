@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { formatBalance, calculateTotalBalance } from '@/lib/utils/finance'
+import { getCurrentUserId } from '@/lib/utils/finance/current-user'
 
 export default function WalletsPage() {
   const t = useTranslations('personalFinance')
@@ -50,8 +51,8 @@ export default function WalletsPage() {
   const [walletToEdit, setWalletToEdit] = useState<PersonalWallet | null>(null)
   const { toast } = useToast()
 
-  // Current user (TODO: Get from auth context)
-  const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a'
+  // Current user (single source of truth until real auth wiring)
+  const userId = getCurrentUserId()
 
   // Debounce search
   useEffect(() => {

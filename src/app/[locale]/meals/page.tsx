@@ -129,6 +129,8 @@ export default function MealsPage() {
     } else if (viewType === 'week') {
       newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7))
     } else { // month
+      // Normalize to day 1 before changing month to avoid overflow (e.g. Jan 31 -> Mar 3)
+      newDate.setDate(1)
       newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1))
     }
     

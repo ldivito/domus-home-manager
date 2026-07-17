@@ -3,9 +3,31 @@ import bcrypt from 'bcryptjs'
 import { getKV, type CloudflareEnv } from './cloudflare'
 import { logger } from '@/lib/logger'
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-)
+let cachedJwtSecret: Uint8Array | null = null
+
+/**
+ * Resolve the JWT signing secret lazily so builds don't require the env var.
+ * Production without JWT_SECRET fails fast; development falls back to an
+ * ephemeral random secret (sessions reset on every server restart).
+ */
+function getJwtSecret(): Uint8Array {
+  if (cachedJwtSecret) return cachedJwtSecret
+
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable must be set in production')
+    }
+    logger.warn(
+      'JWT_SECRET is not set — using an ephemeral development secret; all sessions are invalidated on restart'
+    )
+    cachedJwtSecret = crypto.getRandomValues(new Uint8Array(32))
+    return cachedJwtSecret
+  }
+
+  cachedJwtSecret = new TextEncoder().encode(secret)
+  return cachedJwtSecret
+}
 
 export interface UserPayload {
   userId: string
@@ -41,7 +63,7 @@ export async function createToken(payload: UserPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d') // 7 days
-    .sign(JWT_SECRET)
+    .sign(getJwtSecret())
 
   return token
 }
@@ -51,7 +73,7 @@ export async function createToken(payload: UserPayload): Promise<string> {
  */
 export async function verifyToken(token: string): Promise<SessionData | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecret())
     return payload as SessionData
   } catch (error) {
     logger.error('Token verification failed:', error)
@@ -90,6 +112,11 @@ export async function getUserFromRequest(
     try {
       const kvSession = await getSession(token, env)
       if (!kvSession) return null
+
+      // Reject tokens issued before the user's sessions were revoked
+      // (e.g. after being removed from a household)
+      const revokedAt = await getKV(env).get(`revoked:${jwtData.userId}`)
+      if (revokedAt && jwtData.iat * 1000 <= Number(revokedAt)) return null
     } catch (error) {
       // In development, fall back to JWT-only auth if KV fails (e.g., API timeout)
       if (process.env.NODE_ENV === 'development') {
@@ -152,6 +179,20 @@ export async function getSession(
   } catch {
     return null
   }
+}
+
+/**
+ * Revoke every session of a user from now on: getUserFromRequest rejects
+ * tokens issued before the revocation timestamp. TTL matches token lifetime.
+ */
+export async function revokeUserSessions(
+  userId: string,
+  env?: CloudflareEnv
+): Promise<void> {
+  const kv = getKV(env)
+  await kv.put(`revoked:${userId}`, String(Date.now()), {
+    expirationTtl: 60 * 60 * 24 * 7
+  })
 }
 
 /**

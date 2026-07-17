@@ -463,7 +463,12 @@ export async function getCreditCardPaymentStats(
 }
 
 /**
- * Schedule automatic payment (placeholder for future implementation)
+ * Schedule automatic payment (NOT IMPLEMENTED)
+ *
+ * Placeholder: no scheduling mechanism exists yet, so this always returns
+ * `scheduled: false` to avoid consumers reporting success for a no-op.
+ * It is intentionally excluded from the module's barrel export until a real
+ * implementation (e.g. against credit-card-heartbeat) lands.
  */
 export async function scheduleAutomaticPayment(
   walletId: string,
@@ -472,23 +477,19 @@ export async function scheduleAutomaticPayment(
   fixedAmount?: number,
   daysBefore: number = 3
 ): Promise<{ scheduled: boolean; nextPaymentDate: Date }> {
-  // This would integrate with a job scheduler in a real implementation
-  // For now, we'll just return a placeholder
-  
   const nextPaymentDate = new Date()
   nextPaymentDate.setDate(nextPaymentDate.getDate() + 30 - daysBefore)
 
   // TODO: Implement with cron jobs or database-based scheduling
-  console.log(`Automatic payment scheduled for wallet ${walletId}`, {
+  console.warn(`scheduleAutomaticPayment is not implemented; no payment was scheduled for wallet ${walletId}`, {
     sourceWalletId,
     paymentType,
     fixedAmount,
-    daysBefore,
-    nextPaymentDate
+    daysBefore
   })
 
   return {
-    scheduled: true,
+    scheduled: false,
     nextPaymentDate
   }
 }

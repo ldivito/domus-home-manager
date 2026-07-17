@@ -31,6 +31,7 @@ import {
   RotateCcw
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { getCurrentUserId } from '@/lib/utils/finance/current-user'
 
 export default function CategoriesPage() {
   const t = useTranslations('personalFinance')
@@ -42,8 +43,8 @@ export default function CategoriesPage() {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  // Current user (TODO: Get from auth context)
-  const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a'
+  // Current user (single source of truth until real auth wiring)
+  const userId = getCurrentUserId()
 
   // Debounce search
   useEffect(() => {
@@ -136,6 +137,7 @@ export default function CategoriesPage() {
   const handleRestoreDefaults = async () => {
     setRestoreDialogOpen(false)
     try {
+      await db.restorePersonalFinanceDefaultCategories(userId)
       toast({
         title: t('categories.defaultsRestoredTitle'),
         description: t('categories.defaultsRestoredMessage'),

@@ -310,6 +310,7 @@
     "shareHint": "Destiná parte o todo este ingreso al presupuesto del hogar",
     "householdContribution": "Monto de contribución al hogar",
     "exchangeRate": "Tipo de Cambio ({from} a {to})",
+    "exchangeRateRequired": "Se requiere un tipo de cambio para transferencias entre billeteras con distintas monedas",
     "saving": "Guardando...",
     "saveType": "Guardar {type}",
     "cancel": "Cancelar",

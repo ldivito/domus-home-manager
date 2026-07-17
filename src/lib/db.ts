@@ -1651,6 +1651,13 @@ export class DomusDatabase extends Dexie {
       } catch (error) {
         dbLogger.warn('Error seeding default categories:', error)
       }
+
+      try {
+        // Seed default Personal Finance categories for existing users (with 5s timeout)
+        await withTimeout(this.seedPersonalFinanceCategoriesForExistingUsers(), 5000, 'seedPersonalFinanceCategoriesForExistingUsers')
+      } catch (error) {
+        dbLogger.warn('Error seeding Personal Finance categories:', error)
+      }
     })
   }
 
@@ -1734,6 +1741,45 @@ export class DomusDatabase extends Dexie {
     return this.legacyMealIngredientMigrationPromise
   }
 
+  // Seed default Personal Finance categories for every existing user.
+  // Idempotent: seedPersonalFinanceCategoriesForUser skips users that
+  // already have categories.
+  async seedPersonalFinanceCategoriesForExistingUsers(): Promise<void> {
+    try {
+      const users = await this.users.toArray()
+      for (const user of users) {
+        if (user.id) {
+          await this.seedPersonalFinanceCategoriesForUser(user.id)
+        }
+      }
+    } catch (error) {
+      dbLogger.error('Error seeding Personal Finance categories for existing users:', error)
+    }
+  }
+
+  // Default Personal Finance categories (shared by seeding and restore)
+  private getDefaultPersonalCategories(): Array<{ name: string; type: 'income' | 'expense'; icon: string; color: string }> {
+    return [
+      // Income
+      { name: 'Salary', type: 'income', icon: 'Briefcase', color: '#22c55e' },
+      { name: 'Freelance', type: 'income', icon: 'Laptop', color: '#3b82f6' },
+      { name: 'Investment', type: 'income', icon: 'TrendingUp', color: '#8b5cf6' },
+      { name: 'Bonus', type: 'income', icon: 'Gift', color: '#f59e0b' },
+      { name: 'Other Income', type: 'income', icon: 'Plus', color: '#6b7280' },
+      // Expense
+      { name: 'Food & Dining', type: 'expense', icon: 'UtensilsCrossed', color: '#ef4444' },
+      { name: 'Transportation', type: 'expense', icon: 'Car', color: '#3b82f6' },
+      { name: 'Shopping', type: 'expense', icon: 'ShoppingBag', color: '#ec4899' },
+      { name: 'Entertainment', type: 'expense', icon: 'Film', color: '#8b5cf6' },
+      { name: 'Health & Medical', type: 'expense', icon: 'Heart', color: '#10b981' },
+      { name: 'Bills & Utilities', type: 'expense', icon: 'Receipt', color: '#f59e0b' },
+      { name: 'Education', type: 'expense', icon: 'GraduationCap', color: '#06b6d4' },
+      { name: 'Personal Care', type: 'expense', icon: 'Scissors', color: '#ec4899' },
+      { name: 'Travel', type: 'expense', icon: 'Plane', color: '#84cc16' },
+      { name: 'Other Expenses', type: 'expense', icon: 'MoreHorizontal', color: '#6b7280' }
+    ]
+  }
+
   // Helper method to seed default Personal Finance categories for a user
   async seedPersonalFinanceCategoriesForUser(userId: string): Promise<void> {
     try {
@@ -1741,54 +1787,15 @@ export class DomusDatabase extends Dexie {
       const existingCategories = await this.personalCategories
         .where('userId').equals(userId)
         .count()
-      
+
       if (existingCategories > 0) return // Already seeded
 
       const now = new Date()
-
-      // Default income categories
-      const incomeCategories = [
-        { name: 'Salary', icon: 'Briefcase', color: '#22c55e' },
-        { name: 'Freelance', icon: 'Laptop', color: '#3b82f6' },
-        { name: 'Investment', icon: 'TrendingUp', color: '#8b5cf6' },
-        { name: 'Bonus', icon: 'Gift', color: '#f59e0b' },
-        { name: 'Other Income', icon: 'Plus', color: '#6b7280' }
-      ]
-
-      // Default expense categories
-      const expenseCategories = [
-        { name: 'Food & Dining', icon: 'UtensilsCrossed', color: '#ef4444' },
-        { name: 'Transportation', icon: 'Car', color: '#3b82f6' },
-        { name: 'Shopping', icon: 'ShoppingBag', color: '#ec4899' },
-        { name: 'Entertainment', icon: 'Film', color: '#8b5cf6' },
-        { name: 'Health & Medical', icon: 'Heart', color: '#10b981' },
-        { name: 'Bills & Utilities', icon: 'Receipt', color: '#f59e0b' },
-        { name: 'Education', icon: 'GraduationCap', color: '#06b6d4' },
-        { name: 'Personal Care', icon: 'Scissors', color: '#ec4899' },
-        { name: 'Travel', icon: 'Plane', color: '#84cc16' },
-        { name: 'Other Expenses', icon: 'MoreHorizontal', color: '#6b7280' }
-      ]
-
-      // Create income categories
-      const incomeData = incomeCategories.map(cat => ({
+      const data = this.getDefaultPersonalCategories().map(cat => ({
         id: `pc_${crypto.randomUUID()}`,
         userId,
         name: cat.name,
-        type: 'income' as const,
-        color: cat.color,
-        icon: cat.icon,
-        isActive: true,
-        isDefault: true,
-        createdAt: now,
-        updatedAt: now
-      }))
-
-      // Create expense categories
-      const expenseData = expenseCategories.map(cat => ({
-        id: `pc_${crypto.randomUUID()}`,
-        userId,
-        name: cat.name,
-        type: 'expense' as const,
+        type: cat.type,
         color: cat.color,
         icon: cat.icon,
         isActive: true,
@@ -1798,12 +1805,51 @@ export class DomusDatabase extends Dexie {
       }))
 
       // Add all categories
-      await this.personalCategories.bulkAdd([...incomeData, ...expenseData])
+      await this.personalCategories.bulkAdd(data)
 
       dbLogger.debug(`Personal Finance categories seeded for user ${userId}`)
     } catch (error) {
       dbLogger.error('Error seeding Personal Finance categories:', error)
     }
+  }
+
+  /**
+   * Restore the default Personal Finance categories for a user without
+   * touching their custom ones: missing defaults (matched by name + type)
+   * are re-created and deactivated defaults are re-activated.
+   * Returns the number of categories created or re-activated.
+   */
+  async restorePersonalFinanceDefaultCategories(userId: string): Promise<number> {
+    const existing = await this.personalCategories
+      .where('userId').equals(userId)
+      .toArray()
+
+    const now = new Date()
+    let restored = 0
+
+    for (const def of this.getDefaultPersonalCategories()) {
+      const match = existing.find(c => c.name === def.name && c.type === def.type)
+      if (!match) {
+        await this.personalCategories.add({
+          id: `pc_${crypto.randomUUID()}`,
+          userId,
+          name: def.name,
+          type: def.type,
+          color: def.color,
+          icon: def.icon,
+          isActive: true,
+          isDefault: true,
+          createdAt: now,
+          updatedAt: now
+        })
+        restored++
+      } else if (match.isActive === false && match.id) {
+        await this.personalCategories.update(match.id, { isActive: true, updatedAt: now })
+        restored++
+      }
+    }
+
+    return restored
   }
 
   // Helper method to seed default categories for new databases
@@ -1987,8 +2033,18 @@ export async function bulkDeleteWithSync<T extends { id?: string; householdId?: 
 // =============================================================================
 
 /**
+ * Flag set by the sync engine while applying remote changes so the hooks
+ * below don't stamp updatedAt or re-trigger auto-sync for pulled data.
+ */
+let isApplyingRemoteChanges = false
+
+export function setApplyingRemoteChanges(value: boolean): void {
+  isApplyingRemoteChanges = value
+}
+
+/**
  * List of tables that should trigger sync when modified
- * Matches SYNC_TABLES in sync.ts
+ * Keep in sync with SYNC_TABLES in sync.ts
  */
 const SYNCABLE_TABLES = [
   'users',
@@ -2043,7 +2099,9 @@ const SYNCABLE_TABLES = [
   'personalCategories',
   'personalTransactions',
   'creditCardStatements',
-  'creditCardPayments'
+  'creditCardPayments',
+  // Activity tracking
+  'activityLogs'
 ] as const
 
 /**
@@ -2072,18 +2130,37 @@ function setupAutoSyncHooks() {
 
     // Hook into creating operations
     dexieTable.hook('creating', function() {
+      if (isApplyingRemoteChanges) return
       emitSyncNeeded()
     })
 
     // Hook into updating operations
     dexieTable.hook('updating', function() {
+      if (isApplyingRemoteChanges) return undefined
       emitSyncNeeded()
+      // Stamp updatedAt on every local edit so incremental sync picks up
+      // updates on tables whose records otherwise only carry createdAt
+      return { updatedAt: new Date() }
     })
 
     // Hook into deleting operations
     dexieTable.hook('deleting', function() {
+      if (isApplyingRemoteChanges) return
       emitSyncNeeded()
     })
+  })
+
+  // Seed default Personal Finance categories when a user is created locally
+  // (skipped while applying remote changes: synced users bring their own
+  // categories with them, seeding would duplicate them)
+  db.users.hook('creating', function(primKey, obj) {
+    if (isApplyingRemoteChanges) return
+    const userId = (typeof primKey === 'string' && primKey) || obj?.id
+    if (!userId) return
+    // Defer until the create transaction has committed
+    setTimeout(() => {
+      void db.seedPersonalFinanceCategoriesForUser(userId)
+    }, 0)
   })
 
   dbLogger.debug('Auto-sync hooks initialized for', SYNCABLE_TABLES.length, 'tables')

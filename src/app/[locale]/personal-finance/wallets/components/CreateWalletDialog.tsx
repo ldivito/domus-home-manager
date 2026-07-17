@@ -42,6 +42,7 @@ import * as z from 'zod'
 import { validateWallet, generateWalletId, generateWalletColor } from '@/lib/utils/finance'
 import { db } from '@/lib/db'
 import { useToast } from '@/hooks/use-toast'
+import { getCurrentUserId } from '@/lib/utils/finance/current-user'
 
 const WALLET_ICONS = [
   { value: 'Wallet', label: 'Wallet' },
@@ -157,8 +158,8 @@ export function CreateWalletDialog({
     setIsLoading(true)
 
     try {
-      // Get current user (in a real app, this would come from auth)
-      const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a' // TODO: Get from auth context
+      // Current user (single source of truth until real auth wiring)
+      const userId = getCurrentUserId()
 
       // Validate the wallet data
       const validation = validateWallet({

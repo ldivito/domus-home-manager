@@ -5,31 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Wallet, TrendingUp, TrendingDown, Plus, CreditCard, ArrowUpDown, AlertCircle, BarChart3, PieChart } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   formatCurrency,
   calculateTotalBalance,
+  getCurrentUserId,
 } from '@/lib/utils/finance'
 import CreditCardNotifications from './components/CreditCardNotifications'
 
 export default function PersonalFinancePage() {
   const t = useTranslations('personalFinance')
+  const router = useRouter()
 
   // Reactive data loading via useLiveQuery
+  // NOTE: booleans are not indexable in IndexedDB, so isActive is filtered in memory
   const wallets = useLiveQuery(
     () => db.personalWallets
-      .where('isActive')
-      .equals(1)
+      .filter(w => w.isActive !== false)
       .toArray(),
     []
   )
 
   const categories = useLiveQuery(
     () => db.personalCategories
-      .where('isActive')
-      .equals(1)
+      .filter(c => c.isActive !== false)
       .toArray(),
     []
   )
@@ -65,24 +66,37 @@ export default function PersonalFinancePage() {
     [wallets]
   )
 
+  // Monthly stats are aggregated PER CURRENCY: summing ARS and USD amounts
+  // together would produce economically meaningless numbers
   const monthlyStats = useMemo(() => {
-    if (!monthTransactions) return { income: 0, expenses: 0, net: 0 }
-    const income = monthTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0)
-    const expenses = monthTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0)
-    return { income, expenses, net: income - expenses }
+    const stats = {
+      ARS: { income: 0, expenses: 0, net: 0 },
+      USD: { income: 0, expenses: 0, net: 0 }
+    }
+    if (!monthTransactions) return stats
+    for (const txn of monthTransactions) {
+      const bucket = txn.currency === 'USD' ? stats.USD : stats.ARS
+      if (txn.type === 'income') bucket.income += txn.amount
+      else if (txn.type === 'expense') bucket.expenses += txn.amount
+    }
+    stats.ARS.net = stats.ARS.income - stats.ARS.expenses
+    stats.USD.net = stats.USD.income - stats.USD.expenses
+    return stats
   }, [monthTransactions])
 
+  const hasUsdActivity = monthlyStats.USD.income !== 0 || monthlyStats.USD.expenses !== 0
+
   const monthlyStatsFormatted = useMemo(() => {
-    const { income, expenses, net } = monthlyStats
+    const { ARS, USD } = monthlyStats
     return {
-      income: formatCurrency(income, 'ARS'),
-      expenses: formatCurrency(expenses, 'ARS'),
-      net: formatCurrency(net, 'ARS'),
-      netColor: net >= 0 ? 'text-green-600' : 'text-red-600'
+      income: formatCurrency(ARS.income, 'ARS'),
+      expenses: formatCurrency(ARS.expenses, 'ARS'),
+      net: formatCurrency(ARS.net, 'ARS'),
+      incomeUSD: formatCurrency(USD.income, 'USD'),
+      expensesUSD: formatCurrency(USD.expenses, 'USD'),
+      netUSD: formatCurrency(USD.net, 'USD'),
+      netColor: ARS.net >= 0 ? 'text-green-600' : 'text-red-600',
+      netUsdColor: USD.net >= 0 ? 'text-green-600' : 'text-red-600'
     }
   }, [monthlyStats])
 
@@ -120,7 +134,7 @@ export default function PersonalFinancePage() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('wallets.totalARS')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -132,7 +146,7 @@ export default function PersonalFinancePage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total USD</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('wallets.totalUSD')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -157,7 +171,7 @@ export default function PersonalFinancePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.title')}</CardTitle>
-            {monthlyStats.net >= 0 ? (
+            {monthlyStats.ARS.net >= 0 ? (
               <TrendingUp className="h-4 w-4 text-green-600" />
             ) : (
               <TrendingDown className="h-4 w-4 text-red-600" />
@@ -167,6 +181,11 @@ export default function PersonalFinancePage() {
             <div className={`text-2xl font-bold ${monthlyStatsFormatted.netColor}`}>
               {monthlyStatsFormatted.net}
             </div>
+            {hasUsdActivity && (
+              <div className={`text-sm font-semibold ${monthlyStatsFormatted.netUsdColor}`}>
+                {monthlyStatsFormatted.netUSD}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">{t('analytics.metrics.netIncome')}</p>
           </CardContent>
         </Card>
@@ -254,21 +273,27 @@ export default function PersonalFinancePage() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold mb-1">{monthlyStatsFormatted.income}</div>
+              {hasUsdActivity && (
+                <div className="text-sm font-semibold mb-1">{monthlyStatsFormatted.incomeUSD}</div>
+              )}
               <div className="text-sm text-muted-foreground">{t('dashboard.monthlyIncome')}</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold mb-1 text-red-600">{monthlyStatsFormatted.expenses}</div>
+              {hasUsdActivity && (
+                <div className="text-sm font-semibold mb-1 text-red-600">{monthlyStatsFormatted.expensesUSD}</div>
+              )}
               <div className="text-sm text-muted-foreground">{t('dashboard.monthlyExpenses')}</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
               <div className={`text-2xl font-bold mb-1 ${monthlyStatsFormatted.netColor}`}>
-                {monthlyStats.expenses > 0
-                  ? `${((monthlyStats.income / monthlyStats.expenses) * 100).toFixed(0)}%`
+                {monthlyStats.ARS.expenses > 0
+                  ? `${((monthlyStats.ARS.income / monthlyStats.ARS.expenses) * 100).toFixed(0)}%`
                   : '\u221E'
                 }
               </div>
               <div className="text-sm text-muted-foreground">
-                {monthlyStats.expenses > 0
+                {monthlyStats.ARS.expenses > 0
                   ? t('dashboard.incomeExpenseRatio')
                   : t('dashboard.noExpensesYet')
                 }
@@ -280,10 +305,10 @@ export default function PersonalFinancePage() {
 
       {/* Credit Card Notifications */}
       <CreditCardNotifications
-        userId="current-user-id"
+        userId={getCurrentUserId()}
         compact={false}
         onNotificationClick={(notification) => {
-          console.log('Notification clicked:', notification)
+          router.push(`/personal-finance/wallets/${notification.walletId}`)
         }}
       />
 

@@ -109,6 +109,7 @@
       "category": "Categoría",
       "selectCategory": "Selecciona categoría",
       "importance": "Importancia",
+      "selectImportance": "Selecciona importancia",
       "cancel": "Cancelar",
       "save": "Guardar"
     }

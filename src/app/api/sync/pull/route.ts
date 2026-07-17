@@ -50,6 +50,13 @@ export async function GET(request: Request) {
     // If user has a household, pull all household data (shared between members)
     // If user has no household, pull only their own data
     // IMPORTANT: Only return the LATEST entry per recordId to ensure deletions work correctly
+    //
+    // Timestamp semantics:
+    // - updatedAt = client edit time -> picks the winning row per recordId
+    //   (last-writer-wins; delete tombstones with a newer edit time mask
+    //   older upserts, so deletions don't resurrect)
+    // - createdAt = server receive time -> incremental watermark and cursor,
+    //   so offline edits with old client timestamps are still delivered
     const params: (string | number)[] = []
 
     const baseId = session.householdId || session.userId
@@ -61,14 +68,14 @@ export async function GET(request: Request) {
     params.push(baseId) // For main WHERE
 
     if (sinceParam) {
-      whereConditions += ' AND sm.updatedAt > ?'
+      whereConditions += ' AND sm.createdAt > ?'
       params.push(sinceParam)
     }
 
     if (cursorTimestamp && cursorRecordId) {
       // Cursor-based pagination: get records after the cursor
-      // Use composite ordering: (updatedAt, recordId) for deterministic pagination
-      whereConditions += ' AND (sm.updatedAt > ? OR (sm.updatedAt = ? AND sm.recordId > ?))'
+      // Use composite ordering: (createdAt, recordId) for deterministic pagination
+      whereConditions += ' AND (sm.createdAt > ? OR (sm.createdAt = ? AND sm.recordId > ?))'
       params.push(cursorTimestamp, cursorTimestamp, cursorRecordId)
     }
 
@@ -76,7 +83,7 @@ export async function GET(request: Request) {
     params.push(limit + 1)
 
     const query = `
-      SELECT sm.tableName, sm.recordId, sm.operation, sm.data, sm.updatedAt
+      SELECT sm.tableName, sm.recordId, sm.operation, sm.data, sm.createdAt, sm.updatedAt
       FROM sync_metadata sm
       INNER JOIN (
         SELECT recordId, MAX(updatedAt) as maxUpdated
@@ -85,7 +92,7 @@ export async function GET(request: Request) {
         GROUP BY recordId
       ) latest ON sm.recordId = latest.recordId AND sm.updatedAt = latest.maxUpdated
       WHERE sm.${whereConditions}
-      ORDER BY sm.updatedAt ASC, sm.recordId ASC
+      ORDER BY sm.createdAt ASC, sm.recordId ASC
       LIMIT ?
     `
 
@@ -95,6 +102,7 @@ export async function GET(request: Request) {
       recordId: string
       operation: string
       data: string
+      createdAt: string
       updatedAt: string
     }>()
 
@@ -102,10 +110,10 @@ export async function GET(request: Request) {
     const hasMore = rows.length > limit
     const pageRows = hasMore ? rows.slice(0, limit) : rows
 
-    // Build next cursor from last row
+    // Build next cursor from last row (cursor tracks server receive time)
     const lastRow = pageRows[pageRows.length - 1]
     const nextCursor = hasMore && lastRow
-      ? `${lastRow.updatedAt}_${lastRow.recordId}`
+      ? `${lastRow.createdAt}_${lastRow.recordId}`
       : null
 
     // Transform results into SyncRecord format

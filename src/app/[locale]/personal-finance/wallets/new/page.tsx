@@ -1,17 +1,23 @@
 'use client'
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
+import { useRouter } from '@/i18n/navigation';
 import { CreateWalletDialog } from '../components/CreateWalletDialog';
 
 const NewWalletPage = () => {
-  const t = useTranslations('personalFinance')
+  const router = useRouter()
+  const [open, setOpen] = useState(true)
 
   return (
-    <div>
-      <h1>{t('walletForm.createTitle')}</h1>
-      <CreateWalletDialog />
-    </div>
+    <CreateWalletDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen)
+        if (!isOpen) {
+          router.push('/personal-finance/wallets')
+        }
+      }}
+    />
   );
 };
 

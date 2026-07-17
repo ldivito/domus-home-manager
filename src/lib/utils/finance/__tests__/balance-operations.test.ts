@@ -326,8 +326,9 @@ describe('balance-operations', () => {
         createMockTransaction({ walletId: 'w1', type: 'expense', amount: 5000, status: 'completed' }),
       ]
 
-      // Chain: .where('walletId').equals(walletId).or('targetWalletId').equals(walletId).and(fn).toArray()
-      mockDb.personalTransactions.and.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
+      // Chain: .filter(fn).toArray() — targetWalletId is unindexed, so the
+      // implementation matches source and incoming transfers in memory
+      mockDb.personalTransactions.filter.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
         const filtered = transactions.filter(filterFn)
         return { toArray: vi.fn().mockResolvedValue(filtered) }
       })
@@ -349,7 +350,7 @@ describe('balance-operations', () => {
         }),
       ]
 
-      mockDb.personalTransactions.and.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
+      mockDb.personalTransactions.filter.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
         const filtered = transactions.filter(filterFn)
         return { toArray: vi.fn().mockResolvedValue(filtered) }
       })
@@ -361,7 +362,7 @@ describe('balance-operations', () => {
     })
 
     it('should return 0 for wallets with no transactions', async () => {
-      mockDb.personalTransactions.and.mockImplementation(() => {
+      mockDb.personalTransactions.filter.mockImplementation(() => {
         return { toArray: vi.fn().mockResolvedValue([]) }
       })
 
@@ -379,7 +380,7 @@ describe('balance-operations', () => {
       const transactions = [
         createMockIncome({ walletId: 'w1', amount: 60000, status: 'completed' }),
       ]
-      mockDb.personalTransactions.and.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
+      mockDb.personalTransactions.filter.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
         const filtered = transactions.filter(filterFn)
         return { toArray: vi.fn().mockResolvedValue(filtered) }
       })

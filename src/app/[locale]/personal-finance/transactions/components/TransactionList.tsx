@@ -17,7 +17,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -37,7 +36,6 @@ import {
   Search,
   Filter,
   MoreHorizontal,
-  Edit,
   Trash2,
   Calendar,
   Wallet,
@@ -109,13 +107,14 @@ export function TransactionList() {
     []
   )
 
+  // NOTE: booleans are not indexable in IndexedDB, so isActive is filtered in memory
   const wallets = useLiveQuery(
-    () => db.personalWallets.where('isActive').equals(1).toArray(),
+    () => db.personalWallets.filter(w => w.isActive !== false).toArray(),
     []
   )
 
   const categories = useLiveQuery(
-    () => db.personalCategories.where('isActive').equals(1).toArray(),
+    () => db.personalCategories.filter(c => c.isActive !== false).toArray(),
     []
   )
 
@@ -219,11 +218,16 @@ export function TransactionList() {
       const transaction = rawTransactions?.find(t => t.id === transactionToDelete)
       if (!transaction) return
 
-      // Reverse the transaction's balance effects
-      await reverseTransactionBalanceUpdate(transaction)
+      // Delete the transaction and reverse its balance effects atomically:
+      // if any step fails, everything rolls back (previously a failed delete
+      // left the wallet balance reverted with the transaction still present)
+      await db.transaction('rw', [db.personalTransactions, db.personalWallets, db.deletionLog], async () => {
+        // Delete the transaction (with sync logging)
+        await deleteWithSync(db.personalTransactions, 'personalTransactions', transactionToDelete)
 
-      // Delete the transaction (with sync logging)
-      await deleteWithSync(db.personalTransactions, 'personalTransactions', transactionToDelete)
+        // Reverse the transaction's balance effects
+        await reverseTransactionBalanceUpdate(transaction)
+      })
 
       toast({
         title: t('transactionList.deleteSuccessTitle'),
@@ -607,11 +611,9 @@ export function TransactionList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => console.log('Edit:', transaction.id)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          {t('transactionList.edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        {/* NOTE: Edit action removed until transaction editing
+                            is implemented (it was a dead menu item that only
+                            logged to the console) */}
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteTransaction(transaction.id!)}
@@ -635,23 +637,31 @@ export function TransactionList() {
           <CardContent className="p-4">
             <div className="flex justify-between items-center text-sm text-muted-foreground">
               <span>{t('transactions.showingCount', { count: transactions.length })}</span>
-              <div className="flex gap-4">
-                <span className="text-green-600">
-                  {t('transactions.incomeLabel')} {formatCurrency(
-                    transactions
-                      .filter(t => t.type === 'income')
-                      .reduce((sum, t) => sum + t.amount, 0),
-                    'ARS'
-                  )}
-                </span>
-                <span className="text-red-600">
-                  {t('transactions.expensesLabel')} {formatCurrency(
-                    transactions
-                      .filter(t => t.type === 'expense')
-                      .reduce((sum, t) => sum + t.amount, 0),
-                    'ARS'
-                  )}
-                </span>
+              {/* Totals are aggregated per currency: mixing ARS and USD in a
+                  single sum would produce meaningless numbers */}
+              <div className="flex flex-col items-end gap-1">
+                {(['ARS', 'USD'] as const)
+                  .filter(currency => transactions.some(t => t.currency === currency))
+                  .map(currency => (
+                    <div key={currency} className="flex gap-4">
+                      <span className="text-green-600">
+                        {t('transactions.incomeLabel')} {formatCurrency(
+                          transactions
+                            .filter(t => t.type === 'income' && t.currency === currency)
+                            .reduce((sum, t) => sum + t.amount, 0),
+                          currency
+                        )}
+                      </span>
+                      <span className="text-red-600">
+                        {t('transactions.expensesLabel')} {formatCurrency(
+                          transactions
+                            .filter(t => t.type === 'expense' && t.currency === currency)
+                            .reduce((sum, t) => sum + t.amount, 0),
+                          currency
+                        )}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </div>
           </CardContent>

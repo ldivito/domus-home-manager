@@ -87,7 +87,8 @@ export default function FinancePage() {
   // Get expense categories
   const expenseCategories = useLiveQuery(() => db.expenseCategories.toArray()) || []
 
-  // Get payments for current month
+  // Get all payments (every month): AnalysisTab needs the 12-month history and
+  // the monthly-value defaults (resolveDefaultForMonth) read prior months
   const payments = useLiveQuery(
     () => db.expensePayments.toArray(),
     []
@@ -99,8 +100,8 @@ export default function FinancePage() {
   // Get all exchange rates for analysis
   const allExchangeRates = useLiveQuery(() => db.monthlyExchangeRates.toArray()) || []
 
-  // Get exchange rate value (default to 1 if not set)
-  const exchangeRate = selectedExchangeRate?.rate || 1
+  // Get exchange rate value; null when not set (never assume 1: it would mix USD and ARS)
+  const exchangeRate = selectedExchangeRate?.rate ?? null
 
   // Month names for display
   const monthNames = [
@@ -110,9 +111,15 @@ export default function FinancePage() {
     t('months.october'), t('months.november'), t('months.december')
   ]
 
-  // Calculate totals - convert USD to ARS
+  // Calculate totals - convert USD to ARS.
+  // USD amounts without an exchange rate for the month are excluded and flagged.
+  let hasUnconvertedUSD = false
   const totalHouseholdIncome = selectedIncomes.reduce((sum, inc) => {
     if (inc.currency === 'USD') {
+      if (exchangeRate == null) {
+        hasUnconvertedUSD = true
+        return sum
+      }
       return sum + (inc.amount * exchangeRate)
     }
     return sum + inc.amount
@@ -124,7 +131,14 @@ export default function FinancePage() {
     const seed = stored
       ? { amount: stored.amount, currency: stored.currency ?? 'ARS' as const }
       : resolveDefaultForMonth(exp, selectedMonth, selectedYear, payments)
-    return sum + getMonthlyAmountARS(seed, exchangeRate)
+    if (seed.currency === 'USD') {
+      if (exchangeRate == null) {
+        hasUnconvertedUSD = true
+        return sum
+      }
+      return sum + seed.amount * exchangeRate
+    }
+    return sum + seed.amount
   }, 0)
 
   // Helper function to display amounts

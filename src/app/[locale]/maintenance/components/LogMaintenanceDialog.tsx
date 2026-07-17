@@ -33,6 +33,13 @@ interface LogMaintenanceDialogProps {
   items: MaintenanceItem[]
 }
 
+// Parse a 'YYYY-MM-DD' string (from <input type="date">) as a LOCAL date.
+// new Date('YYYY-MM-DD') parses as UTC midnight, which shifts the day back in UTC-negative timezones.
+function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 function calculateNextDueDate(frequency: MaintenanceFrequency, customDays?: number): Date {
   const now = new Date()
   switch (frequency) {
@@ -101,7 +108,7 @@ export function LogMaintenanceDialog({ open, onOpenChange, task, items }: LogMai
         maintenanceTaskId: task.id,
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        completedDate: new Date(formData.completedDate),
+        completedDate: parseLocalDate(formData.completedDate),
         completedByUserId: formData.completedByUserId && formData.completedByUserId !== '__none__' ? formData.completedByUserId : undefined,
         actualCost: formData.actualCost ? parseFloat(formData.actualCost) : undefined,
         costCurrency: formData.costCurrency,
@@ -115,7 +122,7 @@ export function LogMaintenanceDialog({ open, onOpenChange, task, items }: LogMai
       if (task.frequency !== 'once') {
         const nextDue = calculateNextDueDate(task.frequency, task.customFrequencyDays)
         await db.maintenanceTasks.update(task.id, {
-          lastCompleted: new Date(formData.completedDate),
+          lastCompleted: parseLocalDate(formData.completedDate),
           nextDue,
           updatedAt: new Date()
         })

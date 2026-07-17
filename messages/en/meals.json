@@ -150,5 +150,19 @@
       "cancel": "Cancel",
       "save": "Save"
     }
+  },
+  "templateDialog": {
+    "title": "Select Meal Template",
+    "searchPlaceholder": "Search templates by name, description, or ingredients...",
+    "noResultsTitle": "No templates found",
+    "noResultsHint": "Try adjusting your search terms",
+    "emptyTitle": "No saved templates",
+    "emptyHint": "Save meals as templates to see them here",
+    "usedTimes": "Used {count} times",
+    "ingredientsCount": "{count} ingredients",
+    "ingredientsLabel": "Ingredients:",
+    "moreIngredients": "+{count} more",
+    "lastUsed": "Last used: {date}",
+    "lastUsedNever": "Last used: never"
   }
 }

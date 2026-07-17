@@ -125,12 +125,15 @@ export async function GET(request: Request) {
     }
 
     // Add payments (money spent by each person)
+    // Only count payments made by current household members: paidBy can reference
+    // a removed member (or an orphaned id) and undefined + amount would poison
+    // every balance with NaN
     const paymentsList = payments.results as ExpensePayment[]
     if (paymentsList && Array.isArray(paymentsList)) {
       paymentsList.forEach(payment => {
         const userId = payment.paidBy
         const amount = parseFloat(payment.amount)
-        if (userId && !isNaN(amount)) {
+        if (userId && userId in balances && !isNaN(amount)) {
           balances[userId] += amount
         }
       })
@@ -150,36 +153,58 @@ export async function GET(request: Request) {
     if (settlementsList && Array.isArray(settlementsList)) {
       settlementsList.forEach(settlement => {
         const amount = parseFloat(settlement.amount)
-        if (!isNaN(amount)) {
+        if (isNaN(amount)) return
+        // Guard against settlements referencing users no longer in the household
+        if (settlement.fromUser in balances) {
           balances[settlement.fromUser] += amount // Person who paid reduces their debt
+        }
+        if (settlement.toUser in balances) {
           balances[settlement.toUser] -= amount   // Person who received increases their debt
         }
       })
     }
 
     // Create debt relationships
+    // Greedy two-pointer resolution over mutable copies (mirrors BalanceTab):
+    // each assignment decrements the remaining balances so debts are never
+    // double-counted when there are multiple debtors and creditors.
+    // Note: this endpoint splits expenses equally (averagePerPerson) while the
+    // BalanceTab UI splits proportionally to income, so amounts can differ.
     const debts: Debt[] = []
-    
-    // Simple debt resolution: match creditors with debtors
-    Object.entries(balances).forEach(([creditorId, creditorBalance]) => {
-      if (creditorBalance > 0.01) { // Someone owes them money
-        Object.entries(balances).forEach(([debtorId, debtorBalance]) => {
-          if (debtorBalance < -0.01 && creditorId !== debtorId) { // They owe money to someone
-            const debtAmount = Math.min(creditorBalance, Math.abs(debtorBalance))
-            if (debtAmount > 0.01) {
-              debts.push({
-                fromUserId: debtorId,
-                fromUserName: memberMap.get(debtorId) || 'Unknown',
-                toUserId: creditorId,
-                toUserName: memberMap.get(creditorId) || 'Unknown',
-                amount: Math.round(debtAmount * 100) / 100,
-                currency: 'ARS'
-              })
-            }
-          }
+
+    const debtors = Object.entries(balances)
+      .filter(([, balance]) => balance < -0.01)
+      .map(([userId, balance]) => ({ userId, balance }))
+      .sort((a, b) => a.balance - b.balance)
+    const creditors = Object.entries(balances)
+      .filter(([, balance]) => balance > 0.01)
+      .map(([userId, balance]) => ({ userId, balance }))
+      .sort((a, b) => b.balance - a.balance)
+
+    let debtorIdx = 0
+    let creditorIdx = 0
+    while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
+      const debtor = debtors[debtorIdx]
+      const creditor = creditors[creditorIdx]
+      const debtAmount = Math.min(Math.abs(debtor.balance), creditor.balance)
+
+      if (debtAmount > 0.01) {
+        debts.push({
+          fromUserId: debtor.userId,
+          fromUserName: memberMap.get(debtor.userId) || 'Unknown',
+          toUserId: creditor.userId,
+          toUserName: memberMap.get(creditor.userId) || 'Unknown',
+          amount: Math.round(debtAmount * 100) / 100,
+          currency: 'ARS'
         })
       }
-    })
+
+      debtor.balance += debtAmount
+      creditor.balance -= debtAmount
+
+      if (Math.abs(debtor.balance) < 0.01) debtorIdx++
+      if (creditor.balance < 0.01) creditorIdx++
+    }
 
     // Format balances for response
     const userBalances: UserBalance[] = Object.entries(balances).map(([userId, balance]) => ({

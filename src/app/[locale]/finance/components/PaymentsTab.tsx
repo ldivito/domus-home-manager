@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { db, RecurringExpense, ExpensePayment, User, MonthlyIncome, MonthlyExchangeRate, deleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
-import { resolveDefaultForMonth, getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
+import { resolveDefaultForMonth } from '@/lib/utils/finance/monthlyValues'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -61,24 +61,30 @@ export function PaymentsTab({
 
   // Track which payments we've already generated to prevent duplicates
   const generatedPaymentsRef = useRef<Set<string>>(new Set())
+  // Serialize generation runs so overlapping effect invocations can't race each other
+  const generationLockRef = useRef<Promise<void>>(Promise.resolve())
 
-  const rate = exchangeRate?.rate || 1
+  // Exchange rate for the selected month; null when not configured (never assume 1)
+  const rate = exchangeRate?.rate ?? null
 
-  // Calculate total income in ARS for percentage
+  // Convert an amount to ARS; null when it's USD and the month has no exchange rate
+  const toARS = (amount: number, currency?: 'ARS' | 'USD'): number | null => {
+    if ((currency ?? 'ARS') === 'ARS') return amount
+    return rate != null ? amount * rate : null
+  }
+
+  // Calculate total income in ARS for percentage (USD incomes without a rate are excluded)
   const totalIncomeARS = incomes.reduce((sum, inc) => {
-    if (inc.currency === 'USD') {
-      return sum + (inc.amount * rate)
-    }
-    return sum + inc.amount
+    const amountARS = toARS(inc.amount, inc.currency)
+    return amountARS != null ? sum + amountARS : sum
   }, 0)
 
   // Get user income percentage (based on ARS values)
   const getUserPercentage = (userId: string) => {
     const userIncome = incomes.find(inc => inc.userId === userId)
     if (!userIncome || totalIncomeARS === 0) return 0
-    const userIncomeARS = userIncome.currency === 'USD'
-      ? userIncome.amount * rate
-      : userIncome.amount
+    const userIncomeARS = toARS(userIncome.amount, userIncome.currency)
+    if (userIncomeARS == null) return 0
     return (userIncomeARS / totalIncomeARS) * 100
   }
 
@@ -95,30 +101,33 @@ export function PaymentsTab({
           continue
         }
 
-        // Check if payment already exists in database for this month
-        const existingPayment = payments.find(p =>
-          p.recurringExpenseId === expense.id &&
-          p.month === currentMonth &&
-          p.year === currentYear
-        )
+        try {
+          // Check-and-insert atomically against Dexie using the month/year/expense
+          // key, instead of the `payments` prop (which can be a stale/empty snapshot
+          // while the live query or a sync pull is still resolving)
+          await db.transaction('rw', db.expensePayments, async () => {
+            const existingPayment = await db.expensePayments
+              .where('[recurringExpenseId+year+month]')
+              .equals([expense.id!, currentYear, currentMonth])
+              .first()
 
-        if (!existingPayment) {
-          // Mark as generated before adding to prevent race conditions
-          generatedPaymentsRef.current.add(paymentKey)
+            if (existingPayment) return
 
-          // Create payment for this month
-          const dueDate = new Date(currentYear, currentMonth - 1, expense.dueDay)
+            // Clamp the day so short months don't roll the due date into the next month
+            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate()
+            const dueDate = new Date(currentYear, currentMonth - 1, Math.min(expense.dueDay, daysInMonth))
 
-          // Determine status
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          let status: 'pending' | 'paid' | 'overdue' = 'pending'
-          if (dueDate < today) {
-            status = 'overdue'
-          }
+            // Determine status
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            let status: 'pending' | 'paid' | 'overdue' = 'pending'
+            if (dueDate < today) {
+              status = 'overdue'
+            }
 
-          try {
-            const seed = resolveDefaultForMonth(expense, currentMonth, currentYear, payments)
+            // Seed from the freshest data in Dexie, not the possibly-stale prop
+            const storedPayments = await db.expensePayments.toArray()
+            const seed = resolveDefaultForMonth(expense, currentMonth, currentYear, storedPayments)
             await db.expensePayments.add({
               id: generateId('pay'),
               recurringExpenseId: expense.id!,
@@ -130,23 +139,23 @@ export function PaymentsTab({
               status,
               createdAt: new Date()
             })
-          } catch (error) {
-            // If add fails, remove from generated set so it can be retried
-            generatedPaymentsRef.current.delete(paymentKey)
-            logger.error('Error generating payment:', error)
-          }
-        } else {
-          // Mark as generated since it already exists
+          })
           generatedPaymentsRef.current.add(paymentKey)
+        } catch (error) {
+          // Not added to the generated set so it can be retried
+          logger.error('Error generating payment:', error)
         }
       }
     }
 
     if (expenses.length > 0) {
-      generatePayments()
+      // Chain runs so a new effect invocation waits for the previous one to finish
+      generationLockRef.current = generationLockRef.current
+        .then(generatePayments)
+        .catch((error) => logger.error('Error generating payments:', error))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expenses, currentMonth, currentYear]) // Intentionally excluding payments to prevent infinite loops
+  }, [expenses, currentMonth, currentYear]) // Existence is checked against Dexie, not the payments prop
 
   // Update overdue status
   useEffect(() => {
@@ -167,11 +176,22 @@ export function PaymentsTab({
     updateOverdueStatus()
   }, [payments])
 
-  // Filter payments for current month
+  // Filter payments for current month: month/year fields are the source of truth
+  // (dueDate can overflow into the next month for dueDay 29-31 in short months);
+  // fall back to dueDate only for legacy records synced without month/year
   const currentMonthPayments = payments.filter(p => {
+    if (p.month != null && p.year != null) {
+      return p.month === currentMonth && p.year === currentYear
+    }
     const dueDate = new Date(p.dueDate)
     return dueDate.getMonth() + 1 === currentMonth && dueDate.getFullYear() === currentYear
   })
+
+  // USD data present but no exchange rate configured for this month
+  const hasMissingRateUSD = rate == null && (
+    incomes.some(inc => inc.currency === 'USD') ||
+    currentMonthPayments.some(p => p.currency === 'USD')
+  )
 
   // Apply filter
   const filteredPayments = currentMonthPayments.filter(p => {
@@ -196,13 +216,20 @@ export function PaymentsTab({
     e.preventDefault()
     if (!selectedPayment || !paidByUserId) return
 
+    // Validate explicitly: `|| fallback` would silently discard an intentional 0
+    const parsedAmount = parseFloat(actualAmount)
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+      toast.error(t('dialog.invalidAmount'))
+      return
+    }
+
     setIsSubmitting(true)
     try {
       await db.expensePayments.update(selectedPayment.id!, {
         status: 'paid',
         paidByUserId,
         paidDate: new Date(),
-        amount: parseFloat(actualAmount) || selectedPayment.amount,
+        amount: parsedAmount,
         notes: notes.trim() || undefined,
         updatedAt: new Date()
       })
@@ -309,6 +336,15 @@ export function PaymentsTab({
             </div>
           )}
 
+          {/* Missing Exchange Rate Notice */}
+          {hasMissingRateUSD && (
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
+                {t('missingRateWarning')}
+              </p>
+            </div>
+          )}
+
           {/* Status Summary */}
           <div className="mb-4 sm:mb-6 p-2 sm:p-4 bg-muted/50 rounded-lg overflow-x-auto">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-max sm:min-w-0 sm:flex-wrap">
@@ -353,7 +389,7 @@ export function PaymentsTab({
             <div className="space-y-3 sm:space-y-4">
               {sortedPayments.map(payment => {
                 const expense = getExpense(payment.recurringExpenseId)
-                const amountARS = getMonthlyAmountARS(payment, rate)
+                const amountARS = toARS(payment.amount, payment.currency)
 
                 return (
                   <div
@@ -384,11 +420,18 @@ export function PaymentsTab({
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
                         <div className="text-left sm:text-right">
-                          <p className="text-xl sm:text-2xl font-bold">$ {formatARS(amountARS)}</p>
-                          {rate > 1 && (
-                            <p className="text-xs sm:text-sm text-muted-foreground/70">
-                              USD {formatARS(amountARS / rate)}
-                            </p>
+                          {amountARS != null ? (
+                            <>
+                              <p className="text-xl sm:text-2xl font-bold">$ {formatARS(amountARS)}</p>
+                              {rate != null && (
+                                <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                  USD {formatARS(amountARS / rate)}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            // USD payment without an exchange rate for the month: show in USD
+                            <p className="text-xl sm:text-2xl font-bold">USD {formatARS(payment.amount)}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-1 sm:gap-2">
@@ -419,8 +462,8 @@ export function PaymentsTab({
                       </div>
                     </div>
 
-                    {/* Split breakdown */}
-                    {totalIncomeARS > 0 && (
+                    {/* Split breakdown (needs an ARS amount, so skipped for USD payments without a rate) */}
+                    {totalIncomeARS > 0 && amountARS != null && (
                       <div className="mb-3 p-2 sm:p-3 bg-muted/30 rounded-lg">
                         <p className="text-xs sm:text-sm font-medium mb-2">{t('split')}:</p>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2">
@@ -507,14 +550,17 @@ export function PaymentsTab({
             <div className="space-y-2">
               <Label>{t('dialog.actualAmount')}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                {/* Show the payment's stored currency so USD amounts aren't typed in ARS */}
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                  {(selectedPayment?.currency ?? 'ARS') === 'USD' ? 'USD' : '$'}
+                </span>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={actualAmount}
                   onChange={(e) => setActualAmount(e.target.value)}
-                  className="h-12 pl-8"
+                  className={`h-12 ${(selectedPayment?.currency ?? 'ARS') === 'USD' ? 'pl-14' : 'pl-8'}`}
                 />
               </div>
             </div>

@@ -7,6 +7,77 @@ import { logger } from '@/lib/logger'
 // Batch size for D1 operations (stays within D1 limits)
 const BATCH_SIZE = 50
 
+// Maximum accepted record id length
+const MAX_RECORD_ID_LENGTH = 200
+
+// Whitelist of tables accepted through the sync channel.
+// Keep in sync with SYNC_TABLES in src/lib/sync.ts.
+const ALLOWED_SYNC_TABLES = new Set([
+  // Core tables
+  'users',
+  'households',
+  'householdMembers',
+  'chores',
+  'groceryItems',
+  'groceryCategories',
+  'savedGroceryItems',
+  'tasks',
+  'taskCategories',
+  'homeImprovements',
+  'meals',
+  'mealCategories',
+  'savedMeals',
+  'reminders',
+  'calendarEvents',
+  'homeSettings',
+  // Keto module
+  'ketoSettings',
+  'ketoDays',
+  'ketoWeightEntries',
+  'ketoBodyMeasurements',
+  'ketoWaterEntries',
+  'ketoSymptomEntries',
+  // Finance module
+  'monthlyIncomes',
+  'monthlyExchangeRates',
+  'recurringExpenses',
+  'expenseCategories',
+  'expensePayments',
+  'settlementPayments',
+  // Personal Finance module
+  'personalWallets',
+  'personalCategories',
+  'personalTransactions',
+  'creditCardStatements',
+  'creditCardPayments',
+  // Document Vault module
+  'documents',
+  'documentFolders',
+  'documentTags',
+  // Maintenance Scheduler module
+  'maintenanceItems',
+  'maintenanceTasks',
+  'maintenanceLogs',
+  // Subscription Manager module
+  'subscriptions',
+  'subscriptionPayments',
+  // Pet Management module
+  'pets',
+  'petFeedingSchedules',
+  'petFeedingLogs',
+  'petMedications',
+  'petMedicationLogs',
+  'petVetVisits',
+  'petVaccinations',
+  // Savings module
+  'savingsCampaigns',
+  'savingsMilestones',
+  'savingsParticipants',
+  'savingsContributions',
+  // Activity tracking
+  'activityLogs'
+])
+
 export async function POST(request: Request) {
   try {
     // Get Cloudflare bindings (or use in-memory fallback)
@@ -39,14 +110,37 @@ export async function POST(request: Request) {
 
     // Filter and validate changes
     const validChanges = changes.filter(change => {
-      // Validate user data before pushing - skip incomplete records
-      if (change.table === 'users' && !change.deletedAt) {
-        const userData = change.data as Record<string, unknown>
-        if (!userData.name) {
-          logger.debug('Skipping incomplete user record:', change.id)
-          return false
-        }
+      // Only accept whitelisted syncable tables (prevents injecting records
+      // for arbitrary tables that other members would merge on pull)
+      if (typeof change.table !== 'string' || !ALLOWED_SYNC_TABLES.has(change.table)) {
+        logger.debug('Skipping change for non-syncable table:', change.table)
+        return false
       }
+
+      // Record id must be a non-empty, bounded string
+      if (typeof change.id !== 'string' || change.id.length === 0 || change.id.length > MAX_RECORD_ID_LENGTH) {
+        logger.debug('Skipping change with invalid record id')
+        return false
+      }
+
+      // Payload must be a plain object; when it carries an id it must match
+      // the change id (prevents spoofing another record's payload)
+      const data = change.data as Record<string, unknown> | null | undefined
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        logger.debug('Skipping change with invalid data payload:', change.id)
+        return false
+      }
+      if (data.id !== undefined && data.id !== change.id) {
+        logger.debug('Skipping change with mismatched data id:', change.id)
+        return false
+      }
+
+      // Validate user data before pushing - skip incomplete records
+      if (change.table === 'users' && !change.deletedAt && !data.name) {
+        logger.debug('Skipping incomplete user record:', change.id)
+        return false
+      }
+
       return true
     })
 
@@ -62,18 +156,40 @@ export async function POST(request: Request) {
 
     // Prepare all statements for batch execution
     const now = new Date().toISOString()
+    const scopeId = session.householdId || session.userId
     const statements = validChanges.map(change => {
-      const recordId = `sync_${crypto.randomUUID()}`
+      // Deterministic row id: one sync_metadata row per record, so repeated
+      // pushes replace the previous row instead of growing the table forever
+      const rowId = `sync_${scopeId}_${change.table}_${change.id}`
       const operation = change.deletedAt ? 'delete' : 'upsert'
 
+      // Preserve the client's real edit timestamp (last-writer-wins);
+      // fall back to the push time when missing or invalid
+      const clientUpdatedAt = new Date(change.updatedAt as unknown as string)
+      const updatedAt = isNaN(clientUpdatedAt.getTime()) ? now : clientUpdatedAt.toISOString()
+
+      // Conflict resolution on the server:
+      // - updatedAt holds the client edit time; an incoming row only replaces
+      //   the stored one when it was edited later (stale re-uploads from
+      //   lagging devices can't overwrite newer edits or resurrect deletions,
+      //   because a delete tombstone keeps its newer updatedAt)
+      // - createdAt holds the server receive time and acts as the pull
+      //   watermark, so replaced rows are re-delivered to other devices
       return db
         .prepare(`
-          INSERT OR REPLACE INTO sync_metadata
+          INSERT INTO sync_metadata
           (id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            userId = excluded.userId,
+            operation = excluded.operation,
+            data = excluded.data,
+            createdAt = excluded.createdAt,
+            updatedAt = excluded.updatedAt
+          WHERE excluded.updatedAt > sync_metadata.updatedAt
         `)
         .bind(
-          recordId,
+          rowId,
           session.userId,
           session.householdId || '',
           change.table,
@@ -81,7 +197,7 @@ export async function POST(request: Request) {
           operation,
           JSON.stringify(change.data),
           now,
-          now
+          updatedAt
         )
     })
 

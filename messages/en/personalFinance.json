@@ -310,6 +310,7 @@
     "shareHint": "Add part or all of this income to the household budget",
     "householdContribution": "Household contribution amount",
     "exchangeRate": "Exchange Rate ({from} to {to})",
+    "exchangeRateRequired": "An exchange rate is required for transfers between wallets with different currencies",
     "saving": "Saving...",
     "saveType": "Save {type}",
     "cancel": "Cancel",

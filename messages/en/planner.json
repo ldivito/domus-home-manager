@@ -33,6 +33,7 @@
     "general": "General",
     "task": "Task",
     "meal": "Meal",
+    "chore": "Chore",
     "reminder": "Reminder"
   },
   "form": {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { addWeeks, addMonths, addYears } from 'date-fns'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,13 @@ interface RecordPaymentDialogProps {
   subscription: Subscription | null
 }
 
+// Parse a 'YYYY-MM-DD' string (from <input type="date">) as a LOCAL date.
+// new Date('YYYY-MM-DD') parses as UTC midnight, which shifts the day back in UTC-negative timezones.
+function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 export function RecordPaymentDialog({ open, onOpenChange, subscription }: RecordPaymentDialogProps) {
   const t = useTranslations('subscriptions')
   const tCommon = useTranslations('common')
@@ -44,16 +52,16 @@ export function RecordPaymentDialog({ open, onOpenChange, subscription }: Record
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Reset form when subscription changes
-  useState(() => {
-    if (subscription) {
+  // Prefill amount/currency from the subscription whenever the dialog opens
+  useEffect(() => {
+    if (subscription && open) {
       setFormData(prev => ({
         ...prev,
         amount: subscription.amount.toString(),
         currency: subscription.currency
       }))
     }
-  })
+  }, [subscription, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,7 +79,7 @@ export function RecordPaymentDialog({ open, onOpenChange, subscription }: Record
         subscriptionId: subscription.id,
         amount: parseFloat(formData.amount),
         currency: formData.currency,
-        paymentDate: new Date(formData.paymentDate),
+        paymentDate: parseLocalDate(formData.paymentDate),
         paymentMethod: formData.paymentMethod.trim() || undefined,
         status: formData.status,
         transactionId: formData.transactionId.trim() || undefined,
@@ -79,33 +87,37 @@ export function RecordPaymentDialog({ open, onOpenChange, subscription }: Record
         createdAt: new Date()
       })
 
-      // Calculate next billing date based on billing cycle
-      const currentDate = new Date(subscription.nextBillingDate)
-      const nextDate = new Date(currentDate)
+      // Only advance the billing date when the payment was actually made
+      if (formData.status === 'paid') {
+        // Calculate next billing date based on billing cycle
+        // (date-fns clamps end-of-month, so Jan 31 + 1 month = Feb 28/29)
+        const currentDate = new Date(subscription.nextBillingDate)
+        let nextDate = currentDate
 
-      switch (subscription.billingCycle) {
-        case 'weekly':
-          nextDate.setDate(nextDate.getDate() + 7)
-          break
-        case 'monthly':
-          nextDate.setMonth(nextDate.getMonth() + 1)
-          break
-        case 'quarterly':
-          nextDate.setMonth(nextDate.getMonth() + 3)
-          break
-        case 'biannually':
-          nextDate.setMonth(nextDate.getMonth() + 6)
-          break
-        case 'yearly':
-          nextDate.setFullYear(nextDate.getFullYear() + 1)
-          break
+        switch (subscription.billingCycle) {
+          case 'weekly':
+            nextDate = addWeeks(currentDate, 1)
+            break
+          case 'monthly':
+            nextDate = addMonths(currentDate, 1)
+            break
+          case 'quarterly':
+            nextDate = addMonths(currentDate, 3)
+            break
+          case 'biannually':
+            nextDate = addMonths(currentDate, 6)
+            break
+          case 'yearly':
+            nextDate = addYears(currentDate, 1)
+            break
+        }
+
+        // Update subscription with new next billing date
+        await db.subscriptions.update(subscription.id, {
+          nextBillingDate: nextDate,
+          updatedAt: new Date()
+        })
       }
-
-      // Update subscription with new next billing date
-      await db.subscriptions.update(subscription.id, {
-        nextBillingDate: nextDate,
-        updatedAt: new Date()
-      })
 
       toast.success(t('messages.paymentRecorded'))
       onOpenChange(false)

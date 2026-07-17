@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { SavingsCampaign, SavingsMilestone, db, deleteWithSync } from '@/lib/db'
+import { SavingsCampaign, SavingsMilestone, db, deleteWithSync, bulkDeleteWithSync } from '@/lib/db'
 import { generateId, formatARS } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -159,7 +159,7 @@ export function MilestonesTab({ campaign, milestones }: MilestonesTabProps) {
       // Delete existing milestones if requested
       if (replaceExisting && milestones.length > 0) {
         const milestoneIds = milestones.map(m => m.id!)
-        await db.savingsMilestones.bulkDelete(milestoneIds)
+        await bulkDeleteWithSync(db.savingsMilestones, 'savingsMilestones', milestoneIds)
       }
 
       // Create new milestones

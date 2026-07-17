@@ -137,8 +137,8 @@ export function validateTransaction(data: Partial<TransactionFormData>): Validat
     }
   }
 
-  // Category validation
-  if (!data.categoryId?.trim()) {
+  // Category validation (transfers don't have a category)
+  if (data.type !== 'transfer' && !data.categoryId?.trim()) {
     errors.categoryId = ['Category is required']
   }
 

@@ -2,26 +2,26 @@ import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
-import { v4 as uuidv4 } from 'uuid'
+import { generateWalletId } from '@/lib/utils/finance/helpers'
+import { validateWallet } from '@/lib/utils/finance/validators'
 
-interface PersonalWalletRecord {
+interface WalletRow {
   id: string
-  userId: string
   name: string
-  type: 'physical' | 'bank' | 'credit_card'
-  currency: 'ARS' | 'USD'
+  type: string
+  currency: string
   balance: number
-  creditLimit?: number
-  closingDay?: number
-  dueDay?: number
-  accountNumber?: string
-  bankName?: string
+  creditLimit: number | null
+  closingDay: number | null
+  dueDay: number | null
+  accountNumber: string | null
+  bankName: string | null
   color: string
   icon: string
-  isActive: boolean
-  notes?: string
-  updatedAt: string
+  isActive: number
+  notes: string | null
   createdAt: string
+  updatedAt: string
 }
 
 export async function GET(request: Request) {
@@ -31,49 +31,65 @@ export async function GET(request: Request) {
 
     const session = await getUserFromRequest(request, env)
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const url = new URL(request.url)
+    const typeFilter = url.searchParams.get('type')
+    const currencyFilter = url.searchParams.get('currency')
+
+    // Build query with optional filters
+    let query = `
+      SELECT
+        sm.recordId as id,
+        json_extract(sm.data, '$.name') as name,
+        json_extract(sm.data, '$.type') as type,
+        json_extract(sm.data, '$.currency') as currency,
+        json_extract(sm.data, '$.balance') as balance,
+        json_extract(sm.data, '$.creditLimit') as creditLimit,
+        json_extract(sm.data, '$.closingDay') as closingDay,
+        json_extract(sm.data, '$.dueDay') as dueDay,
+        json_extract(sm.data, '$.accountNumber') as accountNumber,
+        json_extract(sm.data, '$.bankName') as bankName,
+        json_extract(sm.data, '$.color') as color,
+        json_extract(sm.data, '$.icon') as icon,
+        json_extract(sm.data, '$.isActive') as isActive,
+        json_extract(sm.data, '$.notes') as notes,
+        sm.createdAt,
+        sm.updatedAt
+      FROM sync_metadata sm
+      WHERE sm.tableName = 'personalWallets'
+      AND sm.userId = ?
+      AND sm.deletedAt IS NULL
+      AND json_extract(sm.data, '$.isActive') != 0
+    `
+
+    const params: unknown[] = [session.userId]
+
+    if (typeFilter) {
+      query += ` AND json_extract(sm.data, '$.type') = ?`
+      params.push(typeFilter)
+    }
+
+    if (currencyFilter) {
+      query += ` AND json_extract(sm.data, '$.currency') = ?`
+      params.push(currencyFilter)
+    }
+
+    query += ` ORDER BY json_extract(sm.data, '$.name')`
+
     const wallets = await db
-      .prepare(`
-        SELECT
-          sm.recordId as id,
-          json_extract(sm.data, '$.userId') as userId,
-          json_extract(sm.data, '$.name') as name,
-          json_extract(sm.data, '$.type') as type,
-          json_extract(sm.data, '$.currency') as currency,
-          json_extract(sm.data, '$.balance') as balance,
-          json_extract(sm.data, '$.creditLimit') as creditLimit,
-          json_extract(sm.data, '$.closingDay') as closingDay,
-          json_extract(sm.data, '$.dueDay') as dueDay,
-          json_extract(sm.data, '$.accountNumber') as accountNumber,
-          json_extract(sm.data, '$.bankName') as bankName,
-          json_extract(sm.data, '$.color') as color,
-          json_extract(sm.data, '$.icon') as icon,
-          json_extract(sm.data, '$.isActive') as isActive,
-          json_extract(sm.data, '$.notes') as notes,
-          sm.updatedAt,
-          sm.createdAt
-        FROM sync_metadata sm
-        WHERE sm.tableName = 'personalWallets'
-        AND sm.userId = ?
-        AND sm.deletedAt IS NULL
-        AND sm.updatedAt = (
-          SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2
-          WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalWallets'
-        )
-        ORDER BY sm.createdAt ASC
-      `)
-      .bind(session.userId)
+      .prepare(query)
+      .bind(...params)
       .all()
 
     return NextResponse.json({
       success: true,
-      data: (wallets.results as PersonalWalletRecord[]) || []
+      wallets: (wallets.results as WalletRow[]) || []
     })
   } catch (error) {
     logger.error('Get personal wallets error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -84,60 +100,36 @@ export async function POST(request: Request) {
 
     const session = await getUserFromRequest(request, env)
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json() as {
-      name?: string
-      type?: string
-      currency?: string
-      balance?: number
-      creditLimit?: number
-      closingDay?: number
-      dueDay?: number
-      accountNumber?: string
-      bankName?: string
-      color?: string
-      icon?: string
-      notes?: string
+    const body = await request.json()
+
+    // Validate input
+    const validation = validateWallet(body)
+    if (!validation.isValid) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
 
-    const { name, type, currency, balance, creditLimit, closingDay, dueDay, accountNumber, bankName, color, icon, notes } = body
-
-    if (!name || !type || !currency) {
-      return NextResponse.json({ success: false, error: 'Missing required fields: name, type, currency' }, { status: 400 })
-    }
-
-    const validTypes = ['physical', 'bank', 'credit_card']
-    const validCurrencies = ['ARS', 'USD']
-
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ success: false, error: 'Invalid type. Must be: physical, bank, or credit_card' }, { status: 400 })
-    }
-    if (!validCurrencies.includes(currency)) {
-      return NextResponse.json({ success: false, error: 'Invalid currency. Must be: ARS or USD' }, { status: 400 })
-    }
-
-    const walletId = uuidv4()
+    const walletId = generateWalletId()
     const now = new Date().toISOString()
 
     const walletData = {
       id: walletId,
       userId: session.userId,
-      name,
-      type,
-      currency,
-      balance: balance ?? 0,
-      creditLimit: creditLimit ?? null,
-      closingDay: closingDay ?? null,
-      dueDay: dueDay ?? null,
-      accountNumber: accountNumber ?? null,
-      bankName: bankName ?? null,
-      color: color ?? '#8b5cf6',
-      icon: icon ?? 'Wallet',
+      name: body.name.trim(),
+      type: body.type,
+      currency: body.currency,
+      balance: body.balance ?? 0,
+      creditLimit: body.creditLimit ?? null,
+      closingDay: body.closingDay ?? null,
+      dueDay: body.dueDay ?? null,
+      accountNumber: body.accountNumber ?? null,
+      bankName: body.bankName ?? null,
+      color: body.color,
+      icon: body.icon,
       isActive: true,
-      notes: notes ?? null,
-      householdId: session.householdId ?? null,
+      notes: body.notes ?? null,
       createdAt: now,
       updatedAt: now
     }
@@ -146,24 +138,25 @@ export async function POST(request: Request) {
       .prepare(`
         INSERT INTO sync_metadata (
           id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, 'personalWallets', ?, 'insert', ?, ?, ?)
       `)
       .bind(
-        uuidv4(),
+        crypto.randomUUID(),
         session.userId,
-        session.householdId ?? null,
-        'personalWallets',
+        session.householdId || null,
         walletId,
-        'insert',
         JSON.stringify(walletData),
         now,
         now
       )
       .run()
 
-    return NextResponse.json({ success: true, data: walletData }, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      wallet: walletData
+    })
   } catch (error) {
     logger.error('Create personal wallet error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

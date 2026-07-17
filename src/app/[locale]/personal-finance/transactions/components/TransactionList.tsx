@@ -1,59 +1,71 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  TrendingUp,
+  TrendingDown,
   ArrowUpDown,
   Search,
   Filter,
   MoreHorizontal,
-  Edit,
   Trash2,
+  Calendar,
   Wallet,
   Tag
 } from 'lucide-react'
-import { db } from '@/lib/db'
-import { 
+import { db, deleteWithSync } from '@/lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import {
   formatCurrency,
   formatTransactionAmount,
   sortTransactionsByDate,
   filterTransactionsByDateRange,
+  getCurrentMonthRange,
+  getLastNMonthsRange,
   reverseTransactionBalanceUpdate
 } from '@/lib/utils/finance'
-import { 
-  PersonalTransaction, 
-  PersonalWallet, 
+import {
+  PersonalTransaction,
+  PersonalWallet,
   PersonalCategory,
-  TransactionType 
+  TransactionType
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
-import { useTranslations } from 'next-intl'
-import { DateNavigator, ViewMode, getDateRangeForView } from './DateNavigator'
 
 interface TransactionFilters {
   search: string
   type: TransactionType | 'all'
   walletId: string | 'all'
   categoryId: string | 'all'
+  dateRange: 'all' | 'today' | 'week' | 'month' | 'last-month' | '3-months'
   sortBy: 'date' | 'amount'
   sortOrder: 'asc' | 'desc'
 }
@@ -63,6 +75,7 @@ const defaultFilters: TransactionFilters = {
   type: 'all',
   walletId: 'all',
   categoryId: 'all',
+  dateRange: 'month',
   sortBy: 'date',
   sortOrder: 'desc'
 }
@@ -74,94 +87,105 @@ interface TransactionWithDetails extends PersonalTransaction {
 }
 
 export function TransactionList() {
-  const { toast } = useToast()
   const t = useTranslations('personalFinance')
-  const [rawTransactions, setRawTransactions] = useState<PersonalTransaction[]>([])
-  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([])
-  const [wallets, setWallets] = useState<PersonalWallet[]>([])
-  const [categories, setCategories] = useState<PersonalCategory[]>([])
+  const { toast } = useToast()
   const [filters, setFilters] = useState<TransactionFilters>(defaultFilters)
-  const [loading, setLoading] = useState(true)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null)
 
-  // Date navigator state
-  const [view, setView] = useState<ViewMode>('month')
-  const [navigatorDate, setNavigatorDate] = useState<Date>(() => new Date())
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(filters.search), 300)
+    return () => clearTimeout(timer)
+  }, [filters.search])
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      await Promise.all([
-        loadTransactions(),
-        loadWallets(),
-        loadCategories()
-      ])
-    } catch (error) {
-      console.error('Error loading data:', error)
-      toast({
-        title: t('common.error'),
-        description: t('transactions.list.loadError'),
-        variant: 'destructive'
-      })
-    } finally {
-      setLoading(false)
+  // Reactive data loading
+  const rawTransactions = useLiveQuery(
+    () => db.personalTransactions.toArray(),
+    []
+  )
+
+  // NOTE: booleans are not indexable in IndexedDB, so isActive is filtered in memory
+  const wallets = useLiveQuery(
+    () => db.personalWallets.filter(w => w.isActive !== false).toArray(),
+    []
+  )
+
+  const categories = useLiveQuery(
+    () => db.personalCategories.filter(c => c.isActive !== false).toArray(),
+    []
+  )
+
+  const loading = rawTransactions === undefined || wallets === undefined || categories === undefined
+
+  const getDateRangeForFilter = (range: string) => {
+    const now = new Date()
+
+    switch (range) {
+      case 'today':
+        return {
+          start: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+          end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+        }
+      case 'week': {
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - now.getDay())
+        return { start: startOfWeek, end: now }
+      }
+      case 'month':
+        return getCurrentMonthRange()
+      case 'last-month': {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+        return { start: lastMonth, end: endLastMonth }
+      }
+      case '3-months':
+        return getLastNMonthsRange(3)
+      default:
+        return null
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // t and toast excluded to prevent infinite re-render loop
-
-  const loadTransactions = async () => {
-    const allTransactions = await db.personalTransactions.toArray()
-    setRawTransactions(allTransactions)
   }
 
-  const loadWallets = async () => {
-    const userWallets = await db.personalWallets
-      .where('isActive')
-      .equals(1)
-      .toArray()
-    setWallets(userWallets)
-  }
+  // Apply filters and enrichment via useMemo
+  const transactions = useMemo(() => {
+    if (!rawTransactions || !wallets || !categories) return []
 
-  const loadCategories = async () => {
-    const userCategories = await db.personalCategories
-      .where('isActive')
-      .equals(1)
-      .toArray()
-    setCategories(userCategories)
-  }
-
-  // applyFilters intentionally depends on rawTransactions (not transactions) to avoid infinite loop
-  const applyFilters = useCallback(async () => {
     let filtered = [...rawTransactions]
 
-    // Always apply date range from navigator
-    const { start, end } = getDateRangeForView(view, navigatorDate)
-    filtered = filterTransactionsByDateRange(filtered, start, end)
-
     // Apply search filter
-    if (filters.search.trim()) {
-      const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(tx => 
-        tx.description.toLowerCase().includes(searchLower) ||
-        (tx.notes && tx.notes.toLowerCase().includes(searchLower))
+    if (debouncedSearch.trim()) {
+      const searchLower = debouncedSearch.toLowerCase()
+      filtered = filtered.filter(t =>
+        t.description.toLowerCase().includes(searchLower) ||
+        (t.notes && t.notes.toLowerCase().includes(searchLower))
       )
     }
 
     // Apply type filter
     if (filters.type !== 'all') {
-      filtered = filtered.filter(tx => tx.type === filters.type)
+      filtered = filtered.filter(t => t.type === filters.type)
     }
 
     // Apply wallet filter
     if (filters.walletId !== 'all') {
-      filtered = filtered.filter(tx => 
-        tx.walletId === filters.walletId || tx.targetWalletId === filters.walletId
+      filtered = filtered.filter(t =>
+        t.walletId === filters.walletId || t.targetWalletId === filters.walletId
       )
     }
 
     // Apply category filter
     if (filters.categoryId !== 'all') {
-      filtered = filtered.filter(tx => tx.categoryId === filters.categoryId)
+      filtered = filtered.filter(t => t.categoryId === filters.categoryId)
+    }
+
+    // Apply date range filter
+    if (filters.dateRange !== 'all') {
+      const dateRange = getDateRangeForFilter(filters.dateRange)
+      if (dateRange) {
+        filtered = filterTransactionsByDateRange(filtered, dateRange.start, dateRange.end)
+      }
     }
 
     // Sort transactions
@@ -174,76 +198,51 @@ export function TransactionList() {
     }
 
     // Enrich with wallet and category details
-    const enriched = await enrichTransactions(filtered)
-    setTransactions(enriched)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawTransactions, filters, wallets, categories, view, navigatorDate])
-
-  const enrichTransactions = async (txns: PersonalTransaction[]): Promise<TransactionWithDetails[]> => {
-    return txns.map(txn => ({
+    return filtered.map(txn => ({
       ...txn,
       wallet: wallets.find(w => w.id === txn.walletId),
       category: categories.find(c => c.id === txn.categoryId),
       targetWallet: txn.targetWalletId ? wallets.find(w => w.id === txn.targetWalletId) : undefined
-    }))
+    })) as TransactionWithDetails[]
+  }, [rawTransactions, wallets, categories, debouncedSearch, filters])
+
+  const handleDeleteTransaction = (transactionId: string) => {
+    setTransactionToDelete(transactionId)
+    setDeleteDialogOpen(true)
   }
 
-  // Navigator handlers
-  const handleNavigate = useCallback((direction: 'prev' | 'next') => {
-    setNavigatorDate(prev => {
-      const d = new Date(prev)
-      if (view === 'month') {
-        d.setMonth(d.getMonth() + (direction === 'next' ? 1 : -1))
-      } else if (view === 'week') {
-        d.setDate(d.getDate() + (direction === 'next' ? 7 : -7))
-      } else {
-        d.setDate(d.getDate() + (direction === 'next' ? 1 : -1))
-      }
-      return d
-    })
-  }, [view])
-
-  const handleGoToToday = useCallback(() => {
-    setNavigatorDate(new Date())
-  }, [])
-
-  const handleDateChange = useCallback((date: Date) => {
-    setNavigatorDate(date)
-  }, [])
-
-  const handleViewChange = useCallback((newView: ViewMode) => {
-    setView(newView)
-  }, [])
-
-  const handleDeleteTransaction = async (transactionId: string) => {
-    if (!confirm(t('transactions.list.confirmDelete'))) {
-      return
-    }
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return
 
     try {
-      const transaction = rawTransactions.find(tx => tx.id === transactionId)
+      const transaction = rawTransactions?.find(t => t.id === transactionToDelete)
       if (!transaction) return
 
-      // Reverse the transaction's balance effects
-      await reverseTransactionBalanceUpdate(transaction)
+      // Delete the transaction and reverse its balance effects atomically:
+      // if any step fails, everything rolls back (previously a failed delete
+      // left the wallet balance reverted with the transaction still present)
+      await db.transaction('rw', [db.personalTransactions, db.personalWallets, db.deletionLog], async () => {
+        // Delete the transaction (with sync logging)
+        await deleteWithSync(db.personalTransactions, 'personalTransactions', transactionToDelete)
 
-      // Delete the transaction
-      await db.personalTransactions.delete(transactionId)
-
-      // Reload data
-      await loadData()
+        // Reverse the transaction's balance effects
+        await reverseTransactionBalanceUpdate(transaction)
+      })
 
       toast({
-        title: t('transactions.list.deleteSuccessTitle'),
-        description: t('transactions.list.deleteSuccess')
+        title: t('transactionList.deleteSuccessTitle'),
+        description: t('transactionList.deleteSuccessMessage')
       })
     } catch (error) {
       console.error('Error deleting transaction:', error)
       toast({
-        title: t('transactions.list.deleteErrorTitle'),
-        description: t('transactions.list.deleteError'),
+        title: t('transactionList.deleteErrorTitle'),
+        description: t('transactionList.deleteErrorMessage'),
         variant: 'destructive'
       })
+    } finally {
+      setDeleteDialogOpen(false)
+      setTransactionToDelete(null)
     }
   }
 
@@ -268,22 +267,15 @@ export function TransactionList() {
   }
 
   const hasActiveFilters = () => {
-    return Object.entries(filters).some(([key, value]) => 
+    return Object.entries(filters).some(([key, value]) =>
       key !== 'sortBy' && key !== 'sortOrder' && value !== defaultFilters[key as keyof TransactionFilters]
     )
   }
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  useEffect(() => {
-    applyFilters()
-  }, [applyFilters])
-
   if (loading) {
     return (
       <div className="space-y-4">
+        {/* Skeleton loading */}
         {[...Array(5)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4">
@@ -306,30 +298,16 @@ export function TransactionList() {
 
   return (
     <div className="space-y-6">
-      {/* Date Navigator */}
-      <Card>
-        <CardContent className="pt-4 pb-2">
-          <DateNavigator
-            view={view}
-            currentDate={navigatorDate}
-            onViewChange={handleViewChange}
-            onNavigate={handleNavigate}
-            onGoToToday={handleGoToToday}
-            onDateChange={handleDateChange}
-          />
-        </CardContent>
-      </Card>
-
       {/* Filters */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              {t('transactions.list.filtersTitle')}
+              {t('transactionList.filters')}
               {hasActiveFilters() && (
                 <Badge variant="secondary" className="ml-2">
-                  {t('transactions.list.activeFilters')}
+                  {t('transactionList.active')}
                 </Badge>
               )}
             </CardTitle>
@@ -339,10 +317,7 @@ export function TransactionList() {
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
               >
-                {showFilters 
-                  ? t('transactions.list.hideFilters') 
-                  : t('transactions.list.showFilters')
-                }
+                {showFilters ? t('transactionList.hideFilters') : t('transactionList.showFilters')}
               </Button>
               {hasActiveFilters() && (
                 <Button
@@ -350,33 +325,33 @@ export function TransactionList() {
                   size="sm"
                   onClick={clearFilters}
                 >
-                  {t('transactions.list.clearAll')}
+                  {t('transactionList.clearAll')}
                 </Button>
               )}
             </div>
           </div>
         </CardHeader>
-        
+
         {showFilters && (
           <CardContent className="space-y-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder={t('transactions.list.searchPlaceholder')}
+                placeholder={t('transactionList.searchPlaceholder')}
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                 className="pl-10"
               />
             </div>
 
-            {/* Filter Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Filter Row 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Type Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Tag className="h-3 w-3" />
-                  {t('transactions.list.typeFilter')}
+                  {t('transactionList.type')}
                 </label>
                 <Select
                   value={filters.type}
@@ -386,23 +361,23 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('transactions.list.allTypes')}</SelectItem>
+                    <SelectItem value="all">{t('transactionList.allTypes')}</SelectItem>
                     <SelectItem value="income">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-green-600" />
-                        {t('transactions.list.income')}
+                        {t('transactionList.income')}
                       </div>
                     </SelectItem>
                     <SelectItem value="expense">
                       <div className="flex items-center gap-2">
                         <TrendingDown className="h-4 w-4 text-red-600" />
-                        {t('transactions.list.expenses')}
+                        {t('transactionList.expense')}
                       </div>
                     </SelectItem>
                     <SelectItem value="transfer">
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4 text-blue-600" />
-                        {t('transactions.form.transfer')}
+                        {t('transactionList.transfer')}
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -413,7 +388,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Wallet className="h-3 w-3" />
-                  {t('transactions.list.walletFilter')}
+                  {t('transactionList.wallet')}
                 </label>
                 <Select
                   value={filters.walletId}
@@ -423,11 +398,11 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('transactions.list.allWallets')}</SelectItem>
-                    {wallets.map(wallet => (
+                    <SelectItem value="all">{t('transactionList.allWallets')}</SelectItem>
+                    {wallets?.map(wallet => (
                       <SelectItem key={wallet.id} value={wallet.id!}>
                         <div className="flex items-center gap-2">
-                          <div 
+                          <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: wallet.color }}
                           />
@@ -443,7 +418,7 @@ export function TransactionList() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-1">
                   <Tag className="h-3 w-3" />
-                  {t('transactions.list.categoryFilter')}
+                  {t('transactionList.category')}
                 </label>
                 <Select
                   value={filters.categoryId}
@@ -453,11 +428,11 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('transactions.list.allCategories')}</SelectItem>
-                    {categories.map(category => (
+                    <SelectItem value="all">{t('transactionList.allCategories')}</SelectItem>
+                    {categories?.map(category => (
                       <SelectItem key={category.id} value={category.id!}>
                         <div className="flex items-center gap-2">
-                          <div 
+                          <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: category.color }}
                           />
@@ -468,12 +443,36 @@ export function TransactionList() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Date Range Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {t('transactionList.dateRange')}
+                </label>
+                <Select
+                  value={filters.dateRange}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as TransactionFilters['dateRange'] }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('transactionList.allTime')}</SelectItem>
+                    <SelectItem value="today">{t('transactionList.today')}</SelectItem>
+                    <SelectItem value="week">{t('transactionList.thisWeek')}</SelectItem>
+                    <SelectItem value="month">{t('transactionList.thisMonth')}</SelectItem>
+                    <SelectItem value="last-month">{t('transactionList.lastMonth')}</SelectItem>
+                    <SelectItem value="3-months">{t('transactionList.last3Months')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Sort Options */}
             <div className="flex gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('transactions.list.sortBy')}</label>
+                <label className="text-sm font-medium">{t('transactionList.sortBy')}</label>
                 <Select
                   value={filters.sortBy}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'amount' }))}
@@ -482,14 +481,14 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date">{t('transactions.list.sortByDate')}</SelectItem>
-                    <SelectItem value="amount">{t('transactions.list.sortByAmount')}</SelectItem>
+                    <SelectItem value="date">{t('transactionList.date')}</SelectItem>
+                    <SelectItem value="amount">{t('transactionList.amount')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('transactions.list.order')}</label>
+                <label className="text-sm font-medium">{t('transactionList.order')}</label>
                 <Select
                   value={filters.sortOrder}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortOrder: value as 'asc' | 'desc' }))}
@@ -498,8 +497,8 @@ export function TransactionList() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="desc">{t('transactions.list.newestFirst')}</SelectItem>
-                    <SelectItem value="asc">{t('transactions.list.oldestFirst')}</SelectItem>
+                    <SelectItem value="desc">{t('transactionList.newestFirst')}</SelectItem>
+                    <SelectItem value="asc">{t('transactionList.oldestFirst')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -514,11 +513,11 @@ export function TransactionList() {
           <CardContent className="py-12 text-center">
             <div className="text-muted-foreground">
               <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">{t('transactions.list.noTransactionsFound')}</h3>
+              <h3 className="text-lg font-medium mb-2">{t('transactions.noTransactions')}</h3>
               <p>
-                {hasActiveFilters() 
-                  ? t('transactions.list.noTransactionsFoundFilterDesc')
-                  : t('transactions.list.noTransactionsDesc')
+                {hasActiveFilters()
+                  ? t('transactions.noTransactionsFilterHint')
+                  : t('transactions.noTransactionsHint')
                 }
               </p>
             </div>
@@ -546,36 +545,36 @@ export function TransactionList() {
                           {transaction.type}
                         </Badge>
                       </div>
-                      
+
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         {/* Date */}
-                        <span>{new Date(transaction.date).toLocaleDateString()}</span>
-                        
+                        <span>{transaction.date instanceof Date ? transaction.date.toLocaleDateString() : new Date(transaction.date).toLocaleDateString()}</span>
+
                         {/* Wallet Info */}
                         <div className="flex items-center gap-1">
-                          <div 
+                          <div
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: transaction.wallet?.color || '#666' }}
                           />
                           <span>{transaction.wallet?.name}</span>
                         </div>
-                        
+
                         {/* Transfer Target */}
                         {transaction.type === 'transfer' && transaction.targetWallet && (
                           <div className="flex items-center gap-1">
                             <ArrowUpDown className="h-3 w-3" />
-                            <div 
+                            <div
                               className="w-2 h-2 rounded-full"
                               style={{ backgroundColor: transaction.targetWallet.color }}
                             />
                             <span>{transaction.targetWallet.name}</span>
                           </div>
                         )}
-                        
+
                         {/* Category */}
                         {transaction.category && (
                           <div className="flex items-center gap-1">
-                            <div 
+                            <div
                               className="w-2 h-2 rounded-full"
                               style={{ backgroundColor: transaction.category.color }}
                             />
@@ -583,7 +582,7 @@ export function TransactionList() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Notes */}
                       {transaction.notes && (
                         <p className="text-sm text-muted-foreground mt-1 truncate">
@@ -599,9 +598,7 @@ export function TransactionList() {
                       </div>
                       {transaction.sharedWithHousehold && transaction.householdContribution && (
                         <div className="text-xs text-muted-foreground">
-                          {t('transactions.list.shared', { 
-                            amount: formatCurrency(transaction.householdContribution, transaction.currency) 
-                          })}
+                          {t('transactions.amountShared', { amount: formatCurrency(transaction.householdContribution, transaction.currency) })}
                         </div>
                       )}
                     </div>
@@ -614,17 +611,15 @@ export function TransactionList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => console.log('Edit:', transaction.id)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          {t('transactions.list.edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        {/* NOTE: Edit action removed until transaction editing
+                            is implemented (it was a dead menu item that only
+                            logged to the console) */}
+                        <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteTransaction(transaction.id!)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          {t('transactions.list.delete')}
+                          {t('transactionList.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -635,37 +630,61 @@ export function TransactionList() {
           ))}
         </div>
       )}
-      
+
       {/* Summary */}
       {transactions.length > 0 && (
         <Card>
           <CardContent className="p-4">
             <div className="flex justify-between items-center text-sm text-muted-foreground">
-              <span>
-                {t('transactions.list.showing', { count: transactions.length })}
-              </span>
-              <div className="flex gap-4">
-                <span className="text-green-600">
-                  {t('transactions.list.income')}: {formatCurrency(
-                    transactions
-                      .filter(tx => tx.type === 'income')
-                      .reduce((sum, tx) => sum + tx.amount, 0),
-                    'ARS'
-                  )}
-                </span>
-                <span className="text-red-600">
-                  {t('transactions.list.expenses')}: {formatCurrency(
-                    transactions
-                      .filter(tx => tx.type === 'expense')
-                      .reduce((sum, tx) => sum + tx.amount, 0),
-                    'ARS'
-                  )}
-                </span>
+              <span>{t('transactions.showingCount', { count: transactions.length })}</span>
+              {/* Totals are aggregated per currency: mixing ARS and USD in a
+                  single sum would produce meaningless numbers */}
+              <div className="flex flex-col items-end gap-1">
+                {(['ARS', 'USD'] as const)
+                  .filter(currency => transactions.some(t => t.currency === currency))
+                  .map(currency => (
+                    <div key={currency} className="flex gap-4">
+                      <span className="text-green-600">
+                        {t('transactions.incomeLabel')} {formatCurrency(
+                          transactions
+                            .filter(t => t.type === 'income' && t.currency === currency)
+                            .reduce((sum, t) => sum + t.amount, 0),
+                          currency
+                        )}
+                      </span>
+                      <span className="text-red-600">
+                        {t('transactions.expensesLabel')} {formatCurrency(
+                          transactions
+                            .filter(t => t.type === 'expense' && t.currency === currency)
+                            .reduce((sum, t) => sum + t.amount, 0),
+                          currency
+                        )}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteConfirm.areYouSure')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deleteConfirm.deleteTransactionMessage')} {t('deleteConfirm.cannotBeUndone')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteConfirm.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              {t('deleteConfirm.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

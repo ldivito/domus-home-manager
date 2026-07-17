@@ -63,7 +63,8 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
   const [frequency, setFrequency] = useState<typeof frequencies[number]>('monthly')
   const [dueDay, setDueDay] = useState('1')
 
-  const rate = exchangeRate?.rate || 1
+  // Exchange rate for the selected month; null when not configured (never assume 1)
+  const rate = exchangeRate?.rate ?? null
 
   // Find the stored payment record for an expense in the selected month
   const getMonthPayment = (expenseId: string): ExpensePayment | undefined =>
@@ -78,9 +79,12 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
     return resolveDefaultForMonth(expense, selectedMonth, selectedYear, payments)
   }
 
-  // Monthly value converted to ARS
-  const getAmountInARS = (expense: RecurringExpense): number =>
-    getMonthlyAmountARS(getMonthlyValue(expense), rate)
+  // Monthly value converted to ARS; null when it's USD and the month has no rate
+  const getAmountInARS = (expense: RecurringExpense): number | null => {
+    const seed = getMonthlyValue(expense)
+    if (seed.currency === 'ARS') return seed.amount
+    return rate != null ? getMonthlyAmountARS(seed, rate) : null
+  }
 
   const resetForm = () => {
     setName('')
@@ -210,7 +214,9 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
         })
       } else {
         const { currency } = getMonthlyValue(editingMonthExpense)
-        const dueDate = new Date(selectedYear, selectedMonth - 1, editingMonthExpense.dueDay)
+        // Clamp the day so short months don't roll the due date into the next month
+        const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate()
+        const dueDate = new Date(selectedYear, selectedMonth - 1, Math.min(editingMonthExpense.dueDay, daysInMonth))
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         await db.expensePayments.add({
@@ -257,8 +263,9 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
   const activeExpenses = expenses.filter(e => e.isActive)
   const inactiveExpenses = expenses.filter(e => !e.isActive)
 
-  // Calculate totals in ARS
-  const totalActiveARS = activeExpenses.reduce((sum, exp) => sum + getAmountInARS(exp), 0)
+  // Calculate totals in ARS (USD values without an exchange rate are excluded and flagged)
+  const totalActiveARS = activeExpenses.reduce((sum, exp) => sum + (getAmountInARS(exp) ?? 0), 0)
+  const hasMissingRateUSD = activeExpenses.some(exp => getAmountInARS(exp) == null)
 
   return (
     <>
@@ -287,15 +294,20 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
               <p className="text-xs sm:text-sm text-muted-foreground">{t('totalMonthly')}</p>
               <p className="text-lg sm:text-2xl font-bold">
                 $ {formatARS(totalActiveARS)}
-                {rate > 1 && (
+                {rate != null && (
                   <span className="ml-2 text-xs sm:text-sm font-normal text-muted-foreground/70">
                     (USD {formatARS(totalActiveARS / rate)})
                   </span>
                 )}
               </p>
-              {rate > 1 && (
+              {rate != null && (
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   1 USD = $ {formatARS(rate)} ARS
+                </p>
+              )}
+              {hasMissingRateUSD && (
+                <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 mt-1">
+                  {t('missingRateWarning')}
                 </p>
               )}
             </div>
@@ -366,11 +378,18 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
                             {/* Amount and actions */}
                             <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-11 sm:pl-0">
                               <div className="text-left sm:text-right">
-                                <p className="text-xl sm:text-2xl font-bold">$ {formatARS(amountInARS)}</p>
-                                {rate > 1 && (
-                                  <p className="text-xs sm:text-sm text-muted-foreground/70">
-                                    USD {formatARS(amountInARS / rate)}
-                                  </p>
+                                {amountInARS != null ? (
+                                  <>
+                                    <p className="text-xl sm:text-2xl font-bold">$ {formatARS(amountInARS)}</p>
+                                    {rate != null && (
+                                      <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                        USD {formatARS(amountInARS / rate)}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : (
+                                  // USD value without an exchange rate for the month: show in USD
+                                  <p className="text-xl sm:text-2xl font-bold">USD {formatARS(getMonthlyValue(expense).amount)}</p>
                                 )}
                               </div>
                               <div className="flex items-center gap-1 sm:gap-2">
@@ -448,12 +467,20 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
                             </div>
                             <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-11 sm:pl-0">
                               <div className="text-left sm:text-right">
-                                <p className="text-lg sm:text-xl font-semibold text-muted-foreground">
-                                  $ {formatARS(amountInARS)}
-                                </p>
-                                {rate > 1 && (
-                                  <p className="text-xs sm:text-sm text-muted-foreground/70">
-                                    USD {formatARS(amountInARS / rate)}
+                                {amountInARS != null ? (
+                                  <>
+                                    <p className="text-lg sm:text-xl font-semibold text-muted-foreground">
+                                      $ {formatARS(amountInARS)}
+                                    </p>
+                                    {rate != null && (
+                                      <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                        USD {formatARS(amountInARS / rate)}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : (
+                                  <p className="text-lg sm:text-xl font-semibold text-muted-foreground">
+                                    USD {formatARS(getMonthlyValue(expense).amount)}
                                   </p>
                                 )}
                               </div>
@@ -527,12 +554,12 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
                   </SelectItem>
                 </SelectContent>
               </Select>
-              {currency === 'USD' && rate > 1 && (
+              {currency === 'USD' && rate != null && (
                 <p className="text-sm text-muted-foreground">
                   {tIncome('dialog.willBeConverted', { rate: formatARS(rate) })}
                 </p>
               )}
-              {currency === 'USD' && rate <= 1 && (
+              {currency === 'USD' && rate == null && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   {tIncome('dialog.setExchangeRateFirst')}
                 </p>
@@ -559,7 +586,7 @@ export function ExpensesTab({ expenses, categories, payments, selectedMonth, sel
                     required
                   />
                 </div>
-                {currency === 'USD' && amount && rate > 1 && (
+                {currency === 'USD' && amount && rate != null && (
                   <p className="text-sm text-muted-foreground">
                     = $ {formatARS(parseFloat(amount) * rate)} ARS
                   </p>

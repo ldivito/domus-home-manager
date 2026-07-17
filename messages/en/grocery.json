@@ -108,6 +108,7 @@
       "amountPlaceholder": "Enter amount",
       "category": "Category",
       "selectCategory": "Select category",
+      "importance": "Importance",
       "selectImportance": "Select importance",
       "cancel": "Cancel",
       "save": "Save"

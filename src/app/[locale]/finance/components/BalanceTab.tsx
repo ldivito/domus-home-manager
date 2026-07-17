@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, User, ExpensePayment, MonthlyIncome, MonthlyExchangeRate, RecurringExpense, SettlementPayment, deleteWithSync } from '@/lib/db'
 import { formatARS, generateId } from '@/lib/utils'
-import { getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -60,7 +59,14 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const residents = users.filter(u => u.type === 'resident')
-  const rate = exchangeRate?.rate || 1
+  // Exchange rate for the selected month; null when not configured (never assume 1)
+  const rate = exchangeRate?.rate ?? null
+
+  // Convert an amount to ARS; null when it's USD and the month has no exchange rate
+  const toARS = (amount: number, currency?: 'ARS' | 'USD'): number | null => {
+    if ((currency ?? 'ARS') === 'ARS') return amount
+    return rate != null ? amount * rate : null
+  }
 
   // Get settlement payments for this month
   const settlementPaymentsForMonth = useLiveQuery(
@@ -76,29 +82,33 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
     p => p.month === selectedMonth && p.year === selectedYear
   )
 
-  // Calculate total household income in ARS
+  // Calculate total household income in ARS (USD incomes without a rate are excluded)
   const totalIncomeARS = incomes.reduce((sum, inc) => {
-    if (inc.currency === 'USD') {
-      return sum + (inc.amount * rate)
-    }
-    return sum + inc.amount
+    const amountARS = toARS(inc.amount, inc.currency)
+    return amountARS != null ? sum + amountARS : sum
   }, 0)
 
   // Get paid payments only (filtered by selected month)
   const paidPayments = monthPayments.filter(p => p.status === 'paid')
 
-  // Calculate total expenses paid in ARS
+  // Calculate total expenses paid in ARS (USD payments without a rate are excluded)
   const totalExpensesPaidARS = paidPayments.reduce((sum, p) => {
-    return sum + getMonthlyAmountARS(p, rate)
+    const amountARS = toARS(p.amount, p.currency)
+    return amountARS != null ? sum + amountARS : sum
   }, 0)
+
+  // USD data present but no exchange rate configured for this month:
+  // those amounts are excluded from balances/settlements and flagged in the UI
+  const hasMissingRateUSD = rate == null && (
+    incomes.some(inc => inc.currency === 'USD') ||
+    paidPayments.some(p => p.currency === 'USD')
+  )
 
   // Calculate balances for each user
   const userBalances: UserBalance[] = residents.map(user => {
     // Get user's income in ARS
     const userIncome = incomes.find(inc => inc.userId === user.id)
-    const userIncomeARS = userIncome
-      ? (userIncome.currency === 'USD' ? userIncome.amount * rate : userIncome.amount)
-      : 0
+    const userIncomeARS = userIncome ? (toARS(userIncome.amount, userIncome.currency) ?? 0) : 0
     const percentage = totalIncomeARS > 0
       ? (userIncomeARS / totalIncomeARS) * 100
       : 0
@@ -109,7 +119,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
     // Calculate what they actually paid in ARS
     const totalPaid = paidPayments
       .filter(p => p.paidByUserId === user.id)
-      .reduce((sum, p) => sum + getMonthlyAmountARS(p, rate), 0)
+      .reduce((sum, p) => sum + (toARS(p.amount, p.currency) ?? 0), 0)
 
     // Net balance: positive means others owe them
     const netBalance = totalPaid - totalOwed
@@ -125,12 +135,24 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
     }
   })
 
-  // Calculate settlements (who owes whom)
+  // Net balances after applying the settlement transfers already recorded for the
+  // month, so a partially settled (or outdated) debt resurfaces as a new pending
+  // suggestion for the remaining difference instead of showing up as fully paid
+  const settledBalances: UserBalance[] = userBalances.map(b => {
+    let net = b.netBalance
+    settlementPaymentsForMonth.forEach(sp => {
+      if (sp.fromUserId === b.userId) net += sp.amount
+      if (sp.toUserId === b.userId) net -= sp.amount
+    })
+    return { ...b, netBalance: net }
+  })
+
+  // Calculate settlements (who owes whom, net of recorded settlement payments)
   const calculateSettlements = (): Settlement[] => {
     const settlements: Settlement[] = []
 
     // Copy balances for calculation
-    const balances = userBalances.map(b => ({ ...b }))
+    const balances = settledBalances.map(b => ({ ...b }))
 
     // Sort: those who owe (negative) first, those owed (positive) last
     const debtors = balances.filter(b => b.netBalance < -0.01).sort((a, b) => a.netBalance - b.netBalance)
@@ -168,19 +190,8 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
 
   const settlements = calculateSettlements()
 
-  // Check if a settlement has been paid
-  const isSettlementPaid = (settlement: Settlement): boolean => {
-    return settlementPaymentsForMonth.some(
-      sp => sp.fromUserId === settlement.from && sp.toUserId === settlement.to
-    )
-  }
-
-  // Get the settlement payment record if exists
-  const getSettlementPayment = (settlement: Settlement): SettlementPayment | undefined => {
-    return settlementPaymentsForMonth.find(
-      sp => sp.fromUserId === settlement.from && sp.toUserId === settlement.to
-    )
-  }
+  // Helper to render the recorded settlement payments (matched by user id)
+  const getUser = (userId: string) => users.find(u => u.id === userId)
 
   const isAllSettled = settlements.length === 0 && paidPayments.length > 0
 
@@ -234,6 +245,15 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Missing Exchange Rate Notice */}
+      {hasMissingRateUSD && (
+        <div className="p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
+            {t('missingRateWarning')}
+          </p>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
@@ -246,7 +266,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                 <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300">
                   $ {formatARS(totalIncomeARS)}
                 </p>
-                {rate > 1 && (
+                {rate != null && (
                   <p className="text-xs sm:text-sm text-blue-600/70 dark:text-blue-400/70">
                     USD {formatARS(totalIncomeARS / rate)}
                   </p>
@@ -269,7 +289,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                 <p className="text-lg sm:text-2xl font-bold text-purple-700 dark:text-purple-300">
                   $ {formatARS(totalExpensesPaidARS)}
                 </p>
-                {rate > 1 && (
+                {rate != null && (
                   <p className="text-xs sm:text-sm text-purple-600/70 dark:text-purple-400/70">
                     USD {formatARS(totalExpensesPaidARS / rate)}
                   </p>
@@ -292,7 +312,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                 <p className="text-lg sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300">
                   $ {formatARS(totalIncomeARS - totalExpensesPaidARS)}
                 </p>
-                {rate > 1 && (
+                {rate != null && (
                   <p className="text-xs sm:text-sm text-emerald-600/70 dark:text-emerald-400/70">
                     USD {formatARS((totalIncomeARS - totalExpensesPaidARS) / rate)}
                   </p>
@@ -330,7 +350,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
               <div>
                 <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('summary')}</h3>
                 <div className="space-y-3">
-                  {userBalances.map(balance => (
+                  {settledBalances.map(balance => (
                     <div
                       key={balance.userId}
                       className={`p-3 sm:p-4 border rounded-xl transition-all ${
@@ -391,7 +411,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                             }`}>
                               {balance.netBalance >= 0 ? '+' : '-'}$ {formatARS(Math.abs(balance.netBalance))}
                             </p>
-                            {rate > 1 && (
+                            {rate != null && (
                               <p className="text-xs sm:text-sm text-muted-foreground/70">
                                 USD {formatARS(Math.abs(balance.netBalance) / rate)}
                               </p>
@@ -425,7 +445,7 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
               {/* Settlement Suggestions */}
               <div>
                 <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('settlement')}</h3>
-                {isAllSettled ? (
+                {isAllSettled && (
                   <div className="text-center py-6 sm:py-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-200 dark:border-green-800">
                     <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                       <Check className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
@@ -437,24 +457,23 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                       {t('allBalanced')}
                     </p>
                   </div>
-                ) : settlements.length === 0 ? (
+                )}
+                {!isAllSettled && settlements.length === 0 && settlementPaymentsForMonth.length === 0 && (
                   <div className="text-center py-6 sm:py-8 bg-muted/50 rounded-xl">
                     <p className="text-sm text-muted-foreground">{t('noSettlementsNeeded')}</p>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {settlements.map((settlement, index) => {
-                      const isPaid = isSettlementPaid(settlement)
-                      const settlementPayment = getSettlementPayment(settlement)
+                )}
+                {(settlementPaymentsForMonth.length > 0 || settlements.length > 0) && (
+                  <div className={`space-y-3 ${isAllSettled ? 'mt-3' : ''}`}>
+                    {/* Recorded settlement payments (show the amount actually transferred) */}
+                    {settlementPaymentsForMonth.map(sp => {
+                      const fromUser = getUser(sp.fromUserId)
+                      const toUser = getUser(sp.toUserId)
 
                       return (
                         <div
-                          key={index}
-                          className={`p-3 sm:p-4 border rounded-xl transition-all ${
-                            isPaid
-                              ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800'
-                              : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800'
-                          }`}
+                          key={sp.id}
+                          className="p-3 sm:p-4 border rounded-xl transition-all bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800"
                         >
                           {/* Mobile: Stacked layout */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
@@ -463,25 +482,25 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                               <div className="flex items-center gap-2">
                                 <div
                                   className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
-                                  style={{ backgroundColor: settlement.fromColor }}
+                                  style={{ backgroundColor: fromUser?.color || '#6B7280' }}
                                 >
-                                  {settlement.fromName?.charAt(0)?.toUpperCase() || '?'}
+                                  {fromUser?.name?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
                                 <div className="text-left">
-                                  <span className="font-semibold text-sm sm:text-base">{settlement.fromName}</span>
+                                  <span className="font-semibold text-sm sm:text-base">{fromUser?.name || 'Unknown'}</span>
                                   <p className="text-[10px] sm:text-xs text-muted-foreground">{t('pays')}</p>
                                 </div>
                               </div>
-                              <ArrowRight className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-green-600 dark:text-green-400" />
                               <div className="flex items-center gap-2">
                                 <div
                                   className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
-                                  style={{ backgroundColor: settlement.toColor }}
+                                  style={{ backgroundColor: toUser?.color || '#6B7280' }}
                                 >
-                                  {settlement.toName?.charAt(0)?.toUpperCase() || '?'}
+                                  {toUser?.name?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
                                 <div className="text-left">
-                                  <span className="font-semibold text-sm sm:text-base">{settlement.toName}</span>
+                                  <span className="font-semibold text-sm sm:text-base">{toUser?.name || 'Unknown'}</span>
                                   <p className="text-[10px] sm:text-xs text-muted-foreground">{t('receives')}</p>
                                 </div>
                               </div>
@@ -490,58 +509,108 @@ export function BalanceTab({ users, payments, incomes, exchangeRate, selectedMon
                             {/* Amount */}
                             <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-3">
                               <div className="text-center sm:text-right">
-                                <p className={`text-xl sm:text-2xl font-bold ${isPaid ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                  $ {formatARS(settlement.amount)}
+                                <p className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-300">
+                                  $ {formatARS(sp.amount)}
                                 </p>
-                                {rate > 1 && (
+                                {rate != null && (
                                   <p className="text-xs sm:text-sm text-muted-foreground/70">
-                                    USD {formatARS(settlement.amount / rate)}
+                                    USD {formatARS(sp.amount / rate)}
                                   </p>
                                 )}
                               </div>
-                              {isPaid && (
-                                <Badge className="bg-green-500 text-xs">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  {t('paid')}
-                                </Badge>
-                              )}
+                              <Badge className="bg-green-500 text-xs">
+                                <Check className="h-3 w-3 mr-1" />
+                                {t('paid')}
+                              </Badge>
                             </div>
                           </div>
 
-                          {/* Action buttons */}
-                          {isPaid ? (
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 shrink-0" />
-                                {settlementPayment?.paidDate && (
-                                  <span>{t('paidOn', { date: format(new Date(settlementPayment.paidDate), 'MMM d, yyyy') })}</span>
-                                )}
-                                {settlementPayment?.notes && (
-                                  <span className="text-muted-foreground/70">• {settlementPayment.notes}</span>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleUnmarkSettlement(settlementPayment!)}
-                                className="text-muted-foreground hover:text-foreground h-8 text-xs sm:text-sm"
-                              >
-                                <Undo2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                {t('unmarkPaid')}
-                              </Button>
+                          {/* Paid info + unmark */}
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 shrink-0" />
+                              {sp.paidDate && (
+                                <span>{t('paidOn', { date: format(new Date(sp.paidDate), 'MMM d, yyyy') })}</span>
+                              )}
+                              {sp.notes && (
+                                <span className="text-muted-foreground/70">• {sp.notes}</span>
+                              )}
                             </div>
-                          ) : (
                             <Button
-                              onClick={() => handleMarkSettlementPaid(settlement)}
-                              className="w-full h-10 sm:h-11 text-sm"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleUnmarkSettlement(sp)}
+                              className="text-muted-foreground hover:text-foreground h-8 text-xs sm:text-sm"
                             >
-                              <Check className="h-4 w-4 mr-2" />
-                              {t('markSettled')}
+                              <Undo2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                              {t('unmarkPaid')}
                             </Button>
-                          )}
+                          </div>
                         </div>
                       )
                     })}
+
+                    {/* Pending suggestions: remaining debt after recorded settlements */}
+                    {settlements.map((settlement, index) => (
+                      <div
+                        key={`pending-${index}`}
+                        className="p-3 sm:p-4 border rounded-xl transition-all bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800"
+                      >
+                        {/* Mobile: Stacked layout */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                          {/* From -> To users */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-start">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
+                                style={{ backgroundColor: settlement.fromColor }}
+                              >
+                                {settlement.fromName?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <div className="text-left">
+                                <span className="font-semibold text-sm sm:text-base">{settlement.fromName}</span>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('pays')}</p>
+                              </div>
+                            </div>
+                            <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white font-semibold shadow-md shrink-0 text-sm sm:text-base"
+                                style={{ backgroundColor: settlement.toColor }}
+                              >
+                                {settlement.toName?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <div className="text-left">
+                                <span className="font-semibold text-sm sm:text-base">{settlement.toName}</span>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('receives')}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Amount */}
+                          <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-3">
+                            <div className="text-center sm:text-right">
+                              <p className="text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-300">
+                                $ {formatARS(settlement.amount)}
+                              </p>
+                              {rate != null && (
+                                <p className="text-xs sm:text-sm text-muted-foreground/70">
+                                  USD {formatARS(settlement.amount / rate)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => handleMarkSettlementPaid(settlement)}
+                          className="w-full h-10 sm:h-11 text-sm"
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          {t('markSettled')}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

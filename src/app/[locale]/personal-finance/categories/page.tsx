@@ -1,75 +1,71 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { PersonalCategory } from '@/types/personal-finance'
 import { db } from '@/lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { CategoryList } from './components/CategoryList'
 import { CreateCategoryDialog } from './components/CreateCategoryDialog'
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Tag,
   TrendingUp,
   TrendingDown,
   RotateCcw
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { useTranslations } from 'next-intl'
+import { getCurrentUserId } from '@/lib/utils/finance/current-user'
 
 export default function CategoriesPage() {
   const t = useTranslations('personalFinance')
-  const [categories, setCategories] = useState<PersonalCategory[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [activeTab, setActiveTab] = useState<'income' | 'expense'>('expense')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  // Current user (TODO: Get from auth context)
-  const userId = 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a'
+  // Current user (single source of truth until real auth wiring)
+  const userId = getCurrentUserId()
 
-  const loadCategories = async () => {
-    try {
-      setLoading(true)
-      const fetchedCategories = await db.personalCategories
-        .where('userId').equals(userId)
-        .filter(c => c.isActive === true)
-        .toArray()
-      
-      // Sort by creation date (newest first), but put default categories first
-      const sortedCategories = fetchedCategories.sort((a, b) => {
-        // Default categories first
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Reactive data loading via useLiveQuery
+  const categories = useLiveQuery(
+    () => db.personalCategories
+      .where('userId').equals(userId).and(c => c.isActive)
+      .toArray()
+      .then(cats => cats.sort((a, b) => {
         if (a.isDefault && !b.isDefault) return -1
         if (!a.isDefault && b.isDefault) return 1
-        
-        // Then by creation date
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      })
-      
-      setCategories(sortedCategories)
-    } catch (error) {
-      console.error('Error loading categories:', error)
-      toast({
-        title: t('common.error'),
-        description: t('categories.errorLoading'),
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+      })),
+    [userId]
+  )
 
-  useEffect(() => {
-    loadCategories()
-  }, [])
-
-  const handleCategoryCreated = (newCategory: PersonalCategory) => {
-    setCategories(prev => [newCategory, ...prev])
-  }
+  const loading = categories === undefined
 
   const handleEditCategory = async (categoryId: string, updatedData: Partial<PersonalCategory>) => {
     try {
@@ -77,20 +73,16 @@ export default function CategoriesPage() {
         ...updatedData,
         updatedAt: new Date()
       })
-      
-      setCategories(prev => prev.map(cat => 
-        cat.id === categoryId ? { ...cat, ...updatedData } : cat
-      ))
-      
+
       toast({
-        title: t('categories.categoryUpdated'),
-        description: t('categories.categoryUpdatedDesc'),
+        title: t('categories.updatedTitle'),
+        description: t('categories.updatedMessage'),
       })
     } catch (error) {
       console.error('Error updating category:', error)
       toast({
         title: t('common.error'),
-        description: t('categories.errorUpdating'),
+        description: t('categoryForm.errorMessage', { action: 'update' }),
         variant: 'destructive',
       })
     }
@@ -105,76 +97,80 @@ export default function CategoriesPage() {
 
     if (transactionCount > 0) {
       toast({
-        title: t('categories.cannotDelete'),
-        description: t('categories.cannotDeleteDesc', { count: transactionCount }),
+        title: t('categories.cannotDeleteTitle'),
+        description: t('categories.cannotDeleteMessage', { count: transactionCount }),
         variant: 'destructive',
       })
       return
     }
 
-    if (!confirm(t('categories.confirmDelete'))) {
-      return
-    }
+    setCategoryToDelete(categoryId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!categoryToDelete) return
 
     try {
-      // Soft delete: mark as inactive
-      await db.personalCategories.update(categoryId, { 
-        isActive: false, 
-        updatedAt: new Date() 
+      await db.personalCategories.update(categoryToDelete, {
+        isActive: false,
+        updatedAt: new Date()
       })
-      
-      setCategories(prev => prev.filter(c => c.id !== categoryId))
-      
+
       toast({
-        title: t('categories.categoryDeleted'),
-        description: t('categories.categoryDeletedDesc'),
+        title: t('categories.deletedTitle'),
+        description: t('categories.deletedMessage'),
       })
     } catch (error) {
       console.error('Error deleting category:', error)
       toast({
         title: t('common.error'),
-        description: t('categories.errorDeleting'),
+        description: t('categoryForm.errorMessage', { action: 'delete' }),
         variant: 'destructive',
       })
+    } finally {
+      setDeleteDialogOpen(false)
+      setCategoryToDelete(null)
     }
   }
 
   const handleRestoreDefaults = async () => {
-    if (!confirm(t('categories.confirmRestoreDefaults'))) {
-      return
-    }
-
+    setRestoreDialogOpen(false)
     try {
-      // This would typically call a seeder function
-      // For now, we'll show a success message
+      await db.restorePersonalFinanceDefaultCategories(userId)
       toast({
-        title: t('categories.defaultsRestored'),
-        description: t('categories.defaultsRestoredDesc'),
+        title: t('categories.defaultsRestoredTitle'),
+        description: t('categories.defaultsRestoredMessage'),
       })
-      
-      // Reload categories
-      await loadCategories()
     } catch (error) {
       console.error('Error restoring defaults:', error)
       toast({
         title: t('common.error'),
-        description: t('categories.errorRestoringDefaults'),
+        description: t('categoryForm.errorMessage', { action: 'restore' }),
         variant: 'destructive',
       })
     }
   }
 
   // Filter categories
-  const filteredCategories = categories.filter(category => {
-    const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = category.type === activeTab
-    
-    return matchesSearch && matchesType
-  })
+  const filteredCategories = useMemo(() => {
+    if (!categories) return []
+    return categories.filter(category => {
+      const matchesSearch = category.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      const matchesType = category.type === activeTab
+      return matchesSearch && matchesType
+    })
+  }, [categories, debouncedSearch, activeTab])
 
   // Calculate stats
-  const incomeCategories = categories.filter(c => c.type === 'income')
-  const expenseCategories = categories.filter(c => c.type === 'expense')
+  const incomeCategories = useMemo(() =>
+    categories?.filter(c => c.type === 'income') ?? [],
+    [categories]
+  )
+  const expenseCategories = useMemo(() =>
+    categories?.filter(c => c.type === 'expense') ?? [],
+    [categories]
+  )
 
   if (loading) {
     return (
@@ -188,7 +184,7 @@ export default function CategoriesPage() {
         </div>
         <div className="animate-pulse space-y-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            <div key={i} className="h-16 bg-muted rounded"></div>
           ))}
         </div>
       </div>
@@ -206,17 +202,17 @@ export default function CategoriesPage() {
               {t('categories.subtitle')}
             </p>
           </div>
-          
+
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleRestoreDefaults}
+              onClick={() => setRestoreDialogOpen(true)}
               className="hidden sm:flex"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               {t('categories.restoreDefaults')}
             </Button>
-            
+
             <CreateCategoryDialog
               trigger={
                 <Button>
@@ -224,35 +220,30 @@ export default function CategoriesPage() {
                   {t('categories.addCategory')}
                 </Button>
               }
-              onCategoryCreated={handleCategoryCreated}
             />
           </div>
         </div>
 
         {/* Stats overview */}
-        {categories.length > 0 && (
+        {categories && categories.length > 0 && (
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t('categories.incomeCategories')}
-                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('categories.incomeCategories')}</span>
                 </div>
                 <div className="text-2xl font-bold mt-1 text-green-600">
                   {incomeCategories.length}
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <TrendingDown className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t('categories.expenseCategories')}
-                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('categories.expenseCategories')}</span>
                 </div>
                 <div className="text-2xl font-bold mt-1 text-red-600">
                   {expenseCategories.length}
@@ -264,9 +255,7 @@ export default function CategoriesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t('categories.totalCategories')}
-                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('categories.totalCategories')}</span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {categories.length}
@@ -289,16 +278,16 @@ export default function CategoriesPage() {
               className="pl-10"
             />
           </div>
-          
+
           {searchTerm && (
             <div className="flex gap-2 mt-3">
               <Badge variant="secondary" className="gap-1">
-                {t('categories.searchBadge', { term: searchTerm })}
-                <button 
+                {t('categories.filterSearch')} {searchTerm}
+                <button
                   onClick={() => setSearchTerm('')}
                   className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
                 >
-                  ×
+                  x
                 </button>
               </Badge>
             </div>
@@ -311,22 +300,22 @@ export default function CategoriesPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="expense" className="flex items-center gap-2">
             <TrendingDown className="h-4 w-4" />
-            {t('categories.expenseCategories')} ({expenseCategories.length})
+            {t('categories.expensesCount', { count: expenseCategories.length })}
           </TabsTrigger>
           <TabsTrigger value="income" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            {t('categories.incomeCategories')} ({incomeCategories.length})
+            {t('categories.incomeCount', { count: incomeCategories.length })}
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="expense" className="mt-6">
           {filteredCategories.length === 0 && expenseCategories.length > 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">{t('categories.noMatchSearch')}</h3>
+                <h3 className="font-semibold mb-2">{t('categories.noMatch')}</h3>
                 <p className="text-muted-foreground mb-4">
-                  {t('categories.noMatchSearchDesc')}
+                  {t('categories.noMatchHint')}
                 </p>
                 <Button variant="outline" onClick={() => setSearchTerm('')}>
                   {t('categories.clearSearch')}
@@ -339,19 +328,19 @@ export default function CategoriesPage() {
               onEdit={handleEditCategory}
               onDelete={handleDeleteCategory}
               emptyMessage={t('categories.noExpenseCategories')}
-              emptyDescription={t('categories.noExpenseCategoriesDesc')}
+              emptyDescription={t('categories.noExpenseCategoriesHint')}
             />
           )}
         </TabsContent>
-        
+
         <TabsContent value="income" className="mt-6">
           {filteredCategories.length === 0 && incomeCategories.length > 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">{t('categories.noMatchSearch')}</h3>
+                <h3 className="font-semibold mb-2">{t('categories.noMatch')}</h3>
                 <p className="text-muted-foreground mb-4">
-                  {t('categories.noMatchSearchDesc')}
+                  {t('categories.noMatchHint')}
                 </p>
                 <Button variant="outline" onClick={() => setSearchTerm('')}>
                   {t('categories.clearSearch')}
@@ -364,7 +353,7 @@ export default function CategoriesPage() {
               onEdit={handleEditCategory}
               onDelete={handleDeleteCategory}
               emptyMessage={t('categories.noIncomeCategories')}
-              emptyDescription={t('categories.noIncomeCategoriesDesc')}
+              emptyDescription={t('categories.noIncomeCategoriesHint')}
             />
           )}
         </TabsContent>
@@ -373,19 +362,46 @@ export default function CategoriesPage() {
       {/* Results count */}
       {filteredCategories.length > 0 && (
         <div className="text-center text-sm text-muted-foreground">
-          {searchTerm
-            ? t('categories.showingCountSearch', { 
-                count: filteredCategories.length, 
-                type: activeTab,
-                search: searchTerm 
-              })
-            : t('categories.showingCount', { 
-                count: filteredCategories.length, 
-                type: activeTab 
-              })
-          }
+          {t('categories.showingCount', { count: filteredCategories.length, type: activeTab })}
+          {searchTerm && ` matching "${searchTerm}"`}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteConfirm.areYouSure')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deleteConfirm.deleteCategoryMessage')} {t('deleteConfirm.cannotBeUndone')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteConfirm.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              {t('deleteConfirm.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore Defaults Confirmation Dialog */}
+      <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('categories.restoreDefaults')}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will restore default categories. Your custom categories will not be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteConfirm.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestoreDefaults}>
+              {t('categories.restoreDefaults')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

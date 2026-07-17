@@ -104,13 +104,16 @@ export default function SubscriptionsPage() {
       .where({ month: currentMonth, year: currentYear })
       .first()
 
-    // If not found, get the most recent one
+    // If not found, get the most recent one.
+    // Note: the '[month+year]' compound index sorts by month first, so ordering by it
+    // returns the highest month of any year — pick the chronologically latest in JS instead.
     if (!rate) {
-      const rates = await db.monthlyExchangeRates
-        .orderBy('[month+year]')
-        .reverse()
-        .first()
-      rate = rates
+      const rates = await db.monthlyExchangeRates.toArray()
+      rate = rates.reduce<typeof rate>((latest, r) => {
+        if (!latest) return r
+        if (r.year > latest.year || (r.year === latest.year && r.month > latest.month)) return r
+        return latest
+      }, undefined)
     }
 
     return rate

@@ -150,5 +150,19 @@
       "cancel": "Cancelar",
       "save": "Guardar"
     }
+  },
+  "templateDialog": {
+    "title": "Seleccionar plantilla de comida",
+    "searchPlaceholder": "Busca plantillas por nombre, descripción o ingredientes...",
+    "noResultsTitle": "No se encontraron plantillas",
+    "noResultsHint": "Probá ajustar los términos de búsqueda",
+    "emptyTitle": "No hay plantillas guardadas",
+    "emptyHint": "Guardá comidas como plantillas para verlas acá",
+    "usedTimes": "Usada {count} veces",
+    "ingredientsCount": "{count} ingredientes",
+    "ingredientsLabel": "Ingredientes:",
+    "moreIngredients": "+{count} más",
+    "lastUsed": "Último uso: {date}",
+    "lastUsedNever": "Último uso: nunca"
   }
 }

@@ -23,7 +23,7 @@ import {
   CreditCard,
   PawPrint,
   PiggyBank,
-  TrendingUp,
+  Banknote,
   Menu,
   X,
 } from 'lucide-react'
@@ -154,7 +154,7 @@ export default function MobileNavigation() {
     { nameKey: 'meals', href: '/meals', icon: UtensilsCrossed },
     { nameKey: 'keto', href: '/keto', icon: Heart },
     { nameKey: 'finance', href: '/finance', icon: Wallet },
-    { nameKey: 'personalFinance', href: '/personal-finance', icon: TrendingUp },
+    { nameKey: 'personalFinance', href: '/personal-finance', icon: Banknote },
     { nameKey: 'savings', href: '/savings', icon: PiggyBank },
     { nameKey: 'subscriptions', href: '/subscriptions', icon: CreditCard },
     { nameKey: 'pets', href: '/pets', icon: PawPrint },

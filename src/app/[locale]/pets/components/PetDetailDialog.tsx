@@ -239,7 +239,7 @@ export function PetDetailDialog({ open, onOpenChange, pet, onEdit }: PetDetailDi
                       </p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">{t('fields.gender')}</span>
+                      <span className="text-muted-foreground">{t('form.gender')}</span>
                       <p className="font-medium">{t(`gender.${pet.gender}`)}</p>
                     </div>
                     {pet.birthDate && (

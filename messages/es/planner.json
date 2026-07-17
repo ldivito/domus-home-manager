@@ -33,6 +33,7 @@
     "general": "General",
     "task": "Tarea",
     "meal": "Comida",
+    "chore": "Tarea del hogar",
     "reminder": "Recordatorio"
   },
   "form": {

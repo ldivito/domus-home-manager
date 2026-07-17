@@ -87,11 +87,28 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { recurringExpenseId, amount, dueDate, paidDate, paidByUserId, status, notes } = body
+    const { recurringExpenseId, amount, dueDate, paidDate, paidByUserId, status, notes, month, year, currency } = body
 
-    if (!recurringExpenseId || !amount || !dueDate) {
+    // amount == null / NaN check instead of !amount: a monthly value of 0 is valid
+    const amountNum = Number(amount)
+    if (!recurringExpenseId || !dueDate || amount == null || isNaN(amountNum)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const parsedDueDate = new Date(dueDate)
+    if (isNaN(parsedDueDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid dueDate' }, { status: 400 })
+    }
+
+    // Derive month/year/currency (required by the v33 ExpensePayment schema) so
+    // records created here stay visible to the month/year-based UI after sync
+    const monthNum = parseInt(month)
+    const yearNum = parseInt(year)
+    const paymentMonth = !isNaN(monthNum) && monthNum >= 1 && monthNum <= 12
+      ? monthNum
+      : parsedDueDate.getUTCMonth() + 1
+    const paymentYear = !isNaN(yearNum) ? yearNum : parsedDueDate.getUTCFullYear()
+    const paymentCurrency: 'ARS' | 'USD' = currency === 'USD' ? 'USD' : 'ARS'
 
     const paymentId = uuidv4()
     const now = new Date().toISOString()
@@ -99,7 +116,10 @@ export async function POST(request: Request) {
     const paymentData = {
       id: paymentId,
       recurringExpenseId,
-      amount,
+      amount: amountNum,
+      currency: paymentCurrency,
+      month: paymentMonth,
+      year: paymentYear,
       dueDate,
       paidDate: paidDate || (status === 'paid' ? now : null),
       paidByUserId: paidByUserId || session.userId,

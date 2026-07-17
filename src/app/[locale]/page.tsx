@@ -31,7 +31,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react"
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { db, Chore, Task, Meal, CalendarEvent } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { CompleteChoreModal } from '@/components/CompleteChoreModal'

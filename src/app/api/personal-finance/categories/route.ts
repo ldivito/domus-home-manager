@@ -2,19 +2,19 @@ import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
-import { v4 as uuidv4 } from 'uuid'
+import { generateCategoryId } from '@/lib/utils/finance/helpers'
+import { validateCategory } from '@/lib/utils/finance/validators'
 
-interface PersonalCategoryRecord {
+interface CategoryRow {
   id: string
-  userId: string
   name: string
-  type: 'income' | 'expense'
+  type: string
   color: string
   icon: string
-  isActive: boolean
-  isDefault: boolean
-  updatedAt: string
+  isActive: number
+  isDefault: number
   createdAt: string
+  updatedAt: string
 }
 
 export async function GET(request: Request) {
@@ -24,54 +24,54 @@ export async function GET(request: Request) {
 
     const session = await getUserFromRequest(request, env)
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type') // 'income' | 'expense'
+    const url = new URL(request.url)
+    const typeFilter = url.searchParams.get('type')
 
-    const conditions: string[] = [
-      "sm.tableName = 'personalCategories'",
-      "sm.updatedAt = (SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2 WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalCategories')",
-      'sm.userId = ?',
-      'sm.deletedAt IS NULL'
-    ]
-    const bindings: string[] = [session.userId]
-
-    if (type === 'income' || type === 'expense') {
-      conditions.push("json_extract(sm.data, '$.type') = ?")
-      bindings.push(type)
-    }
-
-    const query = `
+    let query = `
       SELECT
         sm.recordId as id,
-        json_extract(sm.data, '$.userId') as userId,
         json_extract(sm.data, '$.name') as name,
         json_extract(sm.data, '$.type') as type,
         json_extract(sm.data, '$.color') as color,
         json_extract(sm.data, '$.icon') as icon,
         json_extract(sm.data, '$.isActive') as isActive,
         json_extract(sm.data, '$.isDefault') as isDefault,
-        sm.updatedAt,
-        sm.createdAt
+        sm.createdAt,
+        sm.updatedAt
       FROM sync_metadata sm
-      WHERE ${conditions.join(' AND ')}
-      ORDER BY json_extract(sm.data, '$.isDefault') DESC, json_extract(sm.data, '$.name') ASC
+      WHERE sm.tableName = 'personalCategories'
+      AND sm.userId = ?
+      AND sm.deletedAt IS NULL
+    `
+
+    const params: unknown[] = [session.userId]
+
+    if (typeFilter) {
+      query += ` AND json_extract(sm.data, '$.type') = ?`
+      params.push(typeFilter)
+    }
+
+    query += `
+      ORDER BY
+        json_extract(sm.data, '$.isDefault') DESC,
+        json_extract(sm.data, '$.name')
     `
 
     const categories = await db
       .prepare(query)
-      .bind(...bindings)
+      .bind(...params)
       .all()
 
     return NextResponse.json({
       success: true,
-      data: (categories.results as PersonalCategoryRecord[]) || []
+      categories: (categories.results as CategoryRow[]) || []
     })
   } catch (error) {
     logger.error('Get personal categories error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -82,40 +82,29 @@ export async function POST(request: Request) {
 
     const session = await getUserFromRequest(request, env)
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json() as {
-      name?: string
-      type?: string
-      color?: string
-      icon?: string
+    const body = await request.json()
+
+    // Validate input
+    const validation = validateCategory(body)
+    if (!validation.isValid) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
 
-    const { name, type, color, icon } = body
-
-    if (!name || !type) {
-      return NextResponse.json({ success: false, error: 'Missing required fields: name, type' }, { status: 400 })
-    }
-
-    const validTypes = ['income', 'expense']
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ success: false, error: 'Invalid type. Must be: income or expense' }, { status: 400 })
-    }
-
-    const categoryId = uuidv4()
+    const categoryId = generateCategoryId()
     const now = new Date().toISOString()
 
     const categoryData = {
       id: categoryId,
       userId: session.userId,
-      name,
-      type,
-      color: color ?? '#6b7280',
-      icon: icon ?? 'Tag',
+      name: body.name.trim(),
+      type: body.type,
+      color: body.color,
+      icon: body.icon,
       isActive: true,
       isDefault: false,
-      householdId: session.householdId ?? null,
       createdAt: now,
       updatedAt: now
     }
@@ -124,24 +113,25 @@ export async function POST(request: Request) {
       .prepare(`
         INSERT INTO sync_metadata (
           id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, 'personalCategories', ?, 'insert', ?, ?, ?)
       `)
       .bind(
-        uuidv4(),
+        crypto.randomUUID(),
         session.userId,
-        session.householdId ?? null,
-        'personalCategories',
+        session.householdId || null,
         categoryId,
-        'insert',
         JSON.stringify(categoryData),
         now,
         now
       )
       .run()
 
-    return NextResponse.json({ success: true, data: categoryData }, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      category: categoryData
+    })
   } catch (error) {
     logger.error('Create personal category error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

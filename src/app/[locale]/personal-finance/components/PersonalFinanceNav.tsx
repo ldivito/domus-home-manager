@@ -1,13 +1,14 @@
 'use client'
 
-import { Link, usePathname } from '@/i18n/navigation'
+import { Link } from '@/i18n/navigation'
+import { usePathname } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { 
-  Home, 
-  Wallet, 
-  ArrowUpDown, 
-  Tags, 
+import {
+  Home,
+  Wallet,
+  ArrowUpDown,
+  Tags,
   BarChart3,
   Plus,
   TrendingUp,
@@ -16,8 +17,8 @@ import {
 import { cn } from '@/lib/utils'
 
 export default function PersonalFinanceNav() {
-  const pathname = usePathname()
   const t = useTranslations('personalFinance')
+  const pathname = usePathname()
 
   const navigation = [
     {
@@ -51,10 +52,10 @@ export default function PersonalFinanceNav() {
       description: t('navigation.analyticsDesc')
     },
     {
-      name: t('navigation.settings'),
+      name: t('settings.title'),
       href: '/personal-finance/settings',
       icon: Settings,
-      description: t('navigation.settingsDesc')
+      description: t('settings.subtitle')
     }
   ]
 
@@ -93,10 +94,10 @@ export default function PersonalFinanceNav() {
         {navigation.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
-          
+
           return (
             <Button
-              key={item.href}
+              key={item.name}
               asChild
               variant={active ? "default" : "ghost"}
               size="sm"
@@ -121,10 +122,10 @@ export default function PersonalFinanceNav() {
         </span>
         {quickActions.map((action) => {
           const Icon = action.icon
-          
+
           return (
             <Button
-              key={action.href}
+              key={action.name}
               asChild
               variant={action.variant}
               size="sm"

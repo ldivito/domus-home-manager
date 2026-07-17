@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/utils/finance'
 
@@ -14,24 +15,26 @@ interface FinancialTrendsProps {
 }
 
 export default function FinancialTrends({ data, currency }: FinancialTrendsProps) {
+  const t = useTranslations('personalFinance')
+
   const CustomTooltip = ({ active, payload, label }: {
     active?: boolean
-    payload?: { value: number; name: string; color: string; dataKey: string }[]
     label?: string
+    payload?: Array<{ value: number; color?: string; dataKey?: string | number }>
   }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg p-4 shadow-md">
           <p className="font-medium mb-2">{label}</p>
-          {payload.map((entry: { value: number; name: string; color: string; dataKey: string }, index: number) => (
+          {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
-              <div 
-                className="w-3 h-3 rounded-full" 
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
               <span className="capitalize">{entry.dataKey}:</span>
               <span className="font-medium">
-                {currency === 'ALL' 
+                {currency === 'ALL'
                   ? `${formatCurrency(entry.value, 'ARS')}*`
                   : formatCurrency(entry.value, currency)
                 }
@@ -39,7 +42,7 @@ export default function FinancialTrends({ data, currency }: FinancialTrendsProps
             </div>
           ))}
           {currency === 'ALL' && (
-            <p className="text-xs text-muted-foreground mt-2">*Mixed currencies shown in ARS</p>
+            <p className="text-xs text-muted-foreground mt-2">{t('analytics.mixedCurrenciesNote')}</p>
           )}
         </div>
       )
@@ -59,8 +62,8 @@ export default function FinancialTrends({ data, currency }: FinancialTrendsProps
     return (
       <div className="h-80 flex items-center justify-center text-muted-foreground">
         <div className="text-center">
-          <p className="text-lg font-medium mb-2">No data available</p>
-          <p className="text-sm">Start adding transactions to see trends</p>
+          <p className="text-lg font-medium mb-2">{t('analytics.noDataAvailable')}</p>
+          <p className="text-sm">{t('analytics.startAddingTransactions')}</p>
         </div>
       </div>
     )
@@ -74,22 +77,22 @@ export default function FinancialTrends({ data, currency }: FinancialTrendsProps
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
         >
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis 
-            dataKey="month" 
+          <XAxis
+            dataKey="month"
             tick={{ fontSize: 12 }}
             className="fill-muted-foreground"
           />
-          <YAxis 
+          <YAxis
             tick={{ fontSize: 12 }}
             className="fill-muted-foreground"
             tickFormatter={formatYAxisTick}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
+          <Legend
             wrapperStyle={{ paddingTop: '20px' }}
             iconType="circle"
           />
-          
+
           <Line
             type="monotone"
             dataKey="income"
@@ -97,9 +100,9 @@ export default function FinancialTrends({ data, currency }: FinancialTrendsProps
             strokeWidth={3}
             dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
             activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
-            name="Income"
+            name={t('analytics.income')}
           />
-          
+
           <Line
             type="monotone"
             dataKey="expenses"
@@ -107,9 +110,9 @@ export default function FinancialTrends({ data, currency }: FinancialTrendsProps
             strokeWidth={3}
             dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
             activeDot={{ r: 6, stroke: '#ef4444', strokeWidth: 2 }}
-            name="Expenses"
+            name={t('analytics.expenses')}
           />
-          
+
           <Line
             type="monotone"
             dataKey="net"
@@ -118,7 +121,7 @@ export default function FinancialTrends({ data, currency }: FinancialTrendsProps
             strokeDasharray="5 5"
             dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
             activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2 }}
-            name="Net Income"
+            name={t('analytics.metrics.netIncome')}
           />
         </LineChart>
       </ResponsiveContainer>

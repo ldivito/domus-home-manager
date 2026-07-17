@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { PersonalWallet, WalletFormData, WalletType } from '@/types/personal-finance'
 import {
   Dialog,
@@ -30,18 +31,26 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Wallet, 
-  CreditCard, 
+import {
+  Wallet,
+  CreditCard,
   Building
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { generateWalletId, generateWalletColor } from '@/lib/utils/finance'
+import { validateWallet, generateWalletId, generateWalletColor } from '@/lib/utils/finance'
 import { db } from '@/lib/db'
 import { useToast } from '@/hooks/use-toast'
-import { useTranslations } from 'next-intl'
+import { getCurrentUserId } from '@/lib/utils/finance/current-user'
+
+const WALLET_ICONS = [
+  { value: 'Wallet', label: 'Wallet' },
+  { value: 'CreditCard', label: 'Credit Card' },
+  { value: 'Building', label: 'Bank' },
+  { value: 'Banknote', label: 'Cash' },
+  { value: 'PiggyBank', label: 'Savings' }
+]
 
 const PREDEFINED_COLORS = [
   '#3b82f6', // Blue
@@ -58,29 +67,38 @@ const PREDEFINED_COLORS = [
 
 // Form validation schema
 const walletSchema = z.object({
-  name: z.string().min(1).max(50),
+  name: z.string().min(1, 'Wallet name is required').max(50, 'Name too long'),
   type: z.enum(['physical', 'bank', 'credit_card'] as const),
   currency: z.enum(['ARS', 'USD'] as const),
   balance: z.number().optional(),
-  creditLimit: z.number().positive().optional(),
-  closingDay: z.number().min(1).max(31).optional(),
-  dueDay: z.number().min(1).max(31).optional(),
+  creditLimit: z.number().optional(),
+  closingDay: z.number().optional(),
+  dueDay: z.number().optional(),
   accountNumber: z.string().optional(),
   bankName: z.string().optional(),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i),
+  color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid color format'),
   icon: z.string(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.type === 'credit_card') {
+    if (!data.creditLimit || data.creditLimit <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Credit limit must be positive', path: ['creditLimit'] })
+    }
+    if (!data.closingDay || data.closingDay < 1 || data.closingDay > 31) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Closing day must be 1-31', path: ['closingDay'] })
+    }
+    if (!data.dueDay || data.dueDay < 1 || data.dueDay > 31) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Due day must be 1-31', path: ['dueDay'] })
+    }
+  }
+  if (data.type === 'bank') {
+    if (!data.bankName || data.bankName.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Bank name is required', path: ['bankName'] })
+    }
+  }
 })
 
 type FormData = z.infer<typeof walletSchema>
-
-const WALLET_ICONS = [
-  { value: 'Wallet', labelKey: 'Wallet' },
-  { value: 'CreditCard', labelKey: 'Credit Card' },
-  { value: 'Building', labelKey: 'Bank' },
-  { value: 'Banknote', labelKey: 'Cash' },
-  { value: 'PiggyBank', labelKey: 'Savings' }
-]
 
 interface CreateWalletDialogProps {
   trigger?: React.ReactNode
@@ -109,6 +127,12 @@ export function CreateWalletDialog({
       type: 'physical',
       currency: 'ARS',
       balance: 0,
+      creditLimit: 0,
+      closingDay: 1,
+      dueDay: 10,
+      accountNumber: '',
+      bankName: '',
+      notes: '',
       color: generateWalletColor('physical'),
       icon: 'Wallet',
       ...defaultValues,
@@ -124,7 +148,7 @@ export function CreateWalletDialog({
     } else {
       setIsOpen(newOpen)
     }
-    
+
     if (!newOpen) {
       form.reset()
     }
@@ -132,11 +156,31 @@ export function CreateWalletDialog({
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
-    
+
     try {
+      // Current user (single source of truth until real auth wiring)
+      const userId = getCurrentUserId()
+
+      // Validate the wallet data
+      const validation = validateWallet({
+        ...data,
+        balance: data.balance || 0,
+      })
+
+      if (!validation.isValid) {
+        const firstError = Object.values(validation.errors)[0]?.[0] || 'Validation failed'
+        toast({
+          title: t('walletForm.validationError'),
+          description: firstError,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Prepare wallet data
       const walletData: PersonalWallet = {
         id: generateWalletId(),
-        userId: 'usr_5ad61fe0-39eb-4097-8a92-94922d0b828a',
+        userId,
         name: data.name,
         type: data.type,
         currency: data.currency,
@@ -154,11 +198,12 @@ export function CreateWalletDialog({
         updatedAt: new Date(),
       }
 
+      // Save to database
       await db.personalWallets.add(walletData)
 
       toast({
-        title: t('wallets.dialog.walletCreated'),
-        description: t('wallets.dialog.walletCreatedDesc', { name: data.name }),
+        title: t('walletForm.successTitle'),
+        description: t('walletForm.successMessage', { name: data.name }),
       })
 
       onWalletCreated?.(walletData)
@@ -168,8 +213,8 @@ export function CreateWalletDialog({
     } catch (error) {
       console.error('Error creating wallet:', error)
       toast({
-        title: t('common.error'),
-        description: t('wallets.dialog.createError'),
+        title: t('walletForm.errorTitle'),
+        description: t('walletForm.errorMessage'),
         variant: 'destructive',
       })
     } finally {
@@ -195,12 +240,12 @@ export function CreateWalletDialog({
           {trigger}
         </DialogTrigger>
       )}
-      
+
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('wallets.dialog.title')}</DialogTitle>
+          <DialogTitle>{t('walletForm.createTitle')}</DialogTitle>
           <DialogDescription>
-            {t('wallets.dialog.description')}
+            {t('walletForm.createDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -209,17 +254,17 @@ export function CreateWalletDialog({
             <div className="grid gap-4">
               {/* Basic Information */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">{t('wallets.dialog.basicInfo')}</h4>
-                
+                <h4 className="text-sm font-medium">{t('walletForm.basicInfo')}</h4>
+
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('wallets.dialog.walletName')}</FormLabel>
+                      <FormLabel>{t('walletForm.walletName')}</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder={t('wallets.dialog.walletNamePlaceholder')}
+                        <Input
+                          placeholder={t('walletForm.walletNamePlaceholder')}
                           {...field}
                         />
                       </FormControl>
@@ -234,7 +279,7 @@ export function CreateWalletDialog({
                     name="type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('wallets.dialog.type')}</FormLabel>
+                        <FormLabel>{t('walletForm.type')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -245,19 +290,19 @@ export function CreateWalletDialog({
                             <SelectItem value="physical">
                               <div className="flex items-center gap-2">
                                 <Wallet className="h-4 w-4" />
-                                {t('wallets.dialog.typePhysical')}
+                                {t('walletForm.typePhysical')}
                               </div>
                             </SelectItem>
                             <SelectItem value="bank">
                               <div className="flex items-center gap-2">
                                 <Building className="h-4 w-4" />
-                                {t('wallets.dialog.typeBank')}
+                                {t('walletForm.typeBank')}
                               </div>
                             </SelectItem>
                             <SelectItem value="credit_card">
                               <div className="flex items-center gap-2">
                                 <CreditCard className="h-4 w-4" />
-                                {t('wallets.dialog.typeCreditCard')}
+                                {t('walletForm.typeCreditCard')}
                               </div>
                             </SelectItem>
                           </SelectContent>
@@ -272,7 +317,7 @@ export function CreateWalletDialog({
                     name="currency"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('wallets.dialog.currency')}</FormLabel>
+                        <FormLabel>{t('walletForm.currency')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -280,8 +325,8 @@ export function CreateWalletDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="ARS">ARS (Argentine Peso)</SelectItem>
-                            <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                            <SelectItem value="ARS">{t('walletForm.currencyARS')}</SelectItem>
+                            <SelectItem value="USD">{t('walletForm.currencyUSD')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -298,7 +343,7 @@ export function CreateWalletDialog({
                   name="balance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('wallets.dialog.initialBalance')}</FormLabel>
+                      <FormLabel>{t('walletForm.initialBalance')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -309,7 +354,7 @@ export function CreateWalletDialog({
                         />
                       </FormControl>
                       <FormDescription>
-                        {t('wallets.dialog.initialBalanceDesc')}
+                        {t('walletForm.initialBalanceHint')}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -320,14 +365,14 @@ export function CreateWalletDialog({
               {/* Credit Card specific fields */}
               {selectedType === 'credit_card' && (
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium">{t('wallets.dialog.creditCardDetails')}</h4>
-                  
+                  <h4 className="text-sm font-medium">{t('walletForm.creditCardDetails')}</h4>
+
                   <FormField
                     control={form.control}
                     name="creditLimit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('wallets.dialog.creditLimit')}</FormLabel>
+                        <FormLabel>{t('walletForm.creditLimit')}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -348,7 +393,7 @@ export function CreateWalletDialog({
                       name="closingDay"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t('wallets.dialog.closingDay')}</FormLabel>
+                          <FormLabel>{t('walletForm.closingDay')}</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -359,7 +404,7 @@ export function CreateWalletDialog({
                               onChange={(e) => field.onChange(Number(e.target.value))}
                             />
                           </FormControl>
-                          <FormDescription>{t('wallets.dialog.dayOfMonth')}</FormDescription>
+                          <FormDescription>{t('walletForm.dayOfMonth')}</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -370,7 +415,7 @@ export function CreateWalletDialog({
                       name="dueDay"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t('wallets.dialog.dueDay')}</FormLabel>
+                          <FormLabel>{t('walletForm.dueDay')}</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -381,7 +426,7 @@ export function CreateWalletDialog({
                               onChange={(e) => field.onChange(Number(e.target.value))}
                             />
                           </FormControl>
-                          <FormDescription>{t('wallets.dialog.paymentDueDay')}</FormDescription>
+                          <FormDescription>{t('walletForm.paymentDueDay')}</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -393,17 +438,17 @@ export function CreateWalletDialog({
               {/* Bank specific fields */}
               {selectedType === 'bank' && (
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium">{t('wallets.dialog.bankDetails')}</h4>
-                  
+                  <h4 className="text-sm font-medium">{t('walletForm.bankDetails')}</h4>
+
                   <FormField
                     control={form.control}
                     name="bankName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('wallets.dialog.bankName')}</FormLabel>
+                        <FormLabel>{t('walletForm.bankName')}</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="e.g. Banco Santander, BBVA"
+                          <Input
+                            placeholder={t('walletForm.bankNamePlaceholder')}
                             {...field}
                           />
                         </FormControl>
@@ -417,15 +462,15 @@ export function CreateWalletDialog({
                     name="accountNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('wallets.dialog.accountNumber')}</FormLabel>
+                        <FormLabel>{t('walletForm.accountNumber')}</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="****1234"
+                          <Input
+                            placeholder={t('walletForm.accountNumberPlaceholder')}
                             {...field}
                           />
                         </FormControl>
                         <FormDescription>
-                          {t('wallets.dialog.accountNumberDesc')}
+                          {t('walletForm.accountNumberHint')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -436,14 +481,14 @@ export function CreateWalletDialog({
 
               {/* Appearance */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">{t('wallets.dialog.appearance')}</h4>
-                
+                <h4 className="text-sm font-medium">{t('walletForm.appearance')}</h4>
+
                 <FormField
                   control={form.control}
                   name="color"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('wallets.dialog.color')}</FormLabel>
+                      <FormLabel>{t('walletForm.color')}</FormLabel>
                       <FormControl>
                         <div className="space-y-3">
                           <div className="flex gap-2 flex-wrap">
@@ -452,8 +497,8 @@ export function CreateWalletDialog({
                                 key={color}
                                 type="button"
                                 className={`w-8 h-8 rounded-full border-2 transition-all ${
-                                  selectedColor === color 
-                                    ? 'border-gray-900 scale-110' 
+                                  selectedColor === color
+                                    ? 'border-gray-900 scale-110'
                                     : 'border-gray-300 hover:scale-105'
                                 }`}
                                 style={{ backgroundColor: color }}
@@ -486,7 +531,7 @@ export function CreateWalletDialog({
                   name="icon"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('wallets.dialog.icon')}</FormLabel>
+                      <FormLabel>{t('walletForm.icon')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -496,7 +541,7 @@ export function CreateWalletDialog({
                         <SelectContent>
                           {WALLET_ICONS.map((icon) => (
                             <SelectItem key={icon.value} value={icon.value}>
-                              {icon.labelKey}
+                              {icon.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -513,10 +558,10 @@ export function CreateWalletDialog({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('wallets.dialog.notes')}</FormLabel>
+                    <FormLabel>{t('walletForm.notesOptional')}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={t('wallets.dialog.notesPlaceholder')}
+                        placeholder={t('walletForm.notesPlaceholder')}
                         className="resize-none"
                         rows={3}
                         {...field}
@@ -529,23 +574,23 @@ export function CreateWalletDialog({
 
               {/* Preview */}
               <div className="p-4 border rounded-lg bg-gray-50">
-                <h4 className="text-sm font-medium mb-2">{t('wallets.dialog.preview')}</h4>
+                <h4 className="text-sm font-medium mb-2">{t('walletForm.preview')}</h4>
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 rounded-lg"
-                    style={{ 
-                      backgroundColor: `${selectedColor}20`, 
-                      color: selectedColor 
+                    style={{
+                      backgroundColor: `${selectedColor}20`,
+                      color: selectedColor
                     }}
                   >
                     {getWalletTypeIcon(selectedType)}
                   </div>
                   <div>
                     <p className="font-medium">
-                      {form.watch('name') || t('wallets.dialog.walletName')}
+                      {form.watch('name') || t('walletForm.previewFallback')}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedType.replace('_', ' ')} • {form.watch('currency')}
+                      {selectedType.replace('_', ' ')} &bull; {form.watch('currency')}
                     </p>
                   </div>
                 </div>
@@ -559,10 +604,10 @@ export function CreateWalletDialog({
                 onClick={() => handleOpenChange(false)}
                 disabled={isLoading}
               >
-                {t('common.cancel')}
+                {t('walletForm.cancel')}
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? t('wallets.dialog.creating') : t('wallets.dialog.createWallet')}
+                {isLoading ? t('walletForm.creating') : t('walletForm.createWallet')}
               </Button>
             </DialogFooter>
           </form>

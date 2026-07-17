@@ -145,15 +145,10 @@ export default function MaintenancePage() {
     }
   }, [tasks])
 
-  // Get upcoming tasks (next 30 days)
-  const upcomingTasks = useMemo(() => {
-    const now = new Date()
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-    return tasks.filter(t => {
-      const dueDate = new Date(t.nextDue)
-      return dueDate <= thirtyDaysFromNow
-    }).slice(0, 10)
-  }, [tasks])
+  // All scheduled tasks sorted by nextDue (the query already orders by nextDue).
+  // No 30-day window or slice: far-future tasks (e.g. yearly services) must be
+  // visible and editable in the Tasks tab, matching the "upcoming" stat count.
+  const upcomingTasks = tasks
 
   // Helper functions
   const getUserName = (userId?: string) => {

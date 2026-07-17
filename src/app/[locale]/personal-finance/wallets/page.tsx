@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { PersonalWallet } from '@/types/personal-finance'
 import { db } from '@/lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,101 +16,118 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { WalletCard } from './components/WalletCard'
 import { CreateWalletDialog } from './components/CreateWalletDialog'
-import { 
-  Plus, 
-  Search, 
+import { EditWalletDialog } from './components/EditWalletDialog'
+import {
+  Plus,
+  Search,
   Filter,
   Wallet
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { useTranslations } from 'next-intl'
 import { formatBalance, calculateTotalBalance } from '@/lib/utils/finance'
+import { getCurrentUserId } from '@/lib/utils/finance/current-user'
 
 export default function WalletsPage() {
   const t = useTranslations('personalFinance')
-  const [wallets, setWallets] = useState<PersonalWallet[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
   const [filterCurrency, setFilterCurrency] = useState<string>('all')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [walletToDelete, setWalletToDelete] = useState<PersonalWallet | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [walletToEdit, setWalletToEdit] = useState<PersonalWallet | null>(null)
   const { toast } = useToast()
 
-  const loadWallets = useCallback(async () => {
-    try {
-      setLoading(true)
-      const fetchedWallets = await db.personalWallets
-        .where('isActive')
-        .equals(1)
-        .toArray()
+  // Current user (single source of truth until real auth wiring)
+  const userId = getCurrentUserId()
 
-      const sortedWallets = fetchedWallets.sort((a, b) =>
-        new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime()
-      )
-      setWallets(sortedWallets)
-    } catch (error) {
-      console.error('Error loading wallets:', error)
-    } finally {
-      setLoading(false)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // t and toast are stable UI functions — excluding them stops infinite re-render loop
-
+  // Debounce search
   useEffect(() => {
-    loadWallets()
-  }, [loadWallets])
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
-  const handleWalletCreated = (newWallet: PersonalWallet) => {
-    setWallets(prev => [newWallet, ...prev])
+  // Reactive data loading via useLiveQuery
+  const wallets = useLiveQuery(
+    () => db.personalWallets
+      .where('userId').equals(userId).and(w => w.isActive)
+      .toArray()
+      .then(w => w.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )),
+    [userId]
+  )
+
+  const loading = wallets === undefined
+
+  const handleEditWallet = (wallet: PersonalWallet) => {
+    setWalletToEdit(wallet)
+    setEditDialogOpen(true)
   }
 
-  const handleEditWallet = (wallet: PersonalWallet) => { // eslint-disable-line @typescript-eslint/no-unused-vars
-    // TODO: Implement edit functionality
-    toast({
-      title: t('wallets.editTitle'),
-      description: t('wallets.editComingSoon'),
-    })
-  }
-
-  const handleDeleteWallet = async (walletId: string) => {
-    if (!confirm(t('wallets.confirmDelete'))) {
-      return
+  const handleDeleteWallet = (walletId: string) => {
+    const wallet = wallets?.find(w => w.id === walletId)
+    if (wallet) {
+      setWalletToDelete(wallet)
+      setDeleteDialogOpen(true)
     }
+  }
+
+  const confirmDelete = async () => {
+    if (!walletToDelete?.id) return
 
     try {
-      await db.personalWallets.update(walletId, {
+      await db.personalWallets.update(walletToDelete.id, {
         isActive: false,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
-      
-      setWallets(prev => prev.filter(w => w.id !== walletId))
-      
+
       toast({
-        title: t('wallets.deleteSuccess'),
-        description: t('wallets.deleteSuccessDesc'),
+        title: t('deleteConfirm.deleteWalletTitle'),
+        description: t('deleteConfirm.deleteWalletMessage'),
       })
     } catch (error) {
       console.error('Error deleting wallet:', error)
       toast({
         title: t('common.error'),
-        description: t('wallets.deleteError'),
+        description: t('walletForm.errorMessage'),
         variant: 'destructive',
       })
+    } finally {
+      setDeleteDialogOpen(false)
+      setWalletToDelete(null)
     }
   }
 
   // Filter wallets based on search and filters
-  const filteredWallets = wallets.filter(wallet => {
-    const matchesSearch = wallet.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === 'all' || wallet.type === filterType
-    const matchesCurrency = filterCurrency === 'all' || wallet.currency === filterCurrency
-    
-    return matchesSearch && matchesType && matchesCurrency
-  })
+  const filteredWallets = useMemo(() => {
+    if (!wallets) return []
+    return wallets.filter(wallet => {
+      const matchesSearch = wallet.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      const matchesType = filterType === 'all' || wallet.type === filterType
+      const matchesCurrency = filterCurrency === 'all' || wallet.currency === filterCurrency
+      return matchesSearch && matchesType && matchesCurrency
+    })
+  }, [wallets, debouncedSearch, filterType, filterCurrency])
 
   // Calculate totals
-  const totalBalances = calculateTotalBalance(wallets)
+  const totalBalances = useMemo(() =>
+    wallets ? calculateTotalBalance(wallets) : { ARS: 0, USD: 0 },
+    [wallets]
+  )
 
   if (loading) {
     return (
@@ -124,14 +143,14 @@ export default function WalletsPage() {
           {[1, 2, 3].map(i => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div className="h-8 bg-muted rounded w-1/2 mb-4"></div>
                 <div className="flex gap-2">
-                  <div className="h-8 bg-gray-200 rounded flex-1"></div>
-                  <div className="h-8 bg-gray-200 rounded flex-1"></div>
+                  <div className="h-8 bg-muted rounded flex-1"></div>
+                  <div className="h-8 bg-muted rounded flex-1"></div>
                 </div>
               </CardContent>
             </Card>
@@ -152,7 +171,7 @@ export default function WalletsPage() {
               {t('wallets.subtitle')}
             </p>
           </div>
-          
+
           <CreateWalletDialog
             trigger={
               <Button>
@@ -160,34 +179,29 @@ export default function WalletsPage() {
                 {t('wallets.addWallet')}
               </Button>
             }
-            onWalletCreated={handleWalletCreated}
           />
         </div>
 
         {/* Balance overview */}
-        {wallets.length > 0 && (
+        {wallets && wallets.length > 0 && (
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t('dashboard.totalCurrency', { currency: 'ARS' })}
-                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('wallets.totalARS')}</span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {formatBalance(totalBalances.ARS, 'ARS').formatted}
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t('dashboard.totalCurrency', { currency: 'USD' })}
-                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('wallets.totalUSD')}</span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {formatBalance(totalBalances.USD, 'USD').formatted}
@@ -199,9 +213,7 @@ export default function WalletsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t('wallets.activeWallets')}
-                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{t('wallets.activeWallets')}</span>
                 </div>
                 <div className="text-2xl font-bold mt-1">
                   {wallets.length}
@@ -213,7 +225,7 @@ export default function WalletsPage() {
       </div>
 
       {/* Filters and search */}
-      {wallets.length > 0 && (
+      {wallets && wallets.length > 0 && (
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -226,66 +238,66 @@ export default function WalletsPage() {
                   className="pl-10"
                 />
               </div>
-              
+
               <div className="flex gap-2">
                 <Select value={filterType} onValueChange={setFilterType}>
                   <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder={t('wallets.allTypes')} />
+                    <SelectValue placeholder={t('walletForm.type')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t('wallets.allTypes')}</SelectItem>
-                    <SelectItem value="physical">{t('wallets.typePhysical')}</SelectItem>
-                    <SelectItem value="bank">{t('wallets.typeBank')}</SelectItem>
-                    <SelectItem value="credit_card">{t('wallets.typeCreditCard')}</SelectItem>
+                    <SelectItem value="physical">{t('wallets.physical')}</SelectItem>
+                    <SelectItem value="bank">{t('wallets.bank')}</SelectItem>
+                    <SelectItem value="credit_card">{t('wallets.creditCard')}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={filterCurrency} onValueChange={setFilterCurrency}>
                   <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder={t('wallets.allCurrencies')} />
+                    <SelectValue placeholder={t('walletForm.currency')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('wallets.allCurrencies')}</SelectItem>
+                    <SelectItem value="all">{t('wallets.allCurrency')}</SelectItem>
                     <SelectItem value="ARS">ARS</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            
+
             {/* Active filters display */}
             {(searchTerm || filterType !== 'all' || filterCurrency !== 'all') && (
               <div className="flex gap-2 mt-3 flex-wrap">
                 {searchTerm && (
                   <Badge variant="secondary" className="gap-1">
-                    {t('wallets.filterSearchLabel', { term: searchTerm })}
-                    <button 
+                    {t('wallets.filterSearch')} {searchTerm}
+                    <button
                       onClick={() => setSearchTerm('')}
                       className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
                     >
-                      ×
+                      x
                     </button>
                   </Badge>
                 )}
                 {filterType !== 'all' && (
                   <Badge variant="secondary" className="gap-1">
-                    {t('wallets.filterTypeLabel', { type: filterType.replace('_', ' ') })}
-                    <button 
+                    {t('wallets.filterType')} {filterType.replace('_', ' ')}
+                    <button
                       onClick={() => setFilterType('all')}
                       className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
                     >
-                      ×
+                      x
                     </button>
                   </Badge>
                 )}
                 {filterCurrency !== 'all' && (
                   <Badge variant="secondary" className="gap-1">
-                    {t('wallets.filterCurrencyLabel', { currency: filterCurrency })}
-                    <button 
+                    {t('wallets.filterCurrency')} {filterCurrency}
+                    <button
                       onClick={() => setFilterCurrency('all')}
                       className="ml-1 hover:bg-gray-500 rounded-full w-4 h-4 flex items-center justify-center text-xs"
                     >
-                      ×
+                      x
                     </button>
                   </Badge>
                 )}
@@ -296,16 +308,16 @@ export default function WalletsPage() {
       )}
 
       {/* Wallets grid */}
-      {filteredWallets.length === 0 && wallets.length > 0 ? (
+      {filteredWallets.length === 0 && wallets && wallets.length > 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">{t('wallets.noWalletsFiltered')}</h3>
+            <h3 className="font-semibold mb-2">{t('wallets.noMatch')}</h3>
             <p className="text-muted-foreground mb-4">
-              {t('wallets.noWalletsFilteredDesc')}
+              {t('wallets.noMatchHint')}
             </p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setSearchTerm('')
                 setFilterType('all')
@@ -320,18 +332,17 @@ export default function WalletsPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">{t('wallets.noWalletsYet')}</h3>
+            <h3 className="font-semibold mb-2">{t('wallets.noWallets')}</h3>
             <p className="text-muted-foreground mb-4">
-              {t('wallets.createFirstWalletDesc')}
+              {t('wallets.noWalletsHint')}
             </p>
             <CreateWalletDialog
               trigger={
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  {t('wallets.createFirstWallet')}
+                  {t('wallets.createFirst')}
                 </Button>
               }
-              onWalletCreated={handleWalletCreated}
             />
           </CardContent>
         </Card>
@@ -349,11 +360,36 @@ export default function WalletsPage() {
       )}
 
       {/* Results count */}
-      {filteredWallets.length > 0 && (
+      {filteredWallets.length > 0 && wallets && (
         <div className="text-center text-sm text-muted-foreground">
-          {t('wallets.showingCount', { showing: filteredWallets.length, total: wallets.length })}
+          {t('wallets.showingCount', { count: filteredWallets.length, total: wallets.length })}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteConfirm.areYouSure')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deleteConfirm.deleteWalletMessage')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteConfirm.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              {t('deleteConfirm.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Wallet Dialog */}
+      <EditWalletDialog
+        wallet={walletToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   )
 }

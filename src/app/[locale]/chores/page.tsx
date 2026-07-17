@@ -22,6 +22,14 @@ import { ActivityLogger } from '@/lib/activity'
 type FrequencyFilter = 'all' | 'daily' | 'weekly' | 'monthly' | 'custom'
 type StatusFilter = 'all' | 'pending' | 'completed' | 'overdue'
 
+// Snapshot of the pre-completion schedule, persisted on the record so that
+// "undo complete" can restore nextDue/lastCompleted. Extra fields are stored
+// by Dexie without requiring a schema change.
+type ChoreUndoSnapshot = {
+  previousNextDue?: Date | string
+  previousLastCompleted?: Date | string
+}
+
 export default function ChoresPage() {
   const t = useTranslations('chores')
   const tCommon = useTranslations('common')
@@ -127,14 +135,18 @@ export default function ChoresPage() {
           nextDue = new Date(now.getTime() + 24 * 60 * 60 * 1000)
       }
 
-      await db.chores.update(selectedChore.id, {
+      const updates: Partial<Chore> & ChoreUndoSnapshot = {
         lastCompleted: now,
         lastCompletedBy: completedByUserId,
         completedAt: now,
         nextDue,
         isCompleted: true,
-        updatedAt: now
-      })
+        updatedAt: now,
+        // Keep the previous schedule so "undo complete" can restore it
+        previousNextDue: selectedChore.nextDue,
+        previousLastCompleted: selectedChore.lastCompleted
+      }
+      await db.chores.update(selectedChore.id, updates)
       await ActivityLogger.choreCompleted(selectedChore.id, selectedChore.title, completedByUserId, selectedChore.householdId)
 
       await loadData()
@@ -148,12 +160,29 @@ export default function ChoresPage() {
     if (!chore.id) return
 
     try {
-      await db.chores.update(chore.id, {
+      const snapshot = chore as Chore & ChoreUndoSnapshot
+      const updates: Partial<Chore> & ChoreUndoSnapshot = {
         isCompleted: false,
         completedAt: undefined,
         lastCompletedBy: undefined,
         updatedAt: new Date()
-      })
+      }
+
+      // Restore the pre-completion schedule (completing advanced nextDue a full period)
+      if (snapshot.previousNextDue) {
+        updates.nextDue = snapshot.previousNextDue instanceof Date
+          ? snapshot.previousNextDue
+          : new Date(snapshot.previousNextDue)
+        updates.lastCompleted = snapshot.previousLastCompleted
+          ? (snapshot.previousLastCompleted instanceof Date
+            ? snapshot.previousLastCompleted
+            : new Date(snapshot.previousLastCompleted))
+          : undefined
+        updates.previousNextDue = undefined
+        updates.previousLastCompleted = undefined
+      }
+
+      await db.chores.update(chore.id, updates)
 
       await loadData()
     } catch (error) {
@@ -211,9 +240,13 @@ export default function ChoresPage() {
 
   const formatDueDate = (date: Date | string) => {
     const d = date instanceof Date ? date : new Date(date)
-    const now = new Date()
-    const diff = d.getTime() - now.getTime()
-    const days = Math.ceil(diff / (24 * 60 * 60 * 1000))
+    // Compare calendar days (normalized to local midnight), not raw millisecond diffs,
+    // so a chore due later today doesn't show as "due tomorrow"
+    const dueDay = new Date(d)
+    dueDay.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const days = Math.round((dueDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
 
     if (days === 0) return t('dueToday')
     if (days === 1) return t('dueTomorrow')
@@ -264,17 +297,26 @@ export default function ChoresPage() {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const dueTodayOrOverdue = chores.filter(c => {
+    // Completing a chore advances nextDue past today, so completed chores leave the
+    // nextDue < tomorrow window immediately. Count completions by completedAt instead.
+    const completedToday = chores.filter(c => {
+      if (!c.isCompleted || !c.completedAt) return false
+      const completedAt = c.completedAt instanceof Date ? c.completedAt : new Date(c.completedAt)
+      return completedAt >= today && completedAt < tomorrow
+    })
+
+    const pendingTodayOrOverdue = chores.filter(c => {
+      if (c.isCompleted) return false
       const dueDate = c.nextDue instanceof Date ? c.nextDue : new Date(c.nextDue)
       return dueDate < tomorrow
     })
 
-    const completedToday = dueTodayOrOverdue.filter(c => c.isCompleted)
+    const total = pendingTodayOrOverdue.length + completedToday.length
 
     return {
-      total: dueTodayOrOverdue.length,
+      total,
       completed: completedToday.length,
-      percentage: dueTodayOrOverdue.length > 0 ? (completedToday.length / dueTodayOrOverdue.length) * 100 : 0
+      percentage: total > 0 ? (completedToday.length / total) * 100 : 0
     }
   }, [chores])
 

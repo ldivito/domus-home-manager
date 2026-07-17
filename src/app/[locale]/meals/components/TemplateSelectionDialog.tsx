@@ -25,7 +25,9 @@ interface TemplateSelectionDialogProps {
 }
 
 export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected }: TemplateSelectionDialogProps) {
+  const t = useTranslations('meals.templateDialog')
   const tCat = useTranslations('meals.defaultCategories')
+  const tCommon = useTranslations('common')
   const [searchTerm, setSearchTerm] = useState('')
 
   const savedMeals = useLiveQuery(
@@ -109,7 +111,7 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center">
             <UtensilsCrossed className="mr-3 h-6 w-6" />
-            Select Meal Template
+            {t('title')}
           </DialogTitle>
         </DialogHeader>
         
@@ -117,7 +119,7 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search templates by name, description, or ingredients..."
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -141,14 +143,14 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
               {searchTerm ? (
                 <div>
                   <Search className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No templates found</h3>
-                  <p className="text-sm">Try adjusting your search terms</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('noResultsTitle')}</h3>
+                  <p className="text-sm">{t('noResultsHint')}</p>
                 </div>
               ) : (
                 <div>
                   <UtensilsCrossed className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No saved templates</h3>
-                  <p className="text-sm">Save meals as templates to see them here</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('emptyTitle')}</h3>
+                  <p className="text-sm">{t('emptyHint')}</p>
                 </div>
               )}
             </div>
@@ -190,14 +192,14 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
 
                         {/* Stats */}
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
-                          <span>Used {meal.timesUsed} times</span>
+                          <span>{t('usedTimes', { count: meal.timesUsed })}</span>
                           <span>•</span>
-                          <span>{ingredientDetails.length} ingredients</span>
+                          <span>{t('ingredientsCount', { count: ingredientDetails.length })}</span>
                         </div>
 
                         {/* Ingredients Preview */}
                         <div>
-                          <p className="text-xs font-medium text-gray-700 mb-1">Ingredients:</p>
+                          <p className="text-xs font-medium text-gray-700 mb-1">{t('ingredientsLabel')}</p>
                           <div className="flex flex-wrap gap-1">
                             {ingredientDetails.slice(0, 4).map(({ savedItem, ingredient }, idx) => (
                               <Badge key={`${savedItem.id}-${ingredient.id ?? idx}`} variant="secondary" className="text-xs">
@@ -207,7 +209,7 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
                             ))}
                             {ingredientDetails.length > 4 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{ingredientDetails.length - 4} more
+                                {t('moreIngredients', { count: ingredientDetails.length - 4 })}
                               </Badge>
                             )}
                           </div>
@@ -215,9 +217,9 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
 
                         {/* Last used */}
                         <div className="text-xs text-gray-500 pt-2 border-t">
-                          Last used: {meal.lastUsed
-                            ? new Date(meal.lastUsed).toLocaleDateString()
-                            : 'Never'}
+                          {meal.lastUsed
+                            ? t('lastUsed', { date: new Date(meal.lastUsed).toLocaleDateString() })
+                            : t('lastUsedNever')}
                         </div>
                       </div>
                     </CardContent>
@@ -230,7 +232,7 @@ export function TemplateSelectionDialog({ open, onOpenChange, onTemplateSelected
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {tCommon('cancel')}
           </Button>
         </DialogFooter>
       </DialogContent>

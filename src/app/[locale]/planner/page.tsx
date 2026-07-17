@@ -1,8 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useLocale, useTranslations } from "next-intl"
-import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { useRouter } from "@/i18n/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
@@ -46,7 +46,6 @@ function getStartOfWeek(d: Date, startOfWeek: 'sunday' | 'monday' = 'sunday') {
 
 export default function PlannerPage() {
   const t = useTranslations('planner')
-  const locale = useLocale()
   const router = useRouter()
   const { startOfWeek } = useCalendarSettings()
   const [view, setView] = useState<PlannerView>('week')
@@ -313,15 +312,15 @@ export default function PlannerPage() {
               usersById={usersById}
               onView={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
-                else if (source === 'task') { router.push(`/${locale}/tasks`) }
-                else if (source === 'meal') { router.push(`/${locale}/meals`) }
-                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+                else if (source === 'task') { router.push('/tasks') }
+                else if (source === 'meal') { router.push('/meals') }
+                else if (source === 'chore') { router.push('/chores') }
               }}
               onEdit={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setEditOpen(true) }
-                else if (source === 'task') { router.push(`/${locale}/tasks`) }
-                else if (source === 'meal') { router.push(`/${locale}/meals`) }
-                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+                else if (source === 'task') { router.push('/tasks') }
+                else if (source === 'meal') { router.push('/meals') }
+                else if (source === 'chore') { router.push('/chores') }
               }}
             />
           )}
@@ -332,15 +331,15 @@ export default function PlannerPage() {
               usersById={usersById}
               onView={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
-                else if (source === 'task') { router.push(`/${locale}/tasks`) }
-                else if (source === 'meal') { router.push(`/${locale}/meals`) }
-                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+                else if (source === 'task') { router.push('/tasks') }
+                else if (source === 'meal') { router.push('/meals') }
+                else if (source === 'chore') { router.push('/chores') }
               }}
               onEdit={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setEditOpen(true) }
-                else if (source === 'task') { router.push(`/${locale}/tasks`) }
-                else if (source === 'meal') { router.push(`/${locale}/meals`) }
-                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+                else if (source === 'task') { router.push('/tasks') }
+                else if (source === 'meal') { router.push('/meals') }
+                else if (source === 'chore') { router.push('/chores') }
               }}
             />
           )}
@@ -352,15 +351,15 @@ export default function PlannerPage() {
               startOfWeek={startOfWeek}
               onView={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setDetailsOpen(true) }
-                else if (source === 'task') { router.push(`/${locale}/tasks`) }
-                else if (source === 'meal') { router.push(`/${locale}/meals`) }
-                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+                else if (source === 'task') { router.push('/tasks') }
+                else if (source === 'meal') { router.push('/meals') }
+                else if (source === 'chore') { router.push('/chores') }
               }}
               onEdit={({ event, source }) => {
                 if (source === 'calendar') { setSelectedEvent(event); setEditOpen(true) }
-                else if (source === 'task') { router.push(`/${locale}/tasks`) }
-                else if (source === 'meal') { router.push(`/${locale}/meals`) }
-                else if (source === 'chore') { router.push(`/${locale}/chores`) }
+                else if (source === 'task') { router.push('/tasks') }
+                else if (source === 'meal') { router.push('/meals') }
+                else if (source === 'chore') { router.push('/chores') }
               }}
             />
           )}

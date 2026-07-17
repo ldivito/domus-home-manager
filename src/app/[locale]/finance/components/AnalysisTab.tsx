@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { User, MonthlyIncome, RecurringExpense, ExpensePayment, MonthlyExchangeRate } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { formatARS } from '@/lib/utils'
-import { getMonthlyAmountARS, resolveDefaultForMonth } from '@/lib/utils/finance/monthlyValues'
+import { resolveDefaultForMonth } from '@/lib/utils/finance/monthlyValues'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   BarChart,
@@ -78,11 +78,29 @@ export function AnalysisTab({
   const activeExpenses = useMemo(() => allExpenses.filter(e => e.isActive), [allExpenses])
   const effectiveExpenseId = selectedExpenseId || activeExpenses[0]?.id || ''
 
-  // Get exchange rate for a specific month/year
-  const getExchangeRate = useCallback((month: number, year: number): number => {
+  // Get exchange rate for a specific month/year; null when the month has no rate
+  // (never fall back to 1: that would silently mix USD and ARS magnitudes)
+  const getExchangeRate = useCallback((month: number, year: number): number | null => {
     const rate = allExchangeRates.find(r => r.month === month && r.year === year)
-    return rate?.rate || 1
+    return rate?.rate ?? null
   }, [allExchangeRates])
+
+  // Convert an amount to ARS; null when it's USD and the month has no exchange rate
+  const convertToARS = useCallback((amount: number, currency: 'ARS' | 'USD' | undefined, rate: number | null): number | null => {
+    if ((currency ?? 'ARS') === 'ARS') return amount
+    return rate != null ? amount * rate : null
+  }, [])
+
+  // Month attribution for payments: month/year fields are the source of truth
+  // (dueDate can overflow into the next month for dueDay 29-31 in short months);
+  // fall back to dueDate only for legacy records synced without month/year
+  const paymentInMonth = useCallback((p: ExpensePayment, month: number, year: number): boolean => {
+    if (p.month != null && p.year != null) {
+      return p.month === month && p.year === year
+    }
+    const dueDate = new Date(p.dueDate)
+    return dueDate.getMonth() + 1 === month && dueDate.getFullYear() === year
+  }, [])
 
   // Get last 12 months for analysis
   const last12Months = useMemo(() => {
@@ -101,37 +119,34 @@ export function AnalysisTab({
     return months
   }, [currentMonth, currentYear])
 
-  // 1. Income per month data
+  // 1. Income per month data (USD amounts without a rate for the month are excluded)
   const incomePerMonthData = useMemo(() => {
     return last12Months.map(({ month, year, label }) => {
       const rate = getExchangeRate(month, year)
       const monthIncomes = allIncomes.filter(i => i.month === month && i.year === year)
       const total = monthIncomes.reduce((sum, inc) => {
-        return sum + (inc.currency === 'USD' ? inc.amount * rate : inc.amount)
+        const amountARS = convertToARS(inc.amount, inc.currency, rate)
+        return amountARS != null ? sum + amountARS : sum
       }, 0)
       return { name: label, value: total, month, year }
     })
-  }, [allIncomes, last12Months, getExchangeRate])
+  }, [allIncomes, last12Months, getExchangeRate, convertToARS])
 
   // 2. Expenses per month data (based on payments)
   const expensesPerMonthData = useMemo(() => {
     return last12Months.map(({ month, year, label }) => {
       const rate = getExchangeRate(month, year)
-      const startOfMonth = new Date(year, month - 1, 1)
-      const endOfMonth = new Date(year, month, 0)
 
-      const monthPayments = allPayments.filter(p => {
-        const dueDate = new Date(p.dueDate)
-        return dueDate >= startOfMonth && dueDate <= endOfMonth && p.status === 'paid'
-      })
+      const monthPayments = allPayments.filter(p => paymentInMonth(p, month, year) && p.status === 'paid')
 
       const total = monthPayments.reduce((sum, p) => {
-        return sum + getMonthlyAmountARS(p, rate)
+        const amountARS = convertToARS(p.amount, p.currency, rate)
+        return amountARS != null ? sum + amountARS : sum
       }, 0)
 
       return { name: label, value: total, month, year }
     })
-  }, [allPayments, last12Months, getExchangeRate])
+  }, [allPayments, last12Months, getExchangeRate, convertToARS, paymentInMonth])
 
   // 3. Each service/expense progression over time
   const expenseProgressionData = useMemo(() => {
@@ -139,18 +154,19 @@ export function AnalysisTab({
 
     return last12Months.map(({ month, year, label }) => {
       const rate = getExchangeRate(month, year)
-      const dataPoint: Record<string, string | number> = { name: label }
+      const dataPoint: Record<string, string | number | null> = { name: label }
 
       activeExpenses.forEach(expense => {
         const payment = allPayments.find(
-          p => p.recurringExpenseId === expense.id && p.month === month && p.year === year
+          p => p.recurringExpenseId === expense.id && paymentInMonth(p, month, year)
         )
-        dataPoint[expense.name] = payment ? getMonthlyAmountARS(payment, rate) : 0
+        // null (chart gap) when there is no record or the USD amount has no rate
+        dataPoint[expense.name] = payment ? convertToARS(payment.amount, payment.currency, rate) : null
       })
 
       return dataPoint
     })
-  }, [allExpenses, allPayments, last12Months, getExchangeRate])
+  }, [allExpenses, allPayments, last12Months, getExchangeRate, convertToARS, paymentInMonth])
 
   // 4. Each member income progression over time
   const memberIncomeProgressionData = useMemo(() => {
@@ -165,14 +181,15 @@ export function AnalysisTab({
           i.userId === user.id && i.month === month && i.year === year
         )
         const total = userIncomes.reduce((sum, inc) => {
-          return sum + (inc.currency === 'USD' ? inc.amount * rate : inc.amount)
+          const amountARS = convertToARS(inc.amount, inc.currency, rate)
+          return amountARS != null ? sum + amountARS : sum
         }, 0)
         dataPoint[user.name] = total
       })
 
       return dataPoint
     })
-  }, [users, allIncomes, last12Months, getExchangeRate])
+  }, [users, allIncomes, last12Months, getExchangeRate, convertToARS])
 
   // 5. Income vs Expenses comparison
   const incomeVsExpensesData = useMemo(() => {
@@ -181,24 +198,20 @@ export function AnalysisTab({
 
       const monthIncomes = allIncomes.filter(i => i.month === month && i.year === year)
       const income = monthIncomes.reduce((sum, inc) => {
-        return sum + (inc.currency === 'USD' ? inc.amount * rate : inc.amount)
+        const amountARS = convertToARS(inc.amount, inc.currency, rate)
+        return amountARS != null ? sum + amountARS : sum
       }, 0)
 
-      const startOfMonth = new Date(year, month - 1, 1)
-      const endOfMonth = new Date(year, month, 0)
-
-      const monthPayments = allPayments.filter(p => {
-        const dueDate = new Date(p.dueDate)
-        return dueDate >= startOfMonth && dueDate <= endOfMonth && p.status === 'paid'
-      })
+      const monthPayments = allPayments.filter(p => paymentInMonth(p, month, year) && p.status === 'paid')
 
       const expenses = monthPayments.reduce((sum, p) => {
-        return sum + getMonthlyAmountARS(p, rate)
+        const amountARS = convertToARS(p.amount, p.currency, rate)
+        return amountARS != null ? sum + amountARS : sum
       }, 0)
 
       return { name: label, income, expenses, savings: income - expenses }
     })
-  }, [allIncomes, allPayments, last12Months, getExchangeRate])
+  }, [allIncomes, allPayments, last12Months, getExchangeRate, convertToARS, paymentInMonth])
 
   // 6. Expense categories breakdown (current month)
   const expenseCategoryData = useMemo(() => {
@@ -208,16 +221,19 @@ export function AnalysisTab({
     allExpenses.filter(e => e.isActive).forEach(expense => {
       const category = expense.category || 'Other'
       const stored = allPayments.find(
-        p => p.recurringExpenseId === expense.id && p.month === currentMonth && p.year === currentYear
+        p => p.recurringExpenseId === expense.id && paymentInMonth(p, currentMonth, currentYear)
       )
       const seed = stored
         ? { amount: stored.amount, currency: stored.currency ?? 'ARS' as const }
         : resolveDefaultForMonth(expense, currentMonth, currentYear, allPayments)
-      categoryTotals[category] = (categoryTotals[category] || 0) + getMonthlyAmountARS(seed, rate)
+      const amountARS = convertToARS(seed.amount, seed.currency, rate)
+      if (amountARS != null) {
+        categoryTotals[category] = (categoryTotals[category] || 0) + amountARS
+      }
     })
 
     return Object.entries(categoryTotals).map(([name, value]) => ({ name, value }))
-  }, [allExpenses, allPayments, currentMonth, currentYear, getExchangeRate])
+  }, [allExpenses, allPayments, currentMonth, currentYear, getExchangeRate, convertToARS, paymentInMonth])
 
   // 7. Income share by member (current month)
   const incomeShareData = useMemo(() => {
@@ -229,7 +245,8 @@ export function AnalysisTab({
     currentIncomes.forEach(income => {
       const user = users.find(u => u.id === income.userId)
       if (user) {
-        const amount = income.currency === 'USD' ? income.amount * rate : income.amount
+        const amount = convertToARS(income.amount, income.currency, rate)
+        if (amount == null) return
         if (!memberTotals[user.name]) {
           memberTotals[user.name] = { value: 0, color: user.color }
         }
@@ -238,7 +255,7 @@ export function AnalysisTab({
     })
 
     return Object.entries(memberTotals).map(([name, { value, color }]) => ({ name, value, color }))
-  }, [allIncomes, users, currentMonth, currentYear, getExchangeRate])
+  }, [allIncomes, users, currentMonth, currentYear, getExchangeRate, convertToARS])
 
   // 8. Net savings trend (area chart)
   const savingsTrendData = useMemo(() => {
@@ -251,13 +268,7 @@ export function AnalysisTab({
 
   // 9. Payment status distribution
   const paymentStatusData = useMemo(() => {
-    const startOfMonth = new Date(currentYear, currentMonth - 1, 1)
-    const endOfMonth = new Date(currentYear, currentMonth, 0)
-
-    const monthPayments = allPayments.filter(p => {
-      const dueDate = new Date(p.dueDate)
-      return dueDate >= startOfMonth && dueDate <= endOfMonth
-    })
+    const monthPayments = allPayments.filter(p => paymentInMonth(p, currentMonth, currentYear))
 
     const statusCounts = {
       paid: 0,
@@ -274,38 +285,54 @@ export function AnalysisTab({
       { name: t('charts.pending'), value: statusCounts.pending, color: '#F59E0B' },
       { name: t('charts.overdue'), value: statusCounts.overdue, color: '#EF4444' }
     ].filter(d => d.value > 0)
-  }, [allPayments, currentMonth, currentYear, t])
+  }, [allPayments, currentMonth, currentYear, t, paymentInMonth])
 
-  // 10. Exchange rate trend
+  // 10. Exchange rate trend (null = month without a configured rate; rates <= 1 are still valid data)
   const exchangeRateTrendData = useMemo(() => {
     return last12Months.map(({ month, year, label }) => {
-      const rate = getExchangeRate(month, year)
-      return { name: label, rate: rate > 1 ? rate : null }
+      return { name: label, rate: getExchangeRate(month, year) }
     })
   }, [last12Months, getExchangeRate])
 
-  // Selected service: stored monthly value across the last 12 months (billed value, paid or not)
+  // Selected service: stored monthly value across the last 12 months (billed value, paid or not).
+  // null = no record for that month (or USD without a rate) — rendered as a gap, not $0.
   const serviceTrendData = useMemo(() => {
     return last12Months.map(({ month, year, label }) => {
       const rate = getExchangeRate(month, year)
       const payment = allPayments.find(
-        p => p.recurringExpenseId === effectiveExpenseId && p.month === month && p.year === year
+        p => p.recurringExpenseId === effectiveExpenseId && paymentInMonth(p, month, year)
       )
-      const value = payment ? getMonthlyAmountARS(payment, rate) : 0
+      const value = payment ? convertToARS(payment.amount, payment.currency, rate) : null
       return { name: label, value }
     })
-  }, [allPayments, effectiveExpenseId, last12Months, getExchangeRate])
+  }, [allPayments, effectiveExpenseId, last12Months, getExchangeRate, convertToARS, paymentInMonth])
 
-  // Selected service: month-over-month percentage variation
+  // Selected service: month-over-month percentage variation.
+  // Only computed between consecutive months that both have data; otherwise null
+  // (a missing month is "no data", not a -100% drop followed by a fake 0%).
   const serviceVariationData = useMemo(() => {
     return serviceTrendData.map((d, i) => {
-      // First month in the 12-month window has no in-window predecessor, so 0%.
-      if (i === 0) return { name: d.name, variation: 0 }
+      if (i === 0) return { name: d.name, variation: null }
       const prev = serviceTrendData[i - 1].value
-      const variation = prev > 0 ? ((d.value - prev) / prev) * 100 : 0
+      if (d.value == null || prev == null || prev <= 0) {
+        return { name: d.name, variation: null }
+      }
+      const variation = ((d.value - prev) / prev) * 100
       return { name: d.name, variation: Math.round(variation * 10) / 10 }
     })
   }, [serviceTrendData])
+
+  // Months in the window that have USD data but no exchange rate (excluded from ARS aggregates)
+  const monthsMissingRate = useMemo(() => {
+    return last12Months
+      .filter(({ month, year }) => {
+        if (getExchangeRate(month, year) != null) return false
+        const hasUSDIncome = allIncomes.some(i => i.month === month && i.year === year && i.currency === 'USD')
+        const hasUSDPayment = allPayments.some(p => p.currency === 'USD' && paymentInMonth(p, month, year))
+        return hasUSDIncome || hasUSDPayment
+      })
+      .map(({ label }) => label)
+  }, [last12Months, getExchangeRate, allIncomes, allPayments, paymentInMonth])
 
   // Get active expense names for the legend
   const activeExpenseNames = allExpenses.filter(e => e.isActive).slice(0, 5).map(e => e.name)
@@ -328,6 +355,15 @@ export function AnalysisTab({
           </CardDescription>
         </CardHeader>
       </Card>
+
+      {/* Months with USD data but no exchange rate: excluded from ARS aggregates */}
+      {monthsMissingRate.length > 0 && (
+        <div className="p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
+            {t('missingRateNotice', { months: monthsMissingRate.join(', ') })}
+          </p>
+        </div>
+      )}
 
       {/* Row 1: Income and Expenses per month */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -481,7 +517,7 @@ export function AnalysisTab({
                 <Tooltip formatter={(value) => [`${value}%`, t('charts.variation')]} />
                 <Bar dataKey="variation" radius={[4, 4, 0, 0]} name={t('charts.variation')}>
                   {serviceVariationData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.variation >= 0 ? CHART_COLORS.expense : CHART_COLORS.income} />
+                    <Cell key={`cell-${index}`} fill={entry.variation != null && entry.variation >= 0 ? CHART_COLORS.expense : CHART_COLORS.income} />
                   ))}
                 </Bar>
               </BarChart>

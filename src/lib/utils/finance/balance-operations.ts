@@ -1,7 +1,7 @@
 // Balance Operations - Database operations for wallet balances
 
 import { db } from '@/lib/db'
-import { PersonalTransaction, CurrencyType } from '@/types/personal-finance'
+import { PersonalTransaction } from '@/types/personal-finance'
 
 /**
  * Update a wallet's balance in the database
@@ -151,8 +151,8 @@ export async function validateSufficientFunds(
  * Get wallet balance summary for dashboard
  */
 export interface WalletBalanceSummary {
-  totalByWallet: { walletId: string; name: string; balance: number; currency: CurrencyType }[]
-  totalByCurrency: { currency: CurrencyType; total: number }[]
+  totalByWallet: { walletId: string; name: string; balance: number; currency: string }[]
+  totalByCurrency: { currency: string; total: number }[]
   totalWallets: number
   activeWallets: number
 }
@@ -179,7 +179,7 @@ export async function getWalletBalanceSummary(userId: string): Promise<WalletBal
       acc.push({ currency: wallet.currency, total: wallet.balance })
     }
     return acc
-  }, [] as { currency: CurrencyType; total: number }[])
+  }, [] as { currency: string; total: number }[])
   
   return {
     totalByWallet,
@@ -193,13 +193,14 @@ export async function getWalletBalanceSummary(userId: string): Promise<WalletBal
  * Recalculate wallet balance from transactions (for consistency check)
  */
 export async function recalculateWalletBalance(walletId: string): Promise<number> {
-  // Get all transactions for this wallet
+  // Get all transactions for this wallet. targetWalletId is not indexed,
+  // so incoming transfers must be matched with an in-memory filter
+  // (a .or('targetWalletId') clause would throw SchemaError).
   const transactions = await db.personalTransactions
-    .where('walletId')
-    .equals(walletId)
-    .or('targetWalletId')
-    .equals(walletId)
-    .and(tx => tx.status === 'completed')
+    .filter(tx =>
+      (tx.walletId === walletId || tx.targetWalletId === walletId) &&
+      tx.status === 'completed'
+    )
     .toArray()
   
   let calculatedBalance = 0

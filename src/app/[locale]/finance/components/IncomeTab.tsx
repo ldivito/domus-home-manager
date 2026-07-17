@@ -59,29 +59,39 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set())
 
-  const rate = exchangeRate?.rate || 1
+  // Exchange rate for the selected month; null when not configured (never assume 1)
+  const rate = exchangeRate?.rate != null && exchangeRate.rate > 0 ? exchangeRate.rate : null
 
   // Get incomes grouped by user
   const getIncomesForUser = (userId: string) => {
     return currentIncomes.filter(inc => inc.userId === userId)
   }
 
-  // Calculate income in ARS for a single entry
-  const getIncomeInARS = (income: MonthlyIncome): number => {
+  // Income in ARS for a single entry; null when it's USD and there is no rate
+  const getIncomeInARS = (income: MonthlyIncome): number | null => {
     if (income.currency === 'USD') {
-      return income.amount * rate
+      return rate != null ? income.amount * rate : null
     }
     return income.amount
   }
 
-  // Calculate total income for a user in ARS
+  // Total income for a user in ARS (USD incomes without a rate are excluded)
   const getUserTotalInARS = (userId: string): number => {
     const userIncomes = getIncomesForUser(userId)
-    return userIncomes.reduce((sum, inc) => sum + getIncomeInARS(inc), 0)
+    return userIncomes.reduce((sum, inc) => {
+      const amountARS = getIncomeInARS(inc)
+      return amountARS != null ? sum + amountARS : sum
+    }, 0)
   }
 
-  // Calculate total household income in ARS
-  const totalHouseholdIncome = currentIncomes.reduce((sum, inc) => sum + getIncomeInARS(inc), 0)
+  // Total household income in ARS (USD incomes without a rate are excluded)
+  const totalHouseholdIncome = currentIncomes.reduce((sum, inc) => {
+    const amountARS = getIncomeInARS(inc)
+    return amountARS != null ? sum + amountARS : sum
+  }, 0)
+
+  // USD incomes present but no exchange rate for the month: flagged in the UI
+  const hasMissingRateUSD = rate == null && currentIncomes.some(inc => inc.currency === 'USD')
 
   const toggleUserExpanded = (userId: string) => {
     const newExpanded = new Set(expandedUsers)
@@ -256,6 +266,15 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
             </div>
           )}
 
+          {/* Missing Exchange Rate Notice */}
+          {hasMissingRateUSD && (
+            <div className="mb-4 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
+                {t('missingRateWarning')}
+              </p>
+            </div>
+          )}
+
           {/* Current Month Header */}
           <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4">
@@ -264,7 +283,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                 <p className="text-xl sm:text-2xl font-bold">{monthNames[currentMonth - 1]} {currentYear}</p>
                 <p className="text-sm sm:text-lg text-muted-foreground mt-1">
                   {t('totalHousehold')}: <span className="font-semibold text-foreground">$ {formatARS(totalHouseholdIncome)}</span>
-                  {rate > 1 && (
+                  {rate != null && (
                     <span className="ml-1 sm:ml-2 text-xs sm:text-sm text-muted-foreground/70">
                       (USD {formatARS(totalHouseholdIncome / rate)})
                     </span>
@@ -281,7 +300,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                   {t('exchangeRate')}
                 </Button>
                 <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground">
-                  {rate > 1 ? (
+                  {rate != null ? (
                     <span>1 USD = $ {formatARS(rate)} ARS</span>
                   ) : (
                     <span className="text-amber-600 dark:text-amber-400">{t('noExchangeRate')}</span>
@@ -346,7 +365,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                             <p className="text-xl sm:text-2xl font-bold">
                               $ {formatARS(userTotalARS)}
                             </p>
-                            {rate > 1 && userTotalARS > 0 && (
+                            {rate != null && userTotalARS > 0 && (
                               <p className="text-xs sm:text-sm text-muted-foreground/70">
                                 USD {formatARS(userTotalARS / rate)}
                               </p>
@@ -392,7 +411,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                                           <Badge variant="outline" className="text-xs">
                                             {income.currency}
                                           </Badge>
-                                          {income.currency === 'USD' && rate > 1 && (
+                                          {income.currency === 'USD' && rate != null && (
                                             <span>USD {formatARS(income.amount)}</span>
                                           )}
                                         </div>
@@ -400,10 +419,16 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                                     </div>
                                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-6 sm:pl-0">
                                       <div className="text-left sm:text-right">
-                                        <p className="font-semibold text-base sm:text-lg">
-                                          $ {formatARS(incomeARS)}
-                                        </p>
-                                        {income.currency === 'USD' && rate > 1 && (
+                                        {incomeARS != null ? (
+                                          <p className="font-semibold text-base sm:text-lg">
+                                            $ {formatARS(incomeARS)}
+                                          </p>
+                                        ) : (
+                                          <p className="font-semibold text-base sm:text-lg text-amber-600 dark:text-amber-400">
+                                            USD {formatARS(income.amount)}
+                                          </p>
+                                        )}
+                                        {income.currency === 'USD' && rate != null && (
                                           <p className="text-xs text-muted-foreground">
                                             = USD {formatARS(income.amount)}
                                           </p>
@@ -478,7 +503,7 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                   <p className="text-2xl sm:text-3xl font-bold text-primary">
                     $ {formatARS(totalHouseholdIncome)}
                   </p>
-                  {rate > 1 && (
+                  {rate != null && (
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       USD {formatARS(totalHouseholdIncome / rate)}
                     </p>
@@ -535,12 +560,12 @@ export function IncomeTab({ users, currentIncomes, currentMonth, currentYear, ex
                   </SelectItem>
                 </SelectContent>
               </Select>
-              {currency === 'USD' && rate > 1 && (
+              {currency === 'USD' && rate != null && (
                 <p className="text-sm text-muted-foreground">
                   {t('dialog.willBeConverted', { rate: formatARS(rate) })}
                 </p>
               )}
-              {currency === 'USD' && rate <= 1 && (
+              {currency === 'USD' && rate == null && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   {t('dialog.setExchangeRateFirst')}
                 </p>

@@ -2,27 +2,35 @@ import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
-import { v4 as uuidv4 } from 'uuid'
+import { generateTransactionId } from '@/lib/utils/finance/helpers'
+import { validateTransaction } from '@/lib/utils/finance/validators'
 
-interface PersonalTransactionRecord {
+interface TransactionRow {
   id: string
   userId: string
-  type: 'income' | 'expense' | 'transfer'
+  type: string
   amount: number
-  currency: 'ARS' | 'USD'
+  currency: string
   walletId: string
-  targetWalletId?: string
-  categoryId: string
+  targetWalletId: string | null
+  categoryId: string | null
   description: string
-  exchangeRate?: number
+  exchangeRate: number | null
   date: string
+  creditCardStatementId: string | null
   isFromCreditCard: boolean
   sharedWithHousehold: boolean
-  householdContribution?: number
-  status: 'pending' | 'completed' | 'cancelled'
-  notes?: string
-  updatedAt: string
+  householdContribution: number | null
+  status: string
+  notes: string | null
   createdAt: string
+  updatedAt: string
+}
+
+interface WalletData {
+  id: string
+  balance: number
+  [key: string]: unknown
 }
 
 export async function GET(request: Request) {
@@ -32,55 +40,23 @@ export async function GET(request: Request) {
 
     const session = await getUserFromRequest(request, env)
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const walletId = searchParams.get('walletId')
-    const type = searchParams.get('type')
-    const dateFrom = searchParams.get('dateFrom')
-    const dateTo = searchParams.get('dateTo')
-    const limit = parseInt(searchParams.get('limit') ?? '100', 10)
-    const categoryId = searchParams.get('categoryId')
-    const status = searchParams.get('status')
+    const url = new URL(request.url)
+    const walletId = url.searchParams.get('walletId')
+    const type = url.searchParams.get('type')
+    const from = url.searchParams.get('from')
+    const to = url.searchParams.get('to')
+    const categoryId = url.searchParams.get('categoryId')
+    const limitParam = url.searchParams.get('limit')
+    const offsetParam = url.searchParams.get('offset')
 
-    // Build dynamic WHERE clauses
-    const conditions: string[] = [
-      "sm.tableName = 'personalTransactions'",
-      "sm.updatedAt = (SELECT MAX(sm2.updatedAt) FROM sync_metadata sm2 WHERE sm2.recordId = sm.recordId AND sm2.tableName = 'personalTransactions')",
-      'sm.userId = ?',
-      'sm.deletedAt IS NULL'
-    ]
-    const bindings: (string | number)[] = [session.userId]
+    const limit = Math.min(Math.max(parseInt(limitParam || '50', 10) || 50, 1), 200)
+    const offset = Math.max(parseInt(offsetParam || '0', 10) || 0, 0)
 
-    if (walletId) {
-      conditions.push("json_extract(sm.data, '$.walletId') = ?")
-      bindings.push(walletId)
-    }
-    if (type) {
-      conditions.push("json_extract(sm.data, '$.type') = ?")
-      bindings.push(type)
-    }
-    if (categoryId) {
-      conditions.push("json_extract(sm.data, '$.categoryId') = ?")
-      bindings.push(categoryId)
-    }
-    if (status) {
-      conditions.push("json_extract(sm.data, '$.status') = ?")
-      bindings.push(status)
-    }
-    if (dateFrom) {
-      conditions.push("json_extract(sm.data, '$.date') >= ?")
-      bindings.push(dateFrom)
-    }
-    if (dateTo) {
-      conditions.push("json_extract(sm.data, '$.date') <= ?")
-      bindings.push(dateTo)
-    }
-
-    bindings.push(Math.min(limit, 500)) // cap at 500
-
-    const query = `
+    // Build the data query dynamically
+    let dataQuery = `
       SELECT
         sm.recordId as id,
         json_extract(sm.data, '$.userId') as userId,
@@ -93,31 +69,93 @@ export async function GET(request: Request) {
         json_extract(sm.data, '$.description') as description,
         json_extract(sm.data, '$.exchangeRate') as exchangeRate,
         json_extract(sm.data, '$.date') as date,
+        json_extract(sm.data, '$.creditCardStatementId') as creditCardStatementId,
         json_extract(sm.data, '$.isFromCreditCard') as isFromCreditCard,
         json_extract(sm.data, '$.sharedWithHousehold') as sharedWithHousehold,
         json_extract(sm.data, '$.householdContribution') as householdContribution,
         json_extract(sm.data, '$.status') as status,
         json_extract(sm.data, '$.notes') as notes,
-        sm.updatedAt,
-        sm.createdAt
+        sm.createdAt,
+        sm.updatedAt
       FROM sync_metadata sm
-      WHERE ${conditions.join(' AND ')}
-      ORDER BY json_extract(sm.data, '$.date') DESC
-      LIMIT ?
+      WHERE sm.tableName = 'personalTransactions'
+      AND sm.userId = ?
+      AND sm.deletedAt IS NULL
     `
 
-    const transactions = await db
-      .prepare(query)
-      .bind(...bindings)
-      .all()
+    // Build the count query in parallel
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM sync_metadata sm
+      WHERE sm.tableName = 'personalTransactions'
+      AND sm.userId = ?
+      AND sm.deletedAt IS NULL
+    `
+
+    const params: unknown[] = [session.userId]
+    const countParams: unknown[] = [session.userId]
+
+    // Apply optional filters
+    if (walletId) {
+      const walletFilter = ` AND (json_extract(sm.data, '$.walletId') = ? OR json_extract(sm.data, '$.targetWalletId') = ?)`
+      dataQuery += walletFilter
+      countQuery += walletFilter
+      params.push(walletId, walletId)
+      countParams.push(walletId, walletId)
+    }
+
+    if (type) {
+      const typeFilter = ` AND json_extract(sm.data, '$.type') = ?`
+      dataQuery += typeFilter
+      countQuery += typeFilter
+      params.push(type)
+      countParams.push(type)
+    }
+
+    if (from) {
+      const fromFilter = ` AND json_extract(sm.data, '$.date') >= ?`
+      dataQuery += fromFilter
+      countQuery += fromFilter
+      params.push(from)
+      countParams.push(from)
+    }
+
+    if (to) {
+      const toFilter = ` AND json_extract(sm.data, '$.date') <= ?`
+      dataQuery += toFilter
+      countQuery += toFilter
+      params.push(to)
+      countParams.push(to)
+    }
+
+    if (categoryId) {
+      const categoryFilter = ` AND json_extract(sm.data, '$.categoryId') = ?`
+      dataQuery += categoryFilter
+      countQuery += categoryFilter
+      params.push(categoryId)
+      countParams.push(categoryId)
+    }
+
+    // Order and paginate data query
+    dataQuery += ` ORDER BY json_extract(sm.data, '$.date') DESC LIMIT ? OFFSET ?`
+    params.push(limit, offset)
+
+    // Execute both queries
+    const [transactions, countResult] = await Promise.all([
+      db.prepare(dataQuery).bind(...params).all(),
+      db.prepare(countQuery).bind(...countParams).first<{ total: number }>()
+    ])
+
+    const total = countResult?.total ?? 0
 
     return NextResponse.json({
       success: true,
-      data: (transactions.results as PersonalTransactionRecord[]) || []
+      transactions: (transactions.results as TransactionRow[]) || [],
+      total
     })
   } catch (error) {
     logger.error('Get personal transactions error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -128,139 +166,217 @@ export async function POST(request: Request) {
 
     const session = await getUserFromRequest(request, env)
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json() as {
-      type?: string
-      amount?: number
-      currency?: string
-      walletId?: string
-      targetWalletId?: string
-      categoryId?: string
-      description?: string
-      exchangeRate?: number
-      date?: string
-      isFromCreditCard?: boolean
-      sharedWithHousehold?: boolean
-      householdContribution?: number
-      status?: string
-      notes?: string
-    }
-
+    const body = await request.json()
     const {
-      type, amount, currency, walletId, targetWalletId, categoryId,
-      description, exchangeRate, date, isFromCreditCard, sharedWithHousehold,
-      householdContribution, status, notes
-    } = body
-
-    if (!type || amount === undefined || !currency || !walletId || !categoryId || !description) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing required fields: type, amount, currency, walletId, categoryId, description'
-      }, { status: 400 })
-    }
-
-    const validTypes = ['income', 'expense', 'transfer']
-    const validCurrencies = ['ARS', 'USD']
-    const validStatuses = ['pending', 'completed', 'cancelled']
-
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ success: false, error: 'Invalid type. Must be: income, expense, or transfer' }, { status: 400 })
-    }
-    if (!validCurrencies.includes(currency)) {
-      return NextResponse.json({ success: false, error: 'Invalid currency. Must be: ARS or USD' }, { status: 400 })
-    }
-    if (status && !validStatuses.includes(status)) {
-      return NextResponse.json({ success: false, error: 'Invalid status. Must be: pending, completed, or cancelled' }, { status: 400 })
-    }
-    if (amount <= 0) {
-      return NextResponse.json({ success: false, error: 'Amount must be positive' }, { status: 400 })
-    }
-
-    const txId = uuidv4()
-    const now = new Date().toISOString()
-
-    const txData = {
-      id: txId,
-      userId: session.userId,
       type,
       amount,
       currency,
       walletId,
-      targetWalletId: targetWalletId ?? null,
+      targetWalletId,
       categoryId,
       description,
+      date,
+      exchangeRate,
+      notes,
+      sharedWithHousehold,
+      householdContribution
+    } = body
+
+    // For transfers, categoryId is not required, so we validate conditionally
+    const dataToValidate = {
+      type,
+      amount: typeof amount === 'string' ? parseFloat(amount) : amount,
+      currency,
+      walletId,
+      targetWalletId,
+      categoryId: type === 'transfer' ? (categoryId || 'transfer') : categoryId,
+      description,
+      date: date ? new Date(date) : undefined
+    }
+
+    const validation = validateTransaction(dataToValidate)
+    if (!validation.isValid) {
+      // If the only error is categoryId and it's a transfer, ignore it
+      if (type === 'transfer') {
+        delete validation.errors.categoryId
+        if (Object.keys(validation.errors).length > 0) {
+          return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
+        }
+      } else {
+        return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
+      }
+    }
+
+    // For transfers, validate source != target
+    if (type === 'transfer') {
+      if (!targetWalletId) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: { targetWalletId: ['Target wallet is required for transfers'] } },
+          { status: 400 }
+        )
+      }
+      if (walletId === targetWalletId) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: { targetWalletId: ['Source and target wallets must be different'] } },
+          { status: 400 }
+        )
+      }
+    }
+
+    const transactionId = generateTransactionId()
+    const now = new Date().toISOString()
+    const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: { amount: ['Amount must be a positive number'] } },
+        { status: 400 }
+      )
+    }
+
+    // exchangeRate is client-provided and moves real balances on transfers:
+    // when present it must be a positive finite number
+    if (exchangeRate != null && (typeof exchangeRate !== 'number' || !Number.isFinite(exchangeRate) || exchangeRate <= 0)) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: { exchangeRate: ['Exchange rate must be a positive number'] } },
+        { status: 400 }
+      )
+    }
+
+    // Validate source wallet exists and is not deleted BEFORE inserting
+    const sourceWalletRow = await db
+      .prepare(`
+        SELECT data FROM sync_metadata
+        WHERE tableName = 'personalWallets' AND recordId = ? AND userId = ? AND deletedAt IS NULL
+      `)
+      .bind(walletId, session.userId)
+      .first<{ data: string }>()
+
+    if (!sourceWalletRow) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: { walletId: ['Source wallet not found'] } },
+        { status: 400 }
+      )
+    }
+
+    // For transfers, validate target wallet exists too
+    let targetWalletRow: { data: string } | null = null
+    if (type === 'transfer' && targetWalletId) {
+      targetWalletRow = await db
+        .prepare(`
+          SELECT data FROM sync_metadata
+          WHERE tableName = 'personalWallets' AND recordId = ? AND userId = ? AND deletedAt IS NULL
+        `)
+        .bind(targetWalletId, session.userId)
+        .first<{ data: string }>()
+
+      if (!targetWalletRow) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: { targetWalletId: ['Target wallet not found'] } },
+          { status: 400 }
+        )
+      }
+    }
+
+    const transactionData = {
+      id: transactionId,
+      userId: session.userId,
+      type,
+      amount: parsedAmount,
+      currency: currency || 'ARS',
+      walletId,
+      targetWalletId: targetWalletId || null,
+      categoryId: categoryId || null,
+      description: description?.trim() || '',
       exchangeRate: exchangeRate ?? null,
-      date: date ?? now,
-      isFromCreditCard: isFromCreditCard ?? false,
+      date: date || now,
+      creditCardStatementId: null,
+      isFromCreditCard: false,
       sharedWithHousehold: sharedWithHousehold ?? false,
       householdContribution: householdContribution ?? null,
-      status: status ?? 'completed',
+      status: 'completed',
       notes: notes ?? null,
-      householdId: session.householdId ?? null,
       createdAt: now,
       updatedAt: now
     }
 
+    // Insert the transaction into sync_metadata
     await db
       .prepare(`
         INSERT INTO sync_metadata (
           id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, 'personalTransactions', ?, 'insert', ?, ?, ?)
       `)
       .bind(
-        uuidv4(),
+        crypto.randomUUID(),
         session.userId,
-        session.householdId ?? null,
-        'personalTransactions',
-        txId,
-        'insert',
-        JSON.stringify(txData),
+        session.householdId || null,
+        transactionId,
+        JSON.stringify(transactionData),
         now,
         now
       )
       .run()
 
-    // Update wallet balance
-    if (type !== 'transfer') {
-      const wallet = await db
-        .prepare(`
-          SELECT data FROM sync_metadata
-          WHERE tableName = 'personalWallets'
-          AND recordId = ?
-          AND userId = ?
-          AND deletedAt IS NULL
-        `)
-        .bind(walletId, session.userId)
-        .first<{ data: string }>()
+    // --- Balance update logic (wallets already fetched and validated above) ---
 
-      if (wallet) {
-        const walletData = typeof wallet.data === 'string' ? JSON.parse(wallet.data) : wallet.data
-        const currentBalance: number = walletData.balance ?? 0
-        const newBalance = type === 'income'
-          ? currentBalance + amount
-          : currentBalance - amount
+    const sourceWallet: WalletData = JSON.parse(sourceWalletRow.data)
+    let newSourceBalance = sourceWallet.balance
 
-        walletData.balance = newBalance
-        walletData.updatedAt = now
-
-        await db
-          .prepare(`
-            UPDATE sync_metadata
-            SET data = ?, operation = 'update', updatedAt = ?
-            WHERE tableName = 'personalWallets'
-            AND recordId = ?
-            AND userId = ?
-          `)
-          .bind(JSON.stringify(walletData), now, walletId, session.userId)
-          .run()
-      }
+    switch (type) {
+      case 'income':
+        newSourceBalance = sourceWallet.balance + parsedAmount
+        break
+      case 'expense':
+      case 'transfer':
+        newSourceBalance = sourceWallet.balance - parsedAmount
+        break
     }
 
-    return NextResponse.json({ success: true, data: txData }, { status: 201 })
+    const updatedSourceData = {
+      ...sourceWallet,
+      balance: Math.round(newSourceBalance * 100) / 100,
+      updatedAt: now
+    }
+
+    await db
+      .prepare(`
+        UPDATE sync_metadata SET data = ?, operation = 'update', updatedAt = ?
+        WHERE tableName = 'personalWallets' AND recordId = ? AND userId = ? AND deletedAt IS NULL
+      `)
+      .bind(JSON.stringify(updatedSourceData), now, walletId, session.userId)
+      .run()
+
+    // For transfers, also update the target wallet (already fetched above)
+    if (type === 'transfer' && targetWalletId && targetWalletRow) {
+      const targetWallet: WalletData = JSON.parse(targetWalletRow.data)
+      const effectiveAmount = Math.round(parsedAmount * (exchangeRate || 1) * 100) / 100
+      const newTargetBalance = targetWallet.balance + effectiveAmount
+
+      const updatedTargetData = {
+        ...targetWallet,
+        balance: Math.round(newTargetBalance * 100) / 100,
+        updatedAt: now
+      }
+
+      await db
+        .prepare(`
+          UPDATE sync_metadata SET data = ?, operation = 'update', updatedAt = ?
+          WHERE tableName = 'personalWallets' AND recordId = ? AND userId = ? AND deletedAt IS NULL
+        `)
+        .bind(JSON.stringify(updatedTargetData), now, targetWalletId, session.userId)
+        .run()
+    }
+
+    return NextResponse.json({
+      success: true,
+      transaction: transactionData
+    })
   } catch (error) {
     logger.error('Create personal transaction error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

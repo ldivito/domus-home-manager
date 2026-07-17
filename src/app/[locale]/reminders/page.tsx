@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/navigation'
 
 interface Notification {
   id: string
@@ -33,7 +33,8 @@ export default function NotificationsPage() {
   )
 
   const tasks = useLiveQuery(
-    () => db.tasks.where('isCompleted').equals(0).toArray(),
+    // isCompleted is a boolean, which IndexedDB can't index — filter in JS instead
+    () => db.tasks.filter(task => !task.isCompleted).toArray(),
     []
   )
 

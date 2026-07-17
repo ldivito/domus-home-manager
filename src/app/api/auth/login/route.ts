@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verifyPassword, createToken, createSessionCookie, storeSession } from '@/lib/auth'
-import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
+import { getDB, getKV, type CloudflareEnv } from '@/lib/cloudflare'
+import { isRateLimited, isRateLimitedKV, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
@@ -17,6 +18,25 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
+      )
+    }
+
+    // Throttle brute-force attempts: per IP+account and per IP overall.
+    // In-memory catches same-instance bursts; KV enforces the limit across
+    // instances in serverless deployments.
+    const ip = getClientIp(request)
+    const emailKey = `login:${ip}:${String(email).toLowerCase()}`
+    const ipKey = `login-ip:${ip}`
+    const kv = getKV(env)
+    if (
+      isRateLimited(emailKey, 5, 15 * 60 * 1000) ||
+      isRateLimited(ipKey, 20, 15 * 60 * 1000) ||
+      (await isRateLimitedKV(kv, emailKey, 5, 15 * 60 * 1000)) ||
+      (await isRateLimitedKV(kv, ipKey, 20, 15 * 60 * 1000))
+    ) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
       )
     }
 

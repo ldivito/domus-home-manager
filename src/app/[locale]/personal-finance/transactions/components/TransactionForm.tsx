@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from '@/i18n/navigation'
+import { useTranslations } from 'next-intl'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -9,15 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { 
+import {
   Form,
   FormControl,
   FormField,
@@ -25,43 +26,39 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { 
-  ArrowUpDown, 
-  TrendingUp, 
-  TrendingDown, 
-  Calculator,
+import {
+  ArrowUpDown,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react'
 import { db } from '@/lib/db'
-import { 
+import {
   generateTransactionId,
   validateTransaction,
   processTransactionBalanceUpdate,
   validateSufficientFunds,
   formatCurrency,
+  getCurrentUserId
 } from '@/lib/utils/finance'
-import { 
-  PersonalWallet, 
-  PersonalCategory, 
+import {
+  PersonalWallet,
+  PersonalCategory,
   PersonalTransaction,
-  TransactionType,
-  CurrencyType 
+  TransactionType
 } from '@/types/personal-finance'
 import { useToast } from '@/hooks/use-toast'
-import { useTranslations } from 'next-intl'
 
 // Form validation schema
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
-  walletId: z.string().min(1),
+  walletId: z.string().min(1, 'Wallet is required'),
   categoryId: z.string().optional(),
   targetWalletId: z.string().optional(),
-  amount: z.number().positive(),
+  amount: z.number().positive('Amount must be positive'),
   currency: z.enum(['ARS', 'USD']),
-  description: z.string().min(1),
+  description: z.string().min(1, 'Description is required'),
   date: z.string(),
   notes: z.string().optional(),
-  sharedWithHousehold: z.boolean().optional(),
-  householdContribution: z.number().optional(),
   exchangeRate: z.number().optional()
 }).superRefine((data, ctx) => {
   // Validate category for non-transfer transactions
@@ -72,7 +69,7 @@ const transactionSchema = z.object({
       path: ['categoryId']
     })
   }
-  
+
   // Validate target wallet for transfers
   if (data.type === 'transfer' && !data.targetWalletId) {
     ctx.addIssue({
@@ -81,22 +78,13 @@ const transactionSchema = z.object({
       path: ['targetWalletId']
     })
   }
-  
+
   // Validate that source and target wallets are different
   if (data.type === 'transfer' && data.walletId === data.targetWalletId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Source and target wallets must be different',
       path: ['targetWalletId']
-    })
-  }
-  
-  // Validate household contribution
-  if (data.sharedWithHousehold && data.householdContribution && data.householdContribution > data.amount) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Household contribution cannot exceed transaction amount',
-      path: ['householdContribution']
     })
   }
 })
@@ -109,18 +97,17 @@ interface TransactionFormProps {
   onCancel?: () => void
 }
 
-export function TransactionForm({ 
-  initialType = 'expense', 
-  onSuccess, 
-  onCancel 
+export function TransactionForm({
+  initialType = 'expense',
+  onSuccess,
+  onCancel
 }: TransactionFormProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const t = useTranslations('personalFinance')
+  const { toast } = useToast()
   const [wallets, setWallets] = useState<PersonalWallet[]>([])
   const [categories, setCategories] = useState<PersonalCategory[]>([])
   const [loading, setLoading] = useState(false)
-  const [calculating, setCalculating] = useState(false)
 
   // Form setup
   const form = useForm<TransactionFormData>({
@@ -131,8 +118,7 @@ export function TransactionForm({
       currency: 'ARS',
       description: '',
       date: new Date().toISOString().split('T')[0],
-      notes: '',
-      sharedWithHousehold: false
+      notes: ''
     }
   })
 
@@ -140,7 +126,6 @@ export function TransactionForm({
   const watchWalletId = form.watch('walletId')
   const watchCurrency = form.watch('currency')
   const watchAmount = form.watch('amount')
-  const watchSharedWithHousehold = form.watch('sharedWithHousehold')
 
   // Load wallets and categories
   useEffect(() => {
@@ -158,23 +143,16 @@ export function TransactionForm({
     }
   }, [watchWalletId, wallets])
 
-  // Auto-set household contribution for income
-  useEffect(() => {
-    if (watchType === 'income' && watchSharedWithHousehold && watchAmount > 0) {
-      form.setValue('householdContribution', watchAmount)
-    }
-  }, [watchType, watchSharedWithHousehold, watchAmount])
-
   const loadWallets = async () => {
     try {
       // In a real app, this would filter by current user
+      // NOTE: booleans are not indexable in IndexedDB, so filter in memory
       const userWallets = await db.personalWallets
-        .where('isActive')
-        .equals(1)
+        .filter(w => w.isActive !== false)
         .toArray()
-      
+
       setWallets(userWallets)
-      
+
       // Auto-select first wallet if none selected
       if (userWallets.length > 0 && !form.getValues('walletId')) {
         form.setValue('walletId', userWallets[0].id!)
@@ -182,8 +160,8 @@ export function TransactionForm({
     } catch (error) {
       console.error('Error loading wallets:', error)
       toast({
-        title: t('transactions.form.errorLoadingWalletsTitle'),
-        description: t('transactions.form.errorLoadingWallets'),
+        title: t('transactionForm.errorTitle'),
+        description: t('transactionList.loadError'),
         variant: 'destructive'
       })
     }
@@ -191,11 +169,11 @@ export function TransactionForm({
 
   const loadCategories = async () => {
     try {
+      // NOTE: booleans are not indexable in IndexedDB, so filter in memory
       const userCategories = await db.personalCategories
-        .where('isActive')
-        .equals(1)
+        .filter(c => c.isActive !== false)
         .toArray()
-      
+
       setCategories(userCategories)
     } catch (error) {
       console.error('Error loading categories:', error)
@@ -211,24 +189,19 @@ export function TransactionForm({
     return wallets.filter(wallet => wallet.id !== watchWalletId)
   }
 
-  const calculateExchangeRate = async (fromCurrency: CurrencyType, toCurrency: CurrencyType) => {
-    if (fromCurrency === toCurrency) return 1
-    
-    setCalculating(true)
-    try {
-      // In a real app, you'd call an exchange rate API
-      // For now, using a mock rate
-      const mockRate = fromCurrency === 'USD' ? 1000 : 0.001
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-      return mockRate
-    } finally {
-      setCalculating(false)
-    }
+  /**
+   * Parse the YYYY-MM-DD string from <input type="date"> as a LOCAL date.
+   * new Date('YYYY-MM-DD') would be interpreted as UTC midnight, shifting the
+   * date one day back in negative-offset timezones (e.g. Argentina, UTC-3).
+   */
+  const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
   }
 
   const handleSubmit = async (data: TransactionFormData) => {
     setLoading(true)
-    
+
     try {
       // Validate transaction
       const validation = validateTransaction({
@@ -237,32 +210,38 @@ export function TransactionForm({
         currency: data.currency,
         walletId: data.walletId,
         categoryId: data.categoryId || '',
+        targetWalletId: data.targetWalletId,
         description: data.description,
-        date: new Date(data.date),
-        sharedWithHousehold: data.sharedWithHousehold || false
+        date: parseLocalDate(data.date),
+        sharedWithHousehold: false
       })
 
       if (!validation.isValid) {
         toast({
-          title: t('transactions.form.validationError'),
+          title: t('transactionForm.validationError'),
           description: Object.values(validation.errors).flat().join(', '),
           variant: 'destructive'
         })
         return
       }
 
-      // Get current user ID (in a real app, from auth context)
-      const userId = 'current-user-id' // TODO: Replace with actual user ID
+      // Get current user ID (placeholder until real auth context is wired)
+      const userId = getCurrentUserId()
 
-      if (data.type === 'transfer') {
-        await handleTransfer(data, userId)
-      } else {
-        await handleBasicTransaction(data, userId)
+      const saved = data.type === 'transfer'
+        ? await handleTransfer(data, userId)
+        : await handleBasicTransaction(data, userId)
+
+      // Do not show success or navigate away if nothing was saved
+      // (e.g. insufficient funds or missing exchange rate)
+      if (!saved) {
+        return
       }
 
+      const typeLabel = data.type.charAt(0).toUpperCase() + data.type.slice(1)
       toast({
-        title: t('transactions.form.success'),
-        description: t('transactions.form.successDesc')
+        title: t('transactionForm.successTitle'),
+        description: t('transactionForm.successMessage', { type: typeLabel })
       })
 
       // Reset form or navigate away
@@ -275,8 +254,8 @@ export function TransactionForm({
     } catch (error) {
       console.error('Error saving transaction:', error)
       toast({
-        title: t('transactions.form.error'),
-        description: t('transactions.form.saveError'),
+        title: t('transactionForm.errorTitle'),
+        description: t('transactionForm.errorMessage'),
         variant: 'destructive'
       })
     } finally {
@@ -284,23 +263,28 @@ export function TransactionForm({
     }
   }
 
-  const handleBasicTransaction = async (data: TransactionFormData, userId: string) => {
+  /**
+   * @returns true if the transaction was saved, false otherwise
+   */
+  const handleBasicTransaction = async (data: TransactionFormData, userId: string): Promise<boolean> => {
     // Validate sufficient funds for expenses
     if (data.type === 'expense') {
       const validation = await validateSufficientFunds(data.walletId, data.amount)
       if (!validation.isValid) {
         toast({
-          title: t('transactions.form.insufficientFunds'),
+          title: t('transactionForm.insufficientFunds'),
           description: validation.error,
           variant: 'destructive'
         })
-        return
+        return false
       }
     }
-    
+
     const transactionId = generateTransactionId()
-    
+
     // Create transaction record
+    // NOTE: household sharing is disabled until the household integration
+    // actually exists (the previous flag was persisted but never acted upon)
     const transaction: PersonalTransaction = {
       id: transactionId,
       userId,
@@ -310,49 +294,58 @@ export function TransactionForm({
       amount: data.amount,
       currency: data.currency,
       description: data.description,
-      date: new Date(data.date),
+      date: parseLocalDate(data.date),
       notes: data.notes,
-      sharedWithHousehold: data.sharedWithHousehold || false,
-      householdContribution: data.householdContribution,
+      sharedWithHousehold: false,
+      householdContribution: undefined,
       isFromCreditCard: false,
       status: 'completed',
       createdAt: new Date(),
       updatedAt: new Date()
     }
 
-    // Save transaction
-    await db.personalTransactions.add(transaction)
+    // Save transaction and update wallet balance atomically
+    await db.transaction('rw', [db.personalTransactions, db.personalWallets], async () => {
+      await db.personalTransactions.add(transaction)
+      await processTransactionBalanceUpdate(transaction)
+    })
 
-    // Update wallet balance
-    await processTransactionBalanceUpdate(transaction)
-
-    // If shared with household, create household income record
-    if (data.sharedWithHousehold && data.householdContribution) {
-      // TODO: Integrate with household system
-      console.log('Would create household income:', data.householdContribution)
-    }
+    return true
   }
 
-  const handleTransfer = async (data: TransactionFormData, userId: string) => {
+  /**
+   * @returns true if the transfer was saved, false otherwise
+   */
+  const handleTransfer = async (data: TransactionFormData, userId: string): Promise<boolean> => {
     const sourceWallet = wallets.find(w => w.id === data.walletId)!
     const targetWallet = wallets.find(w => w.id === data.targetWalletId)!
-    
+
     // Validate sufficient funds in source wallet
     const validation = await validateSufficientFunds(data.walletId, data.amount)
     if (!validation.isValid) {
       toast({
-        title: t('transactions.form.insufficientFunds'),
+        title: t('transactionForm.insufficientFunds'),
         description: validation.error,
         variant: 'destructive'
       })
-      return
+      return false
     }
-    
+
     let exchangeRate = 1
 
-    // Handle currency conversion
+    // Cross-currency transfers require an explicit, user-provided exchange rate.
+    // There is no exchange rate API integration yet, and silently applying a
+    // made-up rate would corrupt wallet balances.
     if (sourceWallet.currency !== targetWallet.currency) {
-      exchangeRate = data.exchangeRate || await calculateExchangeRate(sourceWallet.currency, targetWallet.currency)
+      if (!data.exchangeRate || !Number.isFinite(data.exchangeRate) || data.exchangeRate <= 0) {
+        toast({
+          title: t('transactionForm.validationError'),
+          description: t('transactionForm.exchangeRateRequired'),
+          variant: 'destructive'
+        })
+        return false
+      }
+      exchangeRate = data.exchangeRate
     }
 
     const transactionId = generateTransactionId()
@@ -367,7 +360,7 @@ export function TransactionForm({
       amount: data.amount,
       currency: sourceWallet.currency,
       description: data.description,
-      date: new Date(data.date),
+      date: parseLocalDate(data.date),
       notes: data.notes,
       targetWalletId: data.targetWalletId,
       exchangeRate,
@@ -378,20 +371,13 @@ export function TransactionForm({
       updatedAt: new Date()
     }
 
-    // Save transaction
-    await db.personalTransactions.add(transaction)
+    // Save transaction and update both wallet balances atomically
+    await db.transaction('rw', [db.personalTransactions, db.personalWallets], async () => {
+      await db.personalTransactions.add(transaction)
+      await processTransactionBalanceUpdate(transaction)
+    })
 
-    // Update both wallet balances
-    await processTransactionBalanceUpdate(transaction)
-  }
-
-  const getFormTitle = () => {
-    switch (watchType) {
-      case 'income': return t('transactions.form.newIncome')
-      case 'expense': return t('transactions.form.newExpense')
-      case 'transfer': return t('transactions.form.newTransfer')
-      default: return t('transactions.form.newExpense')
-    }
+    return true
   }
 
   const selectedWallet = wallets.find(w => w.id === watchWalletId)
@@ -404,44 +390,44 @@ export function TransactionForm({
           {watchType === 'income' && <TrendingUp className="h-5 w-5 text-green-600" />}
           {watchType === 'expense' && <TrendingDown className="h-5 w-5 text-red-600" />}
           {watchType === 'transfer' && <ArrowUpDown className="h-5 w-5 text-blue-600" />}
-          {getFormTitle()}
+          {t('transactionForm.newTitle', { type: watchType.charAt(0).toUpperCase() + watchType.slice(1) })}
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            
+
             {/* Transaction Type */}
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('transactions.form.transactionType')}</FormLabel>
+                  <FormLabel>{t('transactionForm.transactionType')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t('transactions.form.selectType')} />
+                        <SelectValue placeholder={t('transactionForm.selectType')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="income">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-green-600" />
-                          {t('transactions.form.income')}
+                          {t('transactionList.income')}
                         </div>
                       </SelectItem>
                       <SelectItem value="expense">
                         <div className="flex items-center gap-2">
                           <TrendingDown className="h-4 w-4 text-red-600" />
-                          {t('transactions.form.expense')}
+                          {t('transactionList.expense')}
                         </div>
                       </SelectItem>
                       <SelectItem value="transfer">
                         <div className="flex items-center gap-2">
                           <ArrowUpDown className="h-4 w-4 text-blue-600" />
-                          {t('transactions.form.transfer')}
+                          {t('transactionList.transfer')}
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -458,15 +444,12 @@ export function TransactionForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {watchType === 'transfer' 
-                      ? t('transactions.form.fromWallet') 
-                      : t('transactions.form.wallet')
-                    }
+                    {watchType === 'transfer' ? t('transactionForm.fromWallet') : t('transactionForm.wallet')}
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t('transactions.form.selectWallet')} />
+                        <SelectValue placeholder={t('transactionForm.selectWallet')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -494,11 +477,11 @@ export function TransactionForm({
                 name="targetWalletId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('transactions.form.toWallet')}</FormLabel>
+                    <FormLabel>{t('transactionForm.toWallet')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('transactions.form.selectTargetWallet')} />
+                          <SelectValue placeholder={t('transactionForm.selectTargetWallet')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -516,10 +499,7 @@ export function TransactionForm({
                     </Select>
                     {selectedWallet && targetWallet && selectedWallet.currency !== targetWallet.currency && (
                       <p className="text-sm text-amber-600 mt-1">
-                        {t('transactions.form.convertingCurrencies', { 
-                          from: selectedWallet.currency, 
-                          to: targetWallet.currency 
-                        })}
+                        {t('transactionForm.converting', { from: selectedWallet.currency, to: targetWallet.currency })}
                       </p>
                     )}
                     <FormMessage />
@@ -535,19 +515,19 @@ export function TransactionForm({
                 name="categoryId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('transactions.form.category')}</FormLabel>
+                    <FormLabel>{t('transactionForm.category')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('transactions.form.selectCategory')} />
+                          <SelectValue placeholder={t('transactionForm.selectCategory')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {getFilteredCategories().map((category) => (
                           <SelectItem key={category.id} value={category.id!}>
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
+                              <div
+                                className="w-3 h-3 rounded-full"
                                 style={{ backgroundColor: category.color }}
                               />
                               {category.name}
@@ -568,7 +548,7 @@ export function TransactionForm({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('transactions.form.amount')}</FormLabel>
+                  <FormLabel>{t('transactionForm.amount')}</FormLabel>
                   <div className="relative">
                     <FormControl>
                       <Input
@@ -598,15 +578,13 @@ export function TransactionForm({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('transactions.form.descriptionLabel')}</FormLabel>
+                  <FormLabel>{t('transactionForm.description')}</FormLabel>
                   <FormControl>
                     <Input
                       placeholder={
-                        watchType === 'income' 
-                          ? t('transactions.form.descriptionPlaceholderIncome') 
-                          : watchType === 'expense' 
-                            ? t('transactions.form.descriptionPlaceholderExpense')
-                            : t('transactions.form.descriptionPlaceholderTransfer')
+                        watchType === 'income' ? t('transactionForm.descriptionIncomePlaceholder') :
+                        watchType === 'expense' ? t('transactionForm.descriptionExpensePlaceholder') :
+                        t('transactionForm.descriptionTransferPlaceholder')
                       }
                       {...field}
                     />
@@ -622,7 +600,7 @@ export function TransactionForm({
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('transactions.form.date')}</FormLabel>
+                  <FormLabel>{t('transactionForm.date')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -637,10 +615,10 @@ export function TransactionForm({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('transactions.form.notes')}</FormLabel>
+                  <FormLabel>{t('transactionForm.notesOptional')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder={t('transactions.form.notesPlaceholder')}
+                      placeholder={t('transactionForm.notesPlaceholder')}
                       className="resize-none"
                       {...field}
                     />
@@ -650,66 +628,12 @@ export function TransactionForm({
               )}
             />
 
-            {/* Household Sharing (only for income) */}
-            {watchType === 'income' && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                <FormField
-                  control={form.control}
-                  name="sharedWithHousehold"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>{t('transactions.form.shareWithHousehold')}</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          {t('transactions.form.shareWithHouseholdDesc')}
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                {watchSharedWithHousehold && (
-                  <FormField
-                    control={form.control}
-                    name="householdContribution"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('transactions.form.householdContribution')}</FormLabel>
-                        <div className="relative">
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max={watchAmount}
-                              placeholder="0.00"
-                              className="pl-12"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <span className="text-muted-foreground">
-                              {watchCurrency === 'USD' ? 'US$' : '$'}
-                            </span>
-                          </div>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-            )}
+            {/* NOTE: household sharing UI removed until the household
+                integration exists — the toggle previously stored a flag that
+                was never reflected in household finances (misleading data) */}
 
             {/* Exchange Rate (for cross-currency transfers) */}
-            {watchType === 'transfer' && selectedWallet && targetWallet && 
+            {watchType === 'transfer' && selectedWallet && targetWallet &&
              selectedWallet.currency !== targetWallet.currency && (
               <FormField
                 control={form.control}
@@ -717,35 +641,18 @@ export function TransactionForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t('transactions.form.exchangeRate', { 
-                        from: selectedWallet.currency, 
-                        to: targetWallet.currency 
-                      })}
+                      {t('transactionForm.exchangeRate', { from: selectedWallet.currency, to: targetWallet.currency })}
                     </FormLabel>
-                    <div className="flex gap-2">
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.0001"
-                          min="0"
-                          placeholder="1.0000"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={async () => {
-                          const rate = await calculateExchangeRate(selectedWallet.currency, targetWallet.currency)
-                          form.setValue('exchangeRate', rate)
-                        }}
-                        disabled={calculating}
-                      >
-                        <Calculator className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        placeholder="1.0000"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
                     {field.value && watchAmount > 0 && (
                       <p className="text-sm text-muted-foreground">
                         {formatCurrency(watchAmount, selectedWallet.currency)} = {' '}
@@ -760,22 +667,19 @@ export function TransactionForm({
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
-              <Button 
-                type="submit" 
-                disabled={loading || calculating}
+              <Button
+                type="submit"
+                disabled={loading}
                 className="flex-1"
               >
-                {loading 
-                  ? t('transactions.form.saving') 
-                  : `${t('transactions.form.save')} ${getFormTitle()}`
-                }
+                {loading ? t('transactionForm.saving') : t('transactionForm.saveType', { type: watchType })}
               </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onCancel || (() => router.back())}
               >
-                {t('transactions.form.cancel')}
+                {t('transactionForm.cancel')}
               </Button>
             </div>
           </form>

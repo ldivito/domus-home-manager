@@ -1,32 +1,34 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Download, TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
+import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { db } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils/finance'
 import { PersonalTransaction, PersonalWallet, PersonalCategory } from '@/types/personal-finance'
+
+// Transactions with their wallet/category resolved for chart aggregation
+type EnrichedTransaction = PersonalTransaction & {
+  wallet?: PersonalWallet
+  category?: PersonalCategory
+}
 import ExpenseChart from './components/ExpenseChart'
 import IncomeChart from './components/IncomeChart'
 import MonthlyOverview from './components/MonthlyOverview'
 import CategoryBreakdown from './components/CategoryBreakdown'
 import FinancialTrends from './components/FinancialTrends'
 import DataExportDialog from './components/DataExportDialog'
-import { useSyncContext } from '@/contexts/SyncContext'
 
 type TimeRange = 'last7days' | 'last30days' | 'last3months' | 'last6months' | 'currentyear' | 'lastyear'
 
-type EnrichedTransaction = PersonalTransaction & {
-  wallet?: PersonalWallet
-  category?: PersonalCategory
-}
-
 interface AnalyticsData {
-  transactions: EnrichedTransaction[]
+  transactions: (PersonalTransaction & { 
+    wallet?: PersonalWallet
+    category?: PersonalCategory 
+  })[]
   totalIncome: number
   totalExpenses: number
   netIncome: number
@@ -49,215 +51,206 @@ interface AnalyticsData {
   }>
 }
 
-// Get date range based on selection
-function getDateRange(range: TimeRange): { start: Date; end: Date } {
-  const end = new Date()
-  const start = new Date()
-
-  switch (range) {
-    case 'last7days':
-      start.setDate(start.getDate() - 7)
-      break
-    case 'last30days':
-      start.setDate(start.getDate() - 30)
-      break
-    case 'last3months':
-      start.setMonth(start.getMonth() - 3)
-      break
-    case 'last6months':
-      start.setMonth(start.getMonth() - 6)
-      break
-    case 'currentyear':
-      start.setMonth(0, 1) // 1 de enero
-      break
-    case 'lastyear':
-      start.setFullYear(start.getFullYear() - 1, 0, 1)
-      end.setFullYear(end.getFullYear() - 1, 11, 31)
-      break
-  }
-
-  return { start, end }
-}
-
-// Helper: días en el rango
-function getDaysInRange(timeRange: TimeRange): number {
-  switch (timeRange) {
-    case 'last7days': return 7
-    case 'last30days': return 30
-    case 'last3months': return 90
-    case 'last6months': return 180
-    case 'currentyear': return Math.ceil((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24))
-    case 'lastyear': return 365
-    default: return 30
-  }
-}
-
-function generateMonthlyData(
-  transactions: EnrichedTransaction[],
-  start: Date,
-  end: Date
-) {
-  const months = []
-  const current = new Date(start)
-
-  while (current <= end) {
-    const monthTransactions = transactions.filter(t => {
-      const txnDate = new Date(t.date)
-      return txnDate.getFullYear() === current.getFullYear() &&
-        txnDate.getMonth() === current.getMonth()
-    })
-
-    const income = monthTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0)
-
-    const expenses = monthTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0)
-
-    months.push({
-      month: current.toLocaleDateString('es', { month: 'short', year: '2-digit' }),
-      income,
-      expenses,
-      net: income - expenses
-    })
-
-    current.setMonth(current.getMonth() + 1)
-  }
-
-  return months
-}
-
-function generateCategoryBreakdown(
-  expenseTransactions: EnrichedTransaction[],
-  totalExpenses: number
-) {
-  const categoryTotals = new Map<string, { name: string; amount: number; color: string }>()
-
-  expenseTransactions.forEach(txn => {
-    if (txn.category) {
-      const current = categoryTotals.get(txn.category.id!) || {
-        name: txn.category.name,
-        amount: 0,
-        color: txn.category.color
-      }
-      current.amount += txn.amount
-      categoryTotals.set(txn.category.id!, current)
-    }
-  })
-
-  return Array.from(categoryTotals.values())
-    .map(cat => ({
-      category: cat.name,
-      amount: cat.amount,
-      color: cat.color,
-      percentage: totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0
-    }))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 10)
-}
-
-function generateWalletBreakdown(wallets: PersonalWallet[], currency: string) {
-  if (currency === 'ALL') {
-    return wallets
-      .filter(w => w.isActive)
-      .map(w => ({
-        wallet: w.name,
-        balance: w.balance,
-        color: w.color || '#3b82f6'
-      }))
-  } else {
-    return wallets
-      .filter(w => w.isActive && w.currency === currency)
-      .map(w => ({
-        wallet: w.name,
-        balance: w.balance,
-        color: w.color || '#3b82f6'
-      }))
-  }
-}
-
-const emptyAnalytics: AnalyticsData = {
-  transactions: [],
-  totalIncome: 0,
-  totalExpenses: 0,
-  netIncome: 0,
-  monthlyData: [],
-  categoryBreakdown: [],
-  walletBreakdown: []
-}
-
 export default function AnalyticsPage() {
   const t = useTranslations('personalFinance')
-  const { triggerSync } = useSyncContext()
   const [timeRange, setTimeRange] = useState<TimeRange>('last30days')
   const [currency, setCurrency] = useState<'ARS' | 'USD' | 'ALL'>('ALL')
+  const [data, setData] = useState<AnalyticsData>({
+    transactions: [],
+    totalIncome: 0,
+    totalExpenses: 0,
+    netIncome: 0,
+    monthlyData: [],
+    categoryBreakdown: [],
+    walletBreakdown: []
+  })
+  const [loading, setLoading] = useState(true)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
 
-  // Trigger sync on mount so data is siempre fresco
-  useEffect(() => {
-    triggerSync(false, true)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Live queries — se actualizan automáticamente cada vez que Dexie cambia
-  const allTransactions = useLiveQuery(() => db.personalTransactions.toArray(), [])
-  const allWallets = useLiveQuery(() => db.personalWallets.toArray(), [])
-  const allCategories = useLiveQuery(() => db.personalCategories.toArray(), [])
-
-  // Loading: undefined significa que useLiveQuery todavía está cargando
-  const loading = allTransactions === undefined || allWallets === undefined || allCategories === undefined
-
-  // Toda la lógica de analytics se computa en useMemo (re-corre cuando cambian los datos o los filtros)
-  const data = useMemo((): AnalyticsData => {
-    if (!allTransactions || !allWallets || !allCategories) return emptyAnalytics
-
-    const { start, end } = getDateRange(timeRange)
-
-    // Filtrar por rango de fechas
-    const inRange = allTransactions.filter(t => {
-      const d = new Date(t.date)
-      return d >= start && d <= end
-    })
-
-    // Filtrar por moneda si está especificado
-    const filtered = currency !== 'ALL'
-      ? inRange.filter(t => t.currency === currency)
-      : inRange
-
-    // Enriquecer con wallet y categoría
-    const enriched: EnrichedTransaction[] = filtered.map(txn => ({
-      ...txn,
-      wallet: allWallets.find(w => w.id === txn.walletId),
-      category: allCategories.find(c => c.id === txn.categoryId)
-    }))
-
-    const totalIncome = enriched
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0)
-
-    const totalExpenses = enriched
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0)
-
-    const netIncome = totalIncome - totalExpenses
-
-    const monthlyData = generateMonthlyData(enriched, start, end)
-    const categoryBreakdown = generateCategoryBreakdown(
-      enriched.filter(t => t.type === 'expense'),
-      totalExpenses
-    )
-    const walletBreakdown = generateWalletBreakdown(allWallets, currency)
-
-    return {
-      transactions: enriched,
-      totalIncome,
-      totalExpenses,
-      netIncome,
-      monthlyData,
-      categoryBreakdown,
-      walletBreakdown
+  // Get date range based on selection
+  const getDateRange = (range: TimeRange): { start: Date; end: Date } => {
+    const end = new Date()
+    const start = new Date()
+    
+    switch (range) {
+      case 'last7days':
+        start.setDate(start.getDate() - 7)
+        break
+      case 'last30days':
+        start.setDate(start.getDate() - 30)
+        break
+      case 'last3months':
+        start.setMonth(start.getMonth() - 3)
+        break
+      case 'last6months':
+        start.setMonth(start.getMonth() - 6)
+        break
+      case 'currentyear':
+        start.setMonth(0, 1) // January 1st
+        break
+      case 'lastyear':
+        start.setFullYear(start.getFullYear() - 1, 0, 1)
+        end.setFullYear(end.getFullYear() - 1, 11, 31)
+        break
     }
-  }, [allTransactions, allWallets, allCategories, timeRange, currency])
+    
+    return { start, end }
+  }
+
+  useEffect(() => {
+    loadAnalyticsData()
+  }, [timeRange, currency])
+
+  const loadAnalyticsData = async () => {
+    setLoading(true)
+    
+    try {
+      // Get date range
+      const { start, end } = getDateRange(timeRange)
+      
+      // Load transactions in date range
+      const transactions = await db.personalTransactions
+        .where('date')
+        .between(start, end)
+        .toArray()
+      
+      // Load related data
+      const [wallets, categories] = await Promise.all([
+        db.personalWallets.toArray(),
+        db.personalCategories.toArray()
+      ])
+      
+      // Filter by currency if specified
+      let filteredTransactions = transactions
+      if (currency !== 'ALL') {
+        filteredTransactions = transactions.filter(t => t.currency === currency)
+      }
+      
+      // Enrich transactions with wallet and category info
+      const enrichedTransactions = filteredTransactions.map(txn => ({
+        ...txn,
+        wallet: wallets.find(w => w.id === txn.walletId),
+        category: categories.find(c => c.id === txn.categoryId)
+      }))
+      
+      // Calculate totals
+      const totalIncome = enrichedTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0)
+      
+      const totalExpenses = enrichedTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0)
+      
+      const netIncome = totalIncome - totalExpenses
+      
+      // Generate monthly data for charts
+      const monthlyData = generateMonthlyData(enrichedTransactions, start, end)
+      
+      // Generate category breakdown for expenses
+      const categoryBreakdown = generateCategoryBreakdown(
+        enrichedTransactions.filter(t => t.type === 'expense'),
+        totalExpenses
+      )
+      
+      // Generate wallet breakdown
+      const walletBreakdown = generateWalletBreakdown(wallets, currency)
+      
+      setData({
+        transactions: enrichedTransactions,
+        totalIncome,
+        totalExpenses,
+        netIncome,
+        monthlyData,
+        categoryBreakdown,
+        walletBreakdown
+      })
+      
+    } catch (error) {
+      console.error('Error loading analytics data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateMonthlyData = (transactions: EnrichedTransaction[], start: Date, end: Date) => {
+    const months = []
+    const current = new Date(start)
+    
+    while (current <= end) {
+      const monthKey = `${current.getFullYear()}-${(current.getMonth() + 1).toString().padStart(2, '0')}`
+      const monthTransactions = transactions.filter(t => {
+        const txnDate = new Date(t.date)
+        return txnDate.getFullYear() === current.getFullYear() && 
+               txnDate.getMonth() === current.getMonth()
+      })
+      
+      const income = monthTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0)
+      
+      const expenses = monthTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0)
+      
+      months.push({
+        month: current.toLocaleDateString('es', { month: 'short', year: '2-digit' }),
+        income,
+        expenses,
+        net: income - expenses
+      })
+      
+      current.setMonth(current.getMonth() + 1)
+    }
+    
+    return months
+  }
+
+  const generateCategoryBreakdown = (expenseTransactions: EnrichedTransaction[], totalExpenses: number) => {
+    const categoryTotals = new Map<string, { name: string; amount: number; color: string }>()
+    
+    expenseTransactions.forEach(txn => {
+      if (txn.category?.id) {
+        const current = categoryTotals.get(txn.category.id) || {
+          name: txn.category.name,
+          amount: 0,
+          color: txn.category.color
+        }
+        current.amount += txn.amount
+        categoryTotals.set(txn.category.id, current)
+      }
+    })
+    
+    return Array.from(categoryTotals.values())
+      .map(cat => ({
+        category: cat.name,
+        amount: cat.amount,
+        color: cat.color,
+        percentage: totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10) // Top 10 categories
+  }
+
+  const generateWalletBreakdown = (wallets: PersonalWallet[], currency: string) => {
+    if (currency === 'ALL') {
+      return wallets
+        .filter(w => w.isActive)
+        .map(w => ({
+          wallet: w.name,
+          balance: w.balance,
+          color: w.color || '#3b82f6'
+        }))
+    } else {
+      return wallets
+        .filter(w => w.isActive && w.currency === currency)
+        .map(w => ({
+          wallet: w.name,
+          balance: w.balance,
+          color: w.color || '#3b82f6'
+        }))
+    }
+  }
 
   const timeRangeOptions = [
     { value: 'last7days', label: t('analytics.timeRanges.last7days') },
@@ -313,7 +306,7 @@ export default function AnalyticsPage() {
               ))}
             </SelectContent>
           </Select>
-
+          
           <Select value={currency} onValueChange={(value: 'ARS' | 'USD' | 'ALL') => setCurrency(value)}>
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -325,9 +318,9 @@ export default function AnalyticsPage() {
             </SelectContent>
           </Select>
         </div>
-
-        <Button
-          variant="outline"
+        
+        <Button 
+          variant="outline" 
           onClick={() => setExportDialogOpen(true)}
           className="w-full sm:w-auto"
         >
@@ -345,13 +338,13 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {currency === 'ALL'
+              {currency === 'ALL' 
                 ? `${formatCurrency(data.totalIncome, 'ARS')}*`
                 : formatCurrency(data.totalIncome, currency)
               }
             </div>
             {currency === 'ALL' && (
-              <p className="text-xs text-muted-foreground">*Mixed currencies</p>
+              <p className="text-xs text-muted-foreground">{t('analytics.mixedCurrenciesNote')}</p>
             )}
           </CardContent>
         </Card>
@@ -363,13 +356,13 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {currency === 'ALL'
+              {currency === 'ALL' 
                 ? `${formatCurrency(data.totalExpenses, 'ARS')}*`
                 : formatCurrency(data.totalExpenses, currency)
               }
             </div>
             {currency === 'ALL' && (
-              <p className="text-xs text-muted-foreground">*Mixed currencies</p>
+              <p className="text-xs text-muted-foreground">{t('analytics.mixedCurrenciesNote')}</p>
             )}
           </CardContent>
         </Card>
@@ -381,13 +374,13 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${data.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {currency === 'ALL'
+              {currency === 'ALL' 
                 ? `${formatCurrency(data.netIncome, 'ARS')}*`
                 : formatCurrency(data.netIncome, currency)
               }
             </div>
             {currency === 'ALL' && (
-              <p className="text-xs text-muted-foreground">*Mixed currencies</p>
+              <p className="text-xs text-muted-foreground">{t('analytics.mixedCurrenciesNote')}</p>
             )}
           </CardContent>
         </Card>
@@ -399,7 +392,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currency === 'ALL'
+              {currency === 'ALL' 
                 ? `${formatCurrency(data.totalExpenses / getDaysInRange(timeRange), 'ARS')}*`
                 : formatCurrency(data.totalExpenses / getDaysInRange(timeRange), currency)
               }
@@ -449,8 +442,8 @@ export default function AnalyticsPage() {
             <CardTitle>{t('analytics.charts.incomeBreakdown')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <IncomeChart
-              transactions={data.transactions.filter(t => t.type === 'income')}
+            <IncomeChart 
+              transactions={data.transactions.filter(t => t.type === 'income')} 
               currency={currency}
             />
           </CardContent>
@@ -462,8 +455,8 @@ export default function AnalyticsPage() {
             <CardTitle>{t('analytics.charts.expenseDetails')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ExpenseChart
-              transactions={data.transactions.filter(t => t.type === 'expense')}
+            <ExpenseChart 
+              transactions={data.transactions.filter(t => t.type === 'expense')} 
               currency={currency}
             />
           </CardContent>
@@ -471,7 +464,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Export Dialog */}
-      <DataExportDialog
+      <DataExportDialog 
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         transactions={data.transactions}
@@ -480,4 +473,17 @@ export default function AnalyticsPage() {
       />
     </div>
   )
+}
+
+// Helper function to get days in range
+function getDaysInRange(timeRange: TimeRange): number {
+  switch (timeRange) {
+    case 'last7days': return 7
+    case 'last30days': return 30
+    case 'last3months': return 90
+    case 'last6months': return 180
+    case 'currentyear': return Math.ceil((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24))
+    case 'lastyear': return 365
+    default: return 30
+  }
 }

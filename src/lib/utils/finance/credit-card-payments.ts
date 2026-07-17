@@ -463,7 +463,12 @@ export async function getCreditCardPaymentStats(
 }
 
 /**
- * Schedule automatic payment (placeholder for future implementation)
+ * Schedule an automatic payment for a credit card wallet.
+ *
+ * Persists one schedule per card in personalScheduledPayments; due schedules
+ * are executed client-side by processDueAutomaticPayments() when the
+ * personal-finance dashboard loads (the app is offline-first, there is no
+ * server-side cron).
  */
 export async function scheduleAutomaticPayment(
   walletId: string,
@@ -471,24 +476,195 @@ export async function scheduleAutomaticPayment(
   paymentType: 'minimum' | 'full' | 'fixed',
   fixedAmount?: number,
   daysBefore: number = 3
-): Promise<{ scheduled: boolean; nextPaymentDate: Date }> {
-  // This would integrate with a job scheduler in a real implementation
-  // For now, we'll just return a placeholder
-  
-  const nextPaymentDate = new Date()
-  nextPaymentDate.setDate(nextPaymentDate.getDate() + 30 - daysBefore)
+): Promise<{ scheduled: boolean; nextPaymentDate: Date | null }> {
+  const cardWallet = await db.personalWallets.get(walletId)
+  if (!cardWallet || cardWallet.type !== 'credit_card') {
+    throw new Error('Wallet is not a credit card')
+  }
 
-  // TODO: Implement with cron jobs or database-based scheduling
-  console.log(`Automatic payment scheduled for wallet ${walletId}`, {
-    sourceWalletId,
-    paymentType,
-    fixedAmount,
-    daysBefore,
-    nextPaymentDate
-  })
+  const sourceWallet = await db.personalWallets.get(sourceWalletId)
+  if (!sourceWallet || sourceWallet.isActive === false || sourceWalletId === walletId) {
+    throw new Error('Source wallet not found or invalid')
+  }
+
+  if (paymentType === 'fixed' && (!fixedAmount || fixedAmount <= 0)) {
+    throw new Error('Fixed payment type requires a positive amount')
+  }
+
+  const now = new Date()
+  const existing = await db.personalScheduledPayments
+    .where('walletId').equals(walletId)
+    .first()
+
+  if (existing?.id) {
+    await db.personalScheduledPayments.update(existing.id, {
+      sourceWalletId,
+      paymentType,
+      fixedAmount: paymentType === 'fixed' ? fixedAmount : undefined,
+      daysBefore,
+      isActive: true,
+      updatedAt: now
+    })
+  } else {
+    await db.personalScheduledPayments.add({
+      id: `psp_${crypto.randomUUID()}`,
+      userId: cardWallet.userId,
+      walletId,
+      sourceWalletId,
+      paymentType,
+      fixedAmount: paymentType === 'fixed' ? fixedAmount : undefined,
+      daysBefore,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    })
+  }
 
   return {
     scheduled: true,
-    nextPaymentDate
+    nextPaymentDate: await getNextAutomaticPaymentDate(walletId, daysBefore)
   }
+}
+
+/** Payment date for the earliest unpaid statement of the card, if any. */
+async function getNextAutomaticPaymentDate(
+  walletId: string,
+  daysBefore: number
+): Promise<Date | null> {
+  const statement = await getEarliestUnpaidStatement(walletId)
+  if (!statement) return null
+  const paymentDate = new Date(statement.dueDate)
+  paymentDate.setDate(paymentDate.getDate() - daysBefore)
+  return paymentDate
+}
+
+async function getEarliestUnpaidStatement(
+  walletId: string
+): Promise<CreditCardStatement | undefined> {
+  const statements = await db.creditCardStatements
+    .where('walletId').equals(walletId)
+    .filter(s => s.status !== 'paid' && s.currentBalance - s.paidAmount > 0)
+    .toArray()
+  statements.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+  return statements[0]
+}
+
+/** Active automatic-payment schedule for a card, if configured. */
+export async function getAutomaticPaymentSchedule(walletId: string) {
+  const schedule = await db.personalScheduledPayments
+    .where('walletId').equals(walletId)
+    .first()
+  return schedule && schedule.isActive !== false ? schedule : undefined
+}
+
+/** Disable the automatic payment for a card (keeps the record for history). */
+export async function cancelAutomaticPayment(walletId: string): Promise<void> {
+  const schedule = await db.personalScheduledPayments
+    .where('walletId').equals(walletId)
+    .first()
+  if (schedule?.id) {
+    await db.personalScheduledPayments.update(schedule.id, {
+      isActive: false,
+      updatedAt: new Date()
+    })
+  }
+}
+
+export interface AutomaticPaymentResult {
+  walletId: string
+  walletName: string
+  status: 'paid' | 'insufficient_funds' | 'error'
+  amount?: number
+  currency?: 'ARS' | 'USD'
+  error?: string
+}
+
+/**
+ * Execute the automatic payments that are due. Called when the
+ * personal-finance dashboard loads; safe to call repeatedly — each statement
+ * is auto-paid at most once (lastProcessedStatementId guard), and skipped
+ * payments (e.g. insufficient funds) are retried on the next visit.
+ */
+export async function processDueAutomaticPayments(
+  userId: string
+): Promise<AutomaticPaymentResult[]> {
+  const schedules = await db.personalScheduledPayments
+    .where('userId').equals(userId)
+    .filter(s => s.isActive !== false)
+    .toArray()
+
+  const results: AutomaticPaymentResult[] = []
+  const now = new Date()
+
+  for (const schedule of schedules) {
+    const cardWallet = await db.personalWallets.get(schedule.walletId)
+    if (!cardWallet) continue
+
+    const statement = await getEarliestUnpaidStatement(schedule.walletId)
+    if (!statement?.id || statement.id === schedule.lastProcessedStatementId) continue
+
+    // Only pay once we are within the configured window before the due date
+    const paymentDate = new Date(statement.dueDate)
+    paymentDate.setDate(paymentDate.getDate() - schedule.daysBefore)
+    if (now < paymentDate) continue
+
+    const remaining = statement.currentBalance - statement.paidAmount
+    let amount: number
+    switch (schedule.paymentType) {
+      case 'minimum':
+        amount = Math.min(Math.max(statement.minimumPayment, 0), remaining)
+        break
+      case 'fixed':
+        amount = Math.min(schedule.fixedAmount ?? 0, remaining)
+        break
+      default:
+        amount = remaining
+    }
+    if (amount <= 0) continue
+
+    const fundsCheck = await validateSufficientFunds(schedule.sourceWalletId, amount)
+    if (!fundsCheck.isValid) {
+      // Not marked as processed: retried on the next dashboard visit
+      results.push({
+        walletId: schedule.walletId,
+        walletName: cardWallet.name,
+        status: 'insufficient_funds',
+        amount,
+        currency: statement.currency
+      })
+      continue
+    }
+
+    try {
+      await processCreditCardPayment(
+        statement.id,
+        schedule.sourceWalletId,
+        amount,
+        now,
+        'Automatic payment'
+      )
+      if (schedule.id) {
+        await db.personalScheduledPayments.update(schedule.id, {
+          lastProcessedStatementId: statement.id,
+          updatedAt: now
+        })
+      }
+      results.push({
+        walletId: schedule.walletId,
+        walletName: cardWallet.name,
+        status: 'paid',
+        amount,
+        currency: statement.currency
+      })
+    } catch (error) {
+      results.push({
+        walletId: schedule.walletId,
+        walletName: cardWallet.name,
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  return results
 }

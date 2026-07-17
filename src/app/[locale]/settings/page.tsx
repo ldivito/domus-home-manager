@@ -169,7 +169,13 @@ export default function SettingsPage() {
     // Load from localStorage or use defaults
     const saved = localStorage.getItem('domus-notifications')
     if (saved) {
-      setNotifications(JSON.parse(saved))
+      try {
+        setNotifications(prev => ({ ...prev, ...JSON.parse(saved) }))
+      } catch (error) {
+        // Corrupt value in localStorage - discard it and keep defaults
+        logger.error('Error parsing notification settings:', error)
+        localStorage.removeItem('domus-notifications')
+      }
     }
   }
 
@@ -272,10 +278,10 @@ export default function SettingsPage() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
-      toast.success(t('dataExported'))
+      toast.success(t('dataManagement.dataExported'))
     } catch (error) {
       logger.error('Export error:', error)
-      toast.error(t('exportError'))
+      toast.error(t('dataManagement.exportError'))
     }
   }
 
@@ -323,17 +329,17 @@ export default function SettingsPage() {
         })
 
         await loadDatabaseStats()
-        toast.success(t('dataImported'))
+        toast.success(t('dataManagement.dataImported'))
       } catch (error) {
         logger.error('Import error:', error)
-        toast.error(t('importError'))
+        toast.error(t('dataManagement.importError'))
       }
     }
     input.click()
   }
 
   const resetAllData = async () => {
-    if (!confirm(t('confirmReset'))) return
+    if (!confirm(t('dataManagement.confirmReset'))) return
 
     try {
       await db.transaction('rw', [db.users, db.chores, db.tasks, db.groceryItems, db.savedGroceryItems, db.groceryCategories, db.meals, db.savedMeals, db.mealCategories, db.homeImprovements, db.homeSettings], async () => {
@@ -351,10 +357,10 @@ export default function SettingsPage() {
       })
 
       await loadDatabaseStats()
-      toast.success(t('dataReset'))
+      toast.success(t('dataManagement.dataReset'))
     } catch (error) {
       logger.error('Reset error:', error)
-      toast.error(t('resetError'))
+      toast.error(t('dataManagement.resetError'))
     }
   }
 

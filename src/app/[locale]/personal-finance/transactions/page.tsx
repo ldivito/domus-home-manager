@@ -19,7 +19,7 @@ export default function TransactionsPage() {
             {t('transactions.subtitle')}
           </p>
         </div>
-        
+
         {/* Quick Actions */}
         <div className="flex gap-2">
           <Link href="/personal-finance/transactions/new?type=income">

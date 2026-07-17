@@ -56,9 +56,12 @@ export async function checkMigrationNeeded(): Promise<MigrationStatus> {
       return { needsMigration: false }
     }
 
-    // If version is 10 or lower, needs migration
-    // Version 10 used ++id (auto-increment), versions 11+ use id (string)
-    if (legacyDb.version <= 10) {
+    // Dexie multiplies its version number by 10 when opening IndexedDB, so
+    // indexedDB.databases() reports Dexie versions 1-10 as native versions
+    // 10-100. Dexie version 10 (native 100) used ++id (auto-increment),
+    // versions 11+ use id (string), so anything at native 100 or lower
+    // needs migration.
+    if (legacyDb.version <= 100) {
       return {
         needsMigration: true,
         currentVersion: legacyDb.version,
@@ -191,10 +194,25 @@ function transformLegacyRecords(
  */
 async function deleteLegacyDatabase(oldName: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // First export the data
+    let settled = false
+    const settle = (action: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(blockedTimer)
+      action()
+    }
+
+    // Guard against hanging forever when another open connection blocks the
+    // delete (onblocked would otherwise only log and never settle)
+    const blockedTimer = setTimeout(() => {
+      settle(() => reject(new Error(
+        `Timed out deleting legacy database ${oldName}: another connection is blocking the delete. Please close other tabs and refresh.`
+      )))
+    }, 15000)
+
     const openRequest = indexedDB.open(oldName)
 
-    openRequest.onsuccess = async (event) => {
+    openRequest.onsuccess = (event) => {
       const db = (event.target as IDBOpenDBRequest).result
 
       // Close the database before deleting
@@ -205,11 +223,11 @@ async function deleteLegacyDatabase(oldName: string): Promise<void> {
 
       deleteRequest.onsuccess = () => {
         logger.debug(`Legacy database ${oldName} deleted successfully`)
-        resolve()
+        settle(() => resolve())
       }
 
       deleteRequest.onerror = () => {
-        reject(new Error(`Failed to delete legacy database ${oldName}`))
+        settle(() => reject(new Error(`Failed to delete legacy database ${oldName}`)))
       }
 
       deleteRequest.onblocked = () => {
@@ -218,7 +236,7 @@ async function deleteLegacyDatabase(oldName: string): Promise<void> {
     }
 
     openRequest.onerror = () => {
-      reject(new Error(`Failed to open ${oldName} for deletion`))
+      settle(() => reject(new Error(`Failed to open ${oldName} for deletion`)))
     }
   })
 }

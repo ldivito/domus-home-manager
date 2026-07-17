@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/utils/finance'
 
@@ -13,24 +14,26 @@ interface CategoryBreakdownProps {
 }
 
 export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
+  const t = useTranslations('personalFinance')
+
   const CustomTooltip = ({ active, payload }: {
     active?: boolean
-    payload?: { value: number; name: string; payload: { category: string; color: string; amount: number; percentage: number } }[]
+    payload?: Array<{ payload: { color: string; category: string; amount: number; percentage: number } }>
   }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
         <div className="bg-background border border-border rounded-lg p-4 shadow-md">
           <div className="flex items-center gap-2 mb-2">
-            <div 
-              className="w-3 h-3 rounded-full" 
+            <div
+              className="w-3 h-3 rounded-full"
               style={{ backgroundColor: data.color }}
             />
             <span className="font-medium">{data.category}</span>
           </div>
           <div className="space-y-1 text-sm">
-            <p>Amount: <span className="font-medium">{formatCurrency(data.amount, 'ARS')}</span></p>
-            <p>Percentage: <span className="font-medium">{data.percentage.toFixed(1)}%</span></p>
+            <p>{t('analytics.amount')}: <span className="font-medium">{formatCurrency(data.amount, 'ARS')}</span></p>
+            <p>{t('analytics.percentage')}: <span className="font-medium">{data.percentage.toFixed(1)}%</span></p>
           </div>
         </div>
       )
@@ -38,26 +41,41 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
     return null
   }
 
-  const CustomLabel = (props: { cx?: number; cy?: number; midAngle?: number; innerRadius?: number; outerRadius?: number; percent?: number }) => {
-    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props
-    if (!percent || percent < 0.05 || !cx || !cy || midAngle === undefined || !innerRadius || !outerRadius) return null
-    
+  // Recharts passes PieLabelRenderProps (fields typed string | number, plus
+  // the datum's own fields like percentage), so coerce before doing math
+  const CustomLabel = (props: {
+    cx?: number | string
+    cy?: number | string
+    midAngle?: number
+    innerRadius?: number | string
+    outerRadius?: number | string
+    percentage?: number
+  }) => {
+    const percentage = props.percentage ?? 0
+    if (percentage < 5) return null // Don't show label for small slices
+
+    const cx = Number(props.cx ?? 0)
+    const cy = Number(props.cy ?? 0)
+    const midAngle = props.midAngle ?? 0
+    const innerRadius = Number(props.innerRadius ?? 0)
+    const outerRadius = Number(props.outerRadius ?? 0)
+
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
         fontSize={12}
         fontWeight="bold"
       >
-        {`${(percent * 100).toFixed(0)}%`}
+        {`${percentage.toFixed(0)}%`}
       </text>
     )
   }
@@ -66,8 +84,8 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
     return (
       <div className="h-80 flex items-center justify-center text-muted-foreground">
         <div className="text-center">
-          <p className="text-lg font-medium mb-2">No expenses data</p>
-          <p className="text-sm">Start adding expense transactions to see breakdown</p>
+          <p className="text-lg font-medium mb-2">{t('analytics.noExpensesData')}</p>
+          <p className="text-sm">{t('analytics.addExpensesToSeeBreakdown')}</p>
         </div>
       </div>
     )
@@ -80,11 +98,11 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
     const others = chartData.slice(7)
     const othersTotal = others.reduce((sum, item) => sum + item.amount, 0)
     const othersPercentage = others.reduce((sum, item) => sum + item.percentage, 0)
-    
+
     chartData = [
       ...top7,
       {
-        category: 'Others',
+        category: t('analytics.others'),
         amount: othersTotal,
         color: '#6b7280',
         percentage: othersPercentage
@@ -119,13 +137,13 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
 
       {/* Legend */}
       <div className="space-y-2">
-        <h4 className="font-medium text-sm text-muted-foreground">Categories</h4>
+        <h4 className="font-medium text-sm text-muted-foreground">{t('analytics.categories')}</h4>
         <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
           {chartData.map((item, index) => (
             <div key={index} className="flex items-center justify-between p-2 rounded border">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0" 
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: item.color }}
                 />
                 <span className="font-medium text-sm truncate">{item.category}</span>

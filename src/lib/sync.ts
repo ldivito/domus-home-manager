@@ -1,4 +1,4 @@
-import { db, getDatabase, DeletionLog } from './db'
+import { db, getDatabase, DeletionLog, setApplyingRemoteChanges } from './db'
 import { checkMigrationNeeded, performMigration } from './migration'
 import { logger } from '@/lib/logger'
 
@@ -115,6 +115,13 @@ const SYNC_TABLES = [
   'expenseCategories',
   'expensePayments',
   'settlementPayments',
+  // Personal Finance module
+  'personalWallets',
+  'personalCategories',
+  'personalTransactions',
+  'creditCardStatements',
+  'creditCardPayments',
+  'personalScheduledPayments',
   // Document Vault module
   'documents',
   'documentFolders',
@@ -322,11 +329,17 @@ export async function getSyncStatus(): Promise<SyncStatus> {
   }
 }
 
+interface LocalChanges {
+  changes: SyncRecord[]
+  deletionLogIds: string[]
+}
+
 /**
  * Collect local changes since last sync
  */
-async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
+async function collectLocalChanges(since: Date | null): Promise<LocalChanges> {
   const changes: SyncRecord[] = []
+  const deletionLogIds: string[] = []
 
   for (const tableName of SYNC_TABLES) {
     const table = db[tableName]
@@ -370,6 +383,9 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
       : await db.deletionLog.toArray()
 
     for (const deletion of deletions) {
+      if (deletion.id) {
+        deletionLogIds.push(deletion.id)
+      }
       changes.push({
         table: deletion.tableName,
         id: deletion.recordId,
@@ -382,18 +398,65 @@ async function collectLocalChanges(since: Date | null): Promise<SyncRecord[]> {
     logger.error('Error collecting deletions:', error)
   }
 
-  return changes
+  return { changes, deletionLogIds }
 }
 
 /**
- * Clear deletion log after successful sync
+ * Remove exactly the deletion log entries that were pushed.
+ * Deleting by id (instead of a timestamp cutoff) avoids purging deletions
+ * recorded after the change-set was collected but before the push finished.
  */
-async function clearDeletionLog(before: Date): Promise<void> {
+async function clearDeletionLogEntries(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
   try {
-    await db.deletionLog.where('deletedAt').belowOrEqual(before).delete()
+    await db.deletionLog.bulkDelete(ids)
   } catch (error) {
     logger.error('Error clearing deletion log:', error)
   }
+}
+
+// Strict match for strings produced by Date#toISOString()
+const ISO_DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/
+
+/**
+ * Recursively revive ISO date strings back into Date objects.
+ * Remote payloads come from JSON.parse on the server, so every Date field
+ * (createdAt, dueDate, nextDue, reminderTime, etc.) arrives as an ISO string.
+ * Without revival, IndexedDB date-range queries silently stop matching
+ * pulled records and code calling .getTime()/.getMonth() breaks.
+ */
+function reviveDates(value: unknown): unknown {
+  if (typeof value === 'string') {
+    if (ISO_DATE_STRING_REGEX.test(value)) {
+      const parsed = new Date(value)
+      if (!isNaN(parsed.getTime())) return parsed
+    }
+    return value
+  }
+  if (Array.isArray(value)) {
+    return value.map(reviveDates)
+  }
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const result: Record<string, unknown> = {}
+    for (const [key, entry] of Object.entries(value)) {
+      result[key] = reviveDates(entry)
+    }
+    return result
+  }
+  return value
+}
+
+/**
+ * Get the effective last-modified timestamp of a record (updatedAt, falling
+ * back to createdAt). Returns null when the record has no usable timestamp.
+ */
+function getRecordTimestamp(record: unknown): number | null {
+  if (!record || typeof record !== 'object') return null
+  const { updatedAt, createdAt } = record as { updatedAt?: Date | string; createdAt?: Date | string }
+  const value = updatedAt ?? createdAt
+  if (!value) return null
+  const time = new Date(value as string | Date).getTime()
+  return isNaN(time) ? null : time
 }
 
 /**
@@ -433,39 +496,64 @@ async function applyRemoteChangesWithProgress(
   let applied = 0
   const total = changes.length
 
-  for (const change of changes) {
-    const table = db[change.table as SyncTable]
-    if (!table) continue
+  // Suspend local updatedAt stamping / sync-needed events while writing
+  // remote data, so pulled records don't look like fresh local edits
+  setApplyingRemoteChanges(true)
+  try {
+    for (const change of changes) {
+      // Only apply changes for known syncable tables (defense against
+      // arbitrary table names injected through the sync channel)
+      if (!(SYNC_TABLES as readonly string[]).includes(change.table)) {
+        logger.warn(`Skipping remote change for non-syncable table: ${change.table}`)
+        continue
+      }
 
-    try {
-      if (change.deletedAt) {
-        // Handle deletion
-        await table.delete(change.id)
-      } else {
-        // Check if we should apply this change
+      const table = db[change.table as SyncTable]
+      if (!table) continue
+
+      try {
         const existingRecord = await table.get(change.id)
-        const remoteData = change.data as Record<string, unknown>
+        const localTime = getRecordTimestamp(existingRecord)
 
-        if (isRemoteDataMoreComplete(existingRecord as unknown as Record<string, unknown> | null, remoteData, change.table)) {
-          // Handle upsert - merge with existing data if available
-          const mergedData = existingRecord
-            ? { ...existingRecord, ...remoteData }
-            : remoteData
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await table.put(mergedData as any)
+        if (change.deletedAt) {
+          // Tombstone wins over any older local version, but keep local
+          // edits that are newer than the deletion (last-writer-wins)
+          const deletionTime = change.deletedAt.getTime()
+          if (!existingRecord || localTime === null || localTime <= deletionTime) {
+            await table.delete(change.id)
+          } else {
+            logger.debug(`Keeping newer local record over remote deletion for ${change.table}:${change.id}`)
+          }
         } else {
-          logger.debug(`Skipping incomplete remote data for ${change.table}:${change.id}`)
-        }
-      }
-      applied++
+          const remoteData = change.data as Record<string, unknown>
+          const remoteTime = getRecordTimestamp(remoteData) ?? change.updatedAt.getTime()
 
-      // Report progress every 10 items or at the end
-      if (applied % 10 === 0 || applied === total) {
-        onProgress(applied, total)
+          if (existingRecord && localTime !== null && localTime >= remoteTime) {
+            // Last-writer-wins: local record is newer (or same age), skip remote
+            logger.debug(`Skipping stale remote data for ${change.table}:${change.id}`)
+          } else if (isRemoteDataMoreComplete(existingRecord as unknown as Record<string, unknown> | null, remoteData, change.table)) {
+            // Handle upsert - merge with existing data if available
+            const mergedData = existingRecord
+              ? { ...existingRecord, ...remoteData }
+              : remoteData
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await table.put(mergedData as any)
+          } else {
+            logger.debug(`Skipping incomplete remote data for ${change.table}:${change.id}`)
+          }
+        }
+        applied++
+
+        // Report progress every 10 items or at the end
+        if (applied % 10 === 0 || applied === total) {
+          onProgress(applied, total)
+        }
+      } catch (error) {
+        logger.error(`Error applying change to ${change.table}:`, error)
       }
-    } catch (error) {
-      logger.error(`Error applying change to ${change.table}:`, error)
     }
+  } finally {
+    setApplyingRemoteChanges(false)
   }
 
   return applied
@@ -516,6 +604,16 @@ async function pushChangesChunked(
   changes: SyncRecord[],
   onProgress?: (chunksCompleted: number, totalChunks: number, recordsPushed: number) => void
 ): Promise<ChunkedPushResult> {
+  // The push is idempotent per recordId, so it always starts from chunk 0.
+  // Resuming by chunk index is unsafe: the change-set is recomputed on every
+  // sync, so a checkpoint from a previous (different) set would skip records
+  // that were never pushed. The checkpoint is only used for the pull cursor;
+  // discard any stale push-phase checkpoint here.
+  const staleCheckpoint = loadSyncCheckpoint()
+  if (staleCheckpoint?.phase === 'push') {
+    clearSyncCheckpoint()
+  }
+
   if (changes.length === 0) {
     return { success: true, totalPushed: 0, failedChunks: [] }
   }
@@ -524,14 +622,9 @@ async function pushChangesChunked(
   const failedChunks: number[] = []
   let totalPushed = 0
 
-  // Load checkpoint to resume from last successful chunk
-  const checkpoint = loadSyncCheckpoint()
-  const completedChunks = checkpoint?.push?.completedChunks || []
-  const startChunk = completedChunks.length
+  logger.debug(`Pushing ${changes.length} changes in ${chunks.length} chunks`)
 
-  logger.debug(`Pushing ${changes.length} changes in ${chunks.length} chunks (starting from chunk ${startChunk})`)
-
-  for (let i = startChunk; i < chunks.length; i++) {
+  for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]
 
     const result = await pushChunk(chunk, i, chunks.length)
@@ -541,17 +634,6 @@ async function pushChangesChunked(
       logger.error(`Push chunk ${i + 1}/${chunks.length} failed: ${result.error}`)
     } else {
       totalPushed += result.count
-      completedChunks.push(i)
-
-      // Save checkpoint after each successful chunk
-      saveSyncCheckpoint({
-        phase: 'push',
-        push: {
-          totalChunks: chunks.length,
-          completedChunks: [...completedChunks],
-          failedChunks
-        }
-      })
     }
 
     // Report progress
@@ -627,9 +709,11 @@ async function pullChangesPaginated(
 
       const result: PullResponse = await response.json()
 
-      // Convert date strings back to Date objects
+      // Convert date strings back to Date objects (both the envelope
+      // timestamps and every Date field inside the record payload)
       const changes = (result.changes || []).map(change => ({
         ...change,
+        data: reviveDates(change.data),
         updatedAt: new Date(change.updatedAt),
         deletedAt: change.deletedAt ? new Date(change.deletedAt) : null
       }))
@@ -676,11 +760,6 @@ export async function performSync(
   forceFullSync: boolean = false,
   onProgress?: (progress: SyncProgress) => void
 ): Promise<SyncResult> {
-  // When forcing a full sync, clear any stale checkpoint so pullChangesPaginated
-  // starts from the beginning instead of resuming from a stale cursor.
-  if (forceFullSync) {
-    clearSyncCheckpoint()
-  }
   const lastSync = forceFullSync ? null : getLastSyncTime()
   const result: SyncResult = {
     success: false,
@@ -722,7 +801,7 @@ export async function performSync(
       percent: 15
     })
 
-    const localChanges = await collectLocalChanges(lastSync)
+    const { changes: localChanges, deletionLogIds } = await collectLocalChanges(lastSync)
 
     reportProgress({
       step: 'collecting',
@@ -733,7 +812,6 @@ export async function performSync(
     })
 
     // 2. Push local changes to server with chunking
-    const syncStartTime = new Date()
     if (localChanges.length > 0) {
       const totalChunks = Math.ceil(localChanges.length / PUSH_CHUNK_SIZE)
       reportProgress({
@@ -779,8 +857,8 @@ export async function performSync(
       }
       result.pushed = pushResult.totalPushed
 
-      // Clear deletion log for successfully pushed deletions
-      await clearDeletionLog(syncStartTime)
+      // Clear exactly the deletion log entries that were pushed
+      await clearDeletionLogEntries(deletionLogIds)
     } else {
       reportProgress({
         step: 'pushing',

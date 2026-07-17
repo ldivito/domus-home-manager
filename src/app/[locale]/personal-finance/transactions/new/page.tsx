@@ -10,7 +10,7 @@ export default function NewTransactionPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <TransactionForm 
+      <TransactionForm
         initialType={type}
         onSuccess={() => {
           // Will redirect to transactions list

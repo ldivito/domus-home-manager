@@ -1,5 +1,12 @@
 // Personal Finance utilities - centralized exports
 
+// Current user (cached from the server session; legacy local id as fallback)
+export {
+  LEGACY_PERSONAL_FINANCE_USER_ID,
+  getCurrentUserId,
+  syncCurrentUserFromSession
+} from './current-user'
+
 // Formatters
 export {
   formatCurrency,
@@ -88,7 +95,11 @@ export {
   getSuggestedPayments,
   validatePaymentAmount,
   getCreditCardPaymentStats,
-  scheduleAutomaticPayment
+  scheduleAutomaticPayment,
+  getAutomaticPaymentSchedule,
+  cancelAutomaticPayment,
+  processDueAutomaticPayments,
+  type AutomaticPaymentResult
 } from './credit-card-payments'
 
 // Credit Card Notifications

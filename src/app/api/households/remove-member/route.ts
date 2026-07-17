@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getUserFromRequest } from '@/lib/auth'
+import { getUserFromRequest, revokeUserSessions } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import { logger } from '@/lib/logger'
 
@@ -76,9 +76,20 @@ export async function DELETE(request: Request) {
       .bind(session.householdId, memberIdToRemove)
       .run()
 
-    // Update user's householdId to null or remove user
-    // For now, we'll just remove them from the household_members table
-    // You might want to handle this differently based on your requirements
+    // Detach the household from the user record so a fresh login doesn't
+    // reattach them to a household they no longer belong to
+    await db
+      .prepare('UPDATE users SET householdId = NULL, updatedAt = ? WHERE id = ?')
+      .bind(new Date().toISOString(), memberIdToRemove)
+      .run()
+
+    // Invalidate the removed member's existing sessions: their tokens still
+    // carry the old householdId claim and would keep syncing household data
+    try {
+      await revokeUserSessions(memberIdToRemove, env)
+    } catch (error) {
+      logger.error('Failed to revoke sessions for removed member:', error)
+    }
 
     return NextResponse.json({
       success: true,

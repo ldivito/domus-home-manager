@@ -121,6 +121,7 @@ const SYNC_TABLES = [
   'personalTransactions',
   'creditCardStatements',
   'creditCardPayments',
+  'personalScheduledPayments',
   // Document Vault module
   'documents',
   'documentFolders',

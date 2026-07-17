@@ -1,9 +1,10 @@
 // Personal Finance utilities - centralized exports
 
-// Current user (placeholder until real auth wiring)
+// Current user (cached from the server session; legacy local id as fallback)
 export {
-  PERSONAL_FINANCE_USER_ID,
-  getCurrentUserId
+  LEGACY_PERSONAL_FINANCE_USER_ID,
+  getCurrentUserId,
+  syncCurrentUserFromSession
 } from './current-user'
 
 // Formatters
@@ -93,9 +94,12 @@ export {
   getCreditCardPaymentHistory,
   getSuggestedPayments,
   validatePaymentAmount,
-  getCreditCardPaymentStats
-  // NOTE: scheduleAutomaticPayment intentionally NOT exported — it is an
-  // unimplemented placeholder. Re-add once real scheduling exists.
+  getCreditCardPaymentStats,
+  scheduleAutomaticPayment,
+  getAutomaticPaymentSchedule,
+  cancelAutomaticPayment,
+  processDueAutomaticPayments,
+  type AutomaticPaymentResult
 } from './credit-card-payments'
 
 // Credit Card Notifications

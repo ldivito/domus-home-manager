@@ -82,7 +82,8 @@
       "rate": "Exchange Rate",
       "ratePlaceholder": "e.g., 1000",
       "hint": "Enter the current USD to ARS exchange rate for this month"
-    }
+    },
+    "missingRateWarning": "Some USD amounts are excluded: no exchange rate is set for this month. Add it in the Income tab."
   },
   "expenses": {
     "title": "Recurring Expenses",
@@ -135,7 +136,8 @@
       "cancel": "Cancel",
       "done": "Done",
       "defaultCategory": "Default"
-    }
+    },
+    "missingRateWarning": "Some USD amounts are excluded: no exchange rate is set for this month. Add it in the Income tab."
   },
   "payments": {
     "title": "Payments",
@@ -175,7 +177,8 @@
       "pending": "Pending",
       "paid": "Paid",
       "overdue": "Overdue"
-    }
+    },
+    "missingRateWarning": "Some USD amounts are excluded: no exchange rate is set for this month. Add it in the Income tab."
   },
   "balance": {
     "title": "Balance & Settlement",
@@ -216,7 +219,8 @@
       "cancel": "Cancel",
       "confirm": "Confirm Settlement",
       "confirming": "Confirming..."
-    }
+    },
+    "missingRateWarning": "Some USD amounts are excluded: no exchange rate is set for this month. Add it in the Income tab."
   },
   "defaultExpenseCategories": {
     "housing": "Housing",
@@ -267,6 +271,7 @@
       "serviceTrend": "Service trend",
       "selectService": "Select service",
       "variation": "Change"
-    }
+    },
+    "missingRateNotice": "Months without an exchange rate are excluded from USD conversions: {months}"
   }
 }

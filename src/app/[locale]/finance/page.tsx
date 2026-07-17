@@ -14,7 +14,7 @@ import { PaymentsTab } from './components/PaymentsTab'
 import { BalanceTab } from './components/BalanceTab'
 import { AnalysisTab } from './components/AnalysisTab'
 import { formatARS } from '@/lib/utils'
-import { resolveDefaultForMonth, getMonthlyAmountARS } from '@/lib/utils/finance/monthlyValues'
+import { resolveDefaultForMonth } from '@/lib/utils/finance/monthlyValues'
 
 export default function FinancePage() {
   const t = useTranslations('finance')
@@ -223,6 +223,15 @@ export default function FinancePage() {
           </div>
         </div>
 
+        {/* Missing Exchange Rate Notice */}
+        {hasUnconvertedUSD && (
+          <div className="mb-4 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
+              {t('balance.missingRateWarning')}
+            </p>
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800">
@@ -235,7 +244,7 @@ export default function FinancePage() {
                   <p className="text-lg sm:text-2xl font-bold text-green-700 dark:text-green-300">
                     {displayAmount(totalHouseholdIncome)}
                   </p>
-                  {exchangeRate > 1 && (
+                  {exchangeRate != null && (
                     <p className="text-xs sm:text-sm text-green-600/70 dark:text-green-400/70">
                       {displayAmount(totalHouseholdIncome / exchangeRate, 'USD ')}
                     </p>
@@ -258,7 +267,7 @@ export default function FinancePage() {
                   <p className="text-lg sm:text-2xl font-bold text-red-700 dark:text-red-300">
                     {displayAmount(totalMonthlyExpenses)}
                   </p>
-                  {exchangeRate > 1 && (
+                  {exchangeRate != null && (
                     <p className="text-xs sm:text-sm text-red-600/70 dark:text-red-400/70">
                       {displayAmount(totalMonthlyExpenses / exchangeRate, 'USD ')}
                     </p>
@@ -281,7 +290,7 @@ export default function FinancePage() {
                   <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300">
                     {displayAmount(totalHouseholdIncome - totalMonthlyExpenses)}
                   </p>
-                  {exchangeRate > 1 && (
+                  {exchangeRate != null && (
                     <p className="text-xs sm:text-sm text-blue-600/70 dark:text-blue-400/70">
                       {displayAmount((totalHouseholdIncome - totalMonthlyExpenses) / exchangeRate, 'USD ')}
                     </p>

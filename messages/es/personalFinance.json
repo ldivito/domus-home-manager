@@ -529,5 +529,29 @@
     "subtitle": "Gestioná tus ingresos personales, gastos y metas financieras",
     "skipToContent": "Ir al contenido principal",
     "skipToNav": "Ir a la navegación"
+  },
+  "autoPayment": {
+    "title": "Pago Automático",
+    "description": "Pagar esta tarjeta automáticamente cuando vence el resumen",
+    "enable": "Activar pago automático",
+    "sourceWallet": "Pagar desde",
+    "sourceWalletPlaceholder": "Seleccioná la billetera de origen",
+    "noSourceWallets": "No hay billeteras activas para usar como origen",
+    "paymentType": "Tipo de pago",
+    "typeMinimum": "Pago mínimo",
+    "typeFull": "Saldo total",
+    "typeFixed": "Monto fijo",
+    "fixedAmount": "Monto",
+    "daysBefore": "Días antes del vencimiento",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "savedMessage": "Pago automático programado",
+    "disabledMessage": "Pago automático desactivado",
+    "errorMessage": "No se pudo guardar el pago automático",
+    "sourceRequired": "Seleccioná una billetera de origen",
+    "fixedAmountRequired": "Ingresá un monto fijo válido",
+    "paid": "Pago automático realizado para {wallet}: {amount}",
+    "insufficientFunds": "Pago automático de {wallet} omitido: fondos insuficientes",
+    "error": "Falló el pago automático de {wallet}"
   }
 }

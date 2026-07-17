@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import type { SyncRecord } from '@/lib/sync'
+import { validateSyncPayload } from '../table-schemas'
 import { logger } from '@/lib/logger'
 
 // Batch size for D1 operations (stays within D1 limits)
@@ -50,6 +51,7 @@ const ALLOWED_SYNC_TABLES = new Set([
   'personalTransactions',
   'creditCardStatements',
   'creditCardPayments',
+  'personalScheduledPayments',
   // Document Vault module
   'documents',
   'documentFolders',
@@ -139,6 +141,16 @@ export async function POST(request: Request) {
       if (change.table === 'users' && !change.deletedAt && !data.name) {
         logger.debug('Skipping incomplete user record:', change.id)
         return false
+      }
+
+      // Per-table field-type validation (blocks type-poisoned payloads that
+      // would corrupt aggregates on every other device after pull)
+      if (!change.deletedAt) {
+        const payloadCheck = validateSyncPayload(change.table, data)
+        if (payloadCheck.ok === false) {
+          logger.debug(`Skipping invalid ${change.table} payload ${change.id}: ${payloadCheck.error}`)
+          return false
+        }
       }
 
       return true

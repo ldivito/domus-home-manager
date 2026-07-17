@@ -529,5 +529,29 @@
     "subtitle": "Manage your personal income, expenses and financial goals",
     "skipToContent": "Skip to main content",
     "skipToNav": "Skip to navigation"
+  },
+  "autoPayment": {
+    "title": "Automatic Payment",
+    "description": "Pay this card automatically when a statement is due",
+    "enable": "Enable automatic payment",
+    "sourceWallet": "Pay from",
+    "sourceWalletPlaceholder": "Select source wallet",
+    "noSourceWallets": "No active wallets available to pay from",
+    "paymentType": "Payment type",
+    "typeMinimum": "Minimum payment",
+    "typeFull": "Full balance",
+    "typeFixed": "Fixed amount",
+    "fixedAmount": "Amount",
+    "daysBefore": "Days before due date",
+    "save": "Save",
+    "saving": "Saving...",
+    "savedMessage": "Automatic payment scheduled",
+    "disabledMessage": "Automatic payment disabled",
+    "errorMessage": "Could not save the automatic payment",
+    "sourceRequired": "Select a wallet to pay from",
+    "fixedAmountRequired": "Enter a valid fixed amount",
+    "paid": "Automatic payment made for {wallet}: {amount}",
+    "insufficientFunds": "Automatic payment for {wallet} skipped: insufficient funds",
+    "error": "Automatic payment for {wallet} failed"
   }
 }

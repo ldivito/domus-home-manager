@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Wallet, TrendingUp, TrendingDown, Plus, CreditCard, ArrowUpDown, AlertCircle, BarChart3, PieChart } from 'lucide-react'
@@ -8,16 +8,40 @@ import { useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import { db } from '@/lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { toast } from 'sonner'
 import {
   formatCurrency,
   calculateTotalBalance,
   getCurrentUserId,
+  processDueAutomaticPayments,
 } from '@/lib/utils/finance'
+import { logger } from '@/lib/logger'
 import CreditCardNotifications from './components/CreditCardNotifications'
 
 export default function PersonalFinancePage() {
   const t = useTranslations('personalFinance')
   const router = useRouter()
+
+  // Execute due automatic credit-card payments (offline-first: no server
+  // cron, so due schedules run when the dashboard loads)
+  useEffect(() => {
+    processDueAutomaticPayments(getCurrentUserId())
+      .then(results => {
+        for (const result of results) {
+          if (result.status === 'paid') {
+            toast.success(t('autoPayment.paid', {
+              wallet: result.walletName,
+              amount: formatCurrency(result.amount ?? 0, result.currency ?? 'ARS')
+            }))
+          } else if (result.status === 'insufficient_funds') {
+            toast.warning(t('autoPayment.insufficientFunds', { wallet: result.walletName }))
+          } else {
+            toast.error(t('autoPayment.error', { wallet: result.walletName }))
+          }
+        }
+      })
+      .catch(error => logger.error('Automatic payment processing failed:', error))
+  }, [t])
 
   // Reactive data loading via useLiveQuery
   // NOTE: booleans are not indexable in IndexedDB, so isActive is filtered in memory

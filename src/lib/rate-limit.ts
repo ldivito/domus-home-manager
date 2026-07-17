@@ -46,3 +46,39 @@ export function getClientIp(request: Request): string {
     'unknown'
   )
 }
+
+// Minimal structural view of the KV namespace (matches getKV()'s return)
+interface RateLimitKV {
+  get(key: string): Promise<string | null>
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>
+}
+
+/**
+ * KV-backed fixed-window rate limiter for multi-instance deployments.
+ *
+ * Best-effort: the read-increment-write is not atomic and KV replication is
+ * eventually consistent, so concurrent bursts may undercount — use together
+ * with the in-memory limiter, which catches same-instance bursts. Fails open
+ * when KV is unreachable so an outage never locks users out.
+ */
+export async function isRateLimitedKV(
+  kv: RateLimitKV,
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<boolean> {
+  const windowIndex = Math.floor(Date.now() / windowMs)
+  const kvKey = `ratelimit:${key}:${windowIndex}`
+  try {
+    const raw = await kv.get(kvKey)
+    const count = raw ? parseInt(raw, 10) || 0 : 0
+    if (count >= limit) return true
+    // Cloudflare KV requires a TTL of at least 60s
+    await kv.put(kvKey, String(count + 1), {
+      expirationTtl: Math.max(60, Math.ceil((windowMs * 2) / 1000))
+    })
+    return false
+  } catch {
+    return false
+  }
+}

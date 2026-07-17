@@ -8,7 +8,8 @@ import React, {
   useCallback,
   useRef
 } from 'react'
-import { performSync, isAuthenticated as checkIsAuthenticated, getLastSyncTime, getSyncStatus } from '@/lib/sync'
+import { performSync, getLastSyncTime, getSyncStatus } from '@/lib/sync'
+import { syncCurrentUserFromSession } from '@/lib/utils/finance/current-user'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -101,10 +102,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     }, DEBOUNCE_DELAY)
   }, [isAuthenticated, triggerSync])
 
-  // Check authentication status
+  // Check authentication status. Also refreshes the cached personal-finance
+  // user and adopts legacy-local records on first login.
   const checkAuth = useCallback(async () => {
     try {
-      const authenticated = await checkIsAuthenticated()
+      const authenticated = await syncCurrentUserFromSession()
       setIsAuthenticated(authenticated)
       return authenticated
     } catch {

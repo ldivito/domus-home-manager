@@ -573,15 +573,30 @@ export interface CreditCardPayment {
   userId: string            // Owner of the payment
   statementId: string       // Reference to CreditCardStatement
   fromWalletId: string      // Wallet used to make the payment
-  
+
   amount: number            // Payment amount
   currency: 'ARS' | 'USD'   // Payment currency
   paymentDate: Date         // When the payment was made
-  
+
   notes?: string           // Optional payment notes
-  
+
   createdAt: Date
   updatedAt: Date
+}
+
+export interface PersonalScheduledPayment {
+  id?: string
+  userId: string
+  walletId: string          // Credit card wallet to pay
+  sourceWalletId: string    // Wallet the money comes from
+  paymentType: 'minimum' | 'full' | 'fixed'
+  fixedAmount?: number      // Required when paymentType === 'fixed'
+  daysBefore: number        // Days before the statement due date to pay
+  isActive: boolean         // Not indexed (IndexedDB can't index booleans)
+  lastProcessedStatementId?: string  // Idempotency: one auto-payment per statement
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
 }
 
 // Document Vault Module interfaces
@@ -1075,6 +1090,7 @@ export class DomusDatabase extends Dexie {
   personalTransactions!: Table<PersonalTransaction>
   creditCardStatements!: Table<CreditCardStatement>
   creditCardPayments!: Table<CreditCardPayment>
+  personalScheduledPayments!: Table<PersonalScheduledPayment>
   // Document Vault tables
   documents!: Table<Document>
   documentFolders!: Table<DocumentFolder>
@@ -1186,6 +1202,12 @@ export class DomusDatabase extends Dexie {
       personalTransactions: 'id, userId, walletId, categoryId, type, date, status, createdAt',
       creditCardStatements: 'id, userId, walletId, status, periodEnd, dueDate, createdAt',
       creditCardPayments: 'id, userId, statementId, fromWalletId, paymentDate, createdAt'
+    })
+
+    // v34: scheduled automatic credit-card payments. Declares ONLY the new
+    // table: re-declaring existing tables here would drop their indexes.
+    this.version(34).stores({
+      personalScheduledPayments: 'id, userId, walletId, createdAt'
     })
 
     // v33: per-month value for expense payments (month/year/currency + compound index)
@@ -2100,6 +2122,7 @@ const SYNCABLE_TABLES = [
   'personalTransactions',
   'creditCardStatements',
   'creditCardPayments',
+  'personalScheduledPayments',
   // Activity tracking
   'activityLogs'
 ] as const

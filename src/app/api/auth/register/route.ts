@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hashPassword, createToken, createSessionCookie, storeSession } from '@/lib/auth'
-import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
-import { isRateLimited, getClientIp } from '@/lib/rate-limit'
+import { getDB, getKV, type CloudflareEnv } from '@/lib/cloudflare'
+import { isRateLimited, isRateLimitedKV, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
@@ -28,9 +28,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Throttle registration attempts per IP (also slows email enumeration)
+    // Throttle registration attempts per IP (also slows email enumeration).
+    // In-memory catches same-instance bursts; KV enforces across instances.
     const ip = getClientIp(request)
-    if (isRateLimited(`register:${ip}`, 10, 60 * 60 * 1000)) {
+    const registerKey = `register:${ip}`
+    if (
+      isRateLimited(registerKey, 10, 60 * 60 * 1000) ||
+      (await isRateLimitedKV(getKV(env), registerKey, 10, 60 * 60 * 1000))
+    ) {
       return NextResponse.json(
         { error: 'Too many registration attempts. Please try again later.' },
         { status: 429 }

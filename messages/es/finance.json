@@ -82,7 +82,8 @@
       "rate": "Tipo de Cambio",
       "ratePlaceholder": "ej., 1000",
       "hint": "Ingresa el tipo de cambio actual de USD a ARS para este mes"
-    }
+    },
+    "missingRateWarning": "Algunos montos en USD quedan excluidos: no hay cotización cargada para este mes. Cargala en la pestaña Ingresos."
   },
   "expenses": {
     "title": "Gastos Recurrentes",
@@ -135,7 +136,8 @@
       "cancel": "Cancelar",
       "done": "Listo",
       "defaultCategory": "Predeterminada"
-    }
+    },
+    "missingRateWarning": "Algunos montos en USD quedan excluidos: no hay cotización cargada para este mes. Cargala en la pestaña Ingresos."
   },
   "payments": {
     "title": "Pagos",
@@ -175,7 +177,8 @@
       "pending": "Pendientes",
       "paid": "Pagados",
       "overdue": "Vencidos"
-    }
+    },
+    "missingRateWarning": "Algunos montos en USD quedan excluidos: no hay cotización cargada para este mes. Cargala en la pestaña Ingresos."
   },
   "balance": {
     "title": "Saldo y Liquidación",
@@ -216,7 +219,8 @@
       "cancel": "Cancelar",
       "confirm": "Confirmar Liquidación",
       "confirming": "Confirmando..."
-    }
+    },
+    "missingRateWarning": "Algunos montos en USD quedan excluidos: no hay cotización cargada para este mes. Cargala en la pestaña Ingresos."
   },
   "defaultExpenseCategories": {
     "housing": "Vivienda",
@@ -267,6 +271,7 @@
       "serviceTrend": "Tendencia por servicio",
       "selectService": "Seleccionar servicio",
       "variation": "Variación"
-    }
+    },
+    "missingRateNotice": "Los meses sin cotización quedan excluidos de las conversiones de USD: {months}"
   }
 }

@@ -51,6 +51,7 @@ vi.mock('@/lib/utils/finance', () => ({
   formatCurrency: vi.fn((amount: number, currency: string) => `${currency} ${amount.toLocaleString()}`),
   calculateTotalBalance: vi.fn(() => ({ ARS: 100000, USD: 500 })),
   getCurrentUserId: vi.fn(() => 'test-user-1'),
+  processDueAutomaticPayments: vi.fn(() => Promise.resolve([])),
 }))
 
 // Mock CreditCardNotifications

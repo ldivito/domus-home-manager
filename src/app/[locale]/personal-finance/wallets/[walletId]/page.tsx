@@ -22,6 +22,7 @@ import {
 import { Link } from '@/i18n/navigation'
 import { formatBalance, formatCurrency, calculateAvailableCredit } from '@/lib/utils/finance'
 import { EditWalletDialog } from '../components/EditWalletDialog'
+import { AutoPaymentSettings } from '../components/AutoPaymentSettings'
 
 const getWalletIcon = (type: string) => {
   switch (type) {
@@ -249,6 +250,11 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
             <div className="text-sm text-muted-foreground">{wallet.notes}</div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Automatic payment (credit cards only) */}
+      {wallet.type === 'credit_card' && wallet.id && (
+        <AutoPaymentSettings walletId={wallet.id} />
       )}
 
       {/* Recent Transactions */}

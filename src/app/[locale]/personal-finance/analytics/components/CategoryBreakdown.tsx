@@ -16,7 +16,10 @@ interface CategoryBreakdownProps {
 export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
   const t = useTranslations('personalFinance')
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: {
+    active?: boolean
+    payload?: Array<{ payload: { color: string; category: string; amount: number; percentage: number } }>
+  }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -38,8 +41,24 @@ export default function CategoryBreakdown({ data }: CategoryBreakdownProps) {
     return null
   }
 
-  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }: any) => {
+  // Recharts passes PieLabelRenderProps (fields typed string | number, plus
+  // the datum's own fields like percentage), so coerce before doing math
+  const CustomLabel = (props: {
+    cx?: number | string
+    cy?: number | string
+    midAngle?: number
+    innerRadius?: number | string
+    outerRadius?: number | string
+    percentage?: number
+  }) => {
+    const percentage = props.percentage ?? 0
     if (percentage < 5) return null // Don't show label for small slices
+
+    const cx = Number(props.cx ?? 0)
+    const cy = Number(props.cy ?? 0)
+    const midAngle = props.midAngle ?? 0
+    const innerRadius = Number(props.innerRadius ?? 0)
+    const outerRadius = Number(props.outerRadius ?? 0)
 
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5

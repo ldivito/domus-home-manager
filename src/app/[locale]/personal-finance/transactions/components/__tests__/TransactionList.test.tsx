@@ -53,7 +53,7 @@ let liveQueryResults: { transactions: unknown[] | undefined; wallets: unknown[] 
 
 const mockUseLiveQuery = vi.fn()
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: (...args: any[]) => mockUseLiveQuery(...args),
+  useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }))
 
 const mockToast = vi.fn()

@@ -171,7 +171,7 @@ export default function DataExportDialog({
   }
 
   const exportToJSON = async () => {
-    const exportData: any = {
+    const exportData: Record<string, unknown> = {
       meta: {
         exportDate: new Date().toISOString(),
         period: getTimeRangeLabel(timeRange),

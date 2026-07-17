@@ -39,8 +39,8 @@ const mockGetNotificationSummary = vi.fn()
 
 vi.mock('@/lib/utils/finance', () => ({
   formatCurrency: vi.fn((amount: number, currency: string) => `${currency} ${amount.toLocaleString()}`),
-  getAllCreditCardNotifications: (...args: any[]) => mockGetAllCreditCardNotifications(...args),
-  getNotificationSummary: (...args: any[]) => mockGetNotificationSummary(...args),
+  getAllCreditCardNotifications: (...args: unknown[]) => mockGetAllCreditCardNotifications(...args),
+  getNotificationSummary: (...args: unknown[]) => mockGetNotificationSummary(...args),
   formatNotificationForDisplay: vi.fn(() => ({ icon: 'icon-test', color: 'blue', urgencyText: 'Urgent', actionSuggestion: 'Pay now' })),
 }))
 

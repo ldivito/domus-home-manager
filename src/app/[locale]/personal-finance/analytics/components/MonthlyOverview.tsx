@@ -18,7 +18,11 @@ interface MonthlyOverviewProps {
 export default function MonthlyOverview({ data, currency }: MonthlyOverviewProps) {
   const t = useTranslations('personalFinance')
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean
+    label?: string
+    payload?: Array<{ payload: { income: number; expenses: number; net: number } }>
+  }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (

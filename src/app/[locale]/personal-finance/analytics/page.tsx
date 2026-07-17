@@ -9,6 +9,12 @@ import { useTranslations } from 'next-intl'
 import { db } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils/finance'
 import { PersonalTransaction, PersonalWallet, PersonalCategory } from '@/types/personal-finance'
+
+// Transactions with their wallet/category resolved for chart aggregation
+type EnrichedTransaction = PersonalTransaction & {
+  wallet?: PersonalWallet
+  category?: PersonalCategory
+}
 import ExpenseChart from './components/ExpenseChart'
 import IncomeChart from './components/IncomeChart'
 import MonthlyOverview from './components/MonthlyOverview'
@@ -167,7 +173,7 @@ export default function AnalyticsPage() {
     }
   }
 
-  const generateMonthlyData = (transactions: any[], start: Date, end: Date) => {
+  const generateMonthlyData = (transactions: EnrichedTransaction[], start: Date, end: Date) => {
     const months = []
     const current = new Date(start)
     
@@ -200,15 +206,15 @@ export default function AnalyticsPage() {
     return months
   }
 
-  const generateCategoryBreakdown = (expenseTransactions: any[], totalExpenses: number) => {
-    const categoryTotals = new Map()
+  const generateCategoryBreakdown = (expenseTransactions: EnrichedTransaction[], totalExpenses: number) => {
+    const categoryTotals = new Map<string, { name: string; amount: number; color: string }>()
     
     expenseTransactions.forEach(txn => {
-      if (txn.category) {
-        const current = categoryTotals.get(txn.category.id) || { 
-          name: txn.category.name, 
-          amount: 0, 
-          color: txn.category.color 
+      if (txn.category?.id) {
+        const current = categoryTotals.get(txn.category.id) || {
+          name: txn.category.name,
+          amount: 0,
+          color: txn.category.color
         }
         current.amount += txn.amount
         categoryTotals.set(txn.category.id, current)

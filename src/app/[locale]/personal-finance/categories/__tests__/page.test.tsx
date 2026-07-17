@@ -46,7 +46,8 @@ vi.mock('@/lib/db', () => ({
 
 const mockUseLiveQuery = vi.fn(() => undefined)
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: (...args: any[]) => (mockUseLiveQuery as any)(...args),
+  useLiveQuery: (...args: unknown[]) =>
+    (mockUseLiveQuery as unknown as (...a: unknown[]) => unknown)(...args),
 }))
 
 const mockToast = vi.fn()

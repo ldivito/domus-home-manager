@@ -68,7 +68,11 @@ export default function ExpenseChart({ transactions, currency }: ExpenseChartPro
       .slice(0, 5) // Top 5 categories
   }, [transactions])
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean
+    label?: string
+    payload?: Array<{ value: number }>
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg p-4 shadow-md">

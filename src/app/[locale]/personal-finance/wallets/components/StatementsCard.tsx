@@ -79,7 +79,7 @@ export function StatementsCard({ walletId }: { walletId: string }) {
                   </div>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className={`grid gap-2 ${lines.length > 1 ? 'sm:grid-cols-2' : ''}`}>
                   {lines.map(line => (
                     <div key={line.currency} className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
                       <div className="flex justify-between font-semibold">

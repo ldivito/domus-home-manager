@@ -204,7 +204,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
                   {t('walletCard.creditLimit')}
                 </div>
                 <div className="text-3xl font-bold">
-                  {formatBalance(wallet.creditLimit, wallet.currency).formatted}
+                  {formatBalance(wallet.creditLimit, wallet.currency, { showSign: false }).formatted}
                 </div>
               </CardContent>
             </Card>
@@ -214,7 +214,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
                   {t('walletCard.availableCredit')}
                 </div>
                 <div className="text-3xl font-bold text-green-600">
-                  {availableCredit !== null ? formatBalance(availableCredit, wallet.currency).formatted : '-'}
+                  {availableCredit !== null ? formatBalance(availableCredit, wallet.currency, { showSign: false }).formatted : '-'}
                 </div>
               </CardContent>
             </Card>

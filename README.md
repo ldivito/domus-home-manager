@@ -50,6 +50,7 @@ Without Cloudflare credentials the API falls back to an in-memory D1/KV, so the 
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — data model, offline storage, how sync works, conflict rules, adding a module
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — Cloudflare D1/KV setup, environment variables, deploying, local dev against real D1
+- [docs/API.md](docs/API.md) — API-key data API for bulk loading and editing data (e.g. from other agents)
 - [docs/PERSONAL_FINANCE.md](docs/PERSONAL_FINANCE.md) — personal finance module: data model, credit card logic, file map
 - [docs/history/](docs/history/) — past design specs and implementation plans
 

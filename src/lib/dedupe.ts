@@ -102,6 +102,44 @@ async function logDeletions(
   })))
 }
 
+const SYSTEM_KEYS = new Set(['id', 'createdAt', 'updatedAt'])
+const isEmpty = (value: unknown) =>
+  value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+
+/**
+ * Fields the kept record lacks but a removed copy has (e.g. an address only
+ * entered on one device). Copied over so merging never loses information.
+ */
+export function fillMissingFields<T extends AnyRecord>(keep: T, remove: T[]): Partial<T> {
+  const patch: Record<string, unknown> = {}
+  for (const dup of remove) {
+    for (const [key, value] of Object.entries(dup)) {
+      if (SYSTEM_KEYS.has(key) || isEmpty(value)) continue
+      if (isEmpty(keep[key]) && !(key in patch)) patch[key] = value
+    }
+  }
+  return patch as Partial<T>
+}
+
+export const DEDUPE_BACKUP_KEY = 'domus_dedupe_backup'
+const DEDUPE_BACKUP_LIMIT = 5000
+
+/**
+ * Keep a local copy of every record the cleanup removes, so nothing is
+ * unrecoverable even though the tombstone replaces it on the server.
+ */
+function backupRemovedRecords(tableName: string, records: AnyRecord[]): void {
+  if (typeof window === 'undefined' || records.length === 0) return
+  try {
+    const existing = JSON.parse(localStorage.getItem(DEDUPE_BACKUP_KEY) || '[]') as unknown[]
+    const removedAt = new Date().toISOString()
+    const next = [...existing, ...records.map(record => ({ tableName, removedAt, record }))]
+    localStorage.setItem(DEDUPE_BACKUP_KEY, JSON.stringify(next.slice(-DEDUPE_BACKUP_LIMIT)))
+  } catch (error) {
+    dbLogger.warn('Could not back up deduplicated records:', error)
+  }
+}
+
 /**
  * Merge duplicates of one table. `remap` receives old-id -> canonical-id and
  * must repoint every reference; it returns the number of records it changed.
@@ -125,8 +163,8 @@ async function dedupeTable<T extends AnyRecord>(
       idMap.set(dup.id!, keep.id!)
       toRemove.push(dup)
     }
-    const patch = merge?.(keep, remove)
-    if (patch && Object.keys(patch).length > 0) {
+    const patch = { ...fillMissingFields(keep, remove), ...(merge?.(keep, remove) ?? {}) }
+    if (Object.keys(patch).length > 0) {
       await table.update(keep.id!, { ...patch, updatedAt: new Date() } as never)
     }
   }
@@ -134,6 +172,7 @@ async function dedupeTable<T extends AnyRecord>(
   // Repoint references before deleting so nothing ever dangles
   const remapped = remap ? await remap(idMap) : 0
 
+  backupRemovedRecords(tableName, toRemove)
   await table.bulkDelete(toRemove.map(r => r.id!))
   await logDeletions(database, tableName, toRemove)
 
@@ -176,6 +215,15 @@ async function remapIngredients(
     }
   }
   return changed
+}
+
+function ingredientSignature(record: AnyRecord): string {
+  const ingredients = record.ingredients as Array<{ savedGroceryItemId?: string; amount?: string }> | undefined
+  if (!Array.isArray(ingredients)) return ''
+  return ingredients
+    .map(i => `${i?.savedGroceryItemId ?? ''}:${norm(i?.amount)}`)
+    .sort()
+    .join(',')
 }
 
 /** Keep the highest usage counters when merging saved items / saved meals */
@@ -225,8 +273,10 @@ export async function dedupeSyncedData(database: DomusDatabase): Promise<DedupeR
     r => (norm(r.name) ? `${norm(r.name)}|${norm(r.category)}` : null),
     idMap => remapIngredients(database, idMap),
     mergeUsage))
+  // Saved meals only merge when their ingredients are identical too: two
+  // recipes sharing a name but not ingredients are different recipes
   await run('savedMeals', dedupeTable(database, 'savedMeals',
-    r => (norm(r.name) ? `${norm(r.name)}|${norm(r.category)}` : null),
+    r => (norm(r.name) ? `${norm(r.name)}|${norm(r.category)}|${ingredientSignature(r)}` : null),
     undefined,
     mergeUsage))
 

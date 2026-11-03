@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Dexie from 'dexie'
 import { DomusDatabase } from '@/lib/db'
-import { dedupeSyncedData, findDuplicateGroups } from '@/lib/dedupe'
+import { dedupeSyncedData, findDuplicateGroups, DEDUPE_BACKUP_KEY } from '@/lib/dedupe'
 
 const old = new Date('2024-01-01T00:00:00.000Z')
 const newer = new Date('2025-06-01T00:00:00.000Z')
@@ -132,6 +132,48 @@ describe('dedupeSyncedData', () => {
     await dedupeSyncedData(database)
 
     expect((await database.homeSettings.toArray()).map(h => h.id)).toEqual(['hst_b'])
+  })
+
+  it('never merges saved meals whose ingredients differ', async () => {
+    await database.savedMeals.bulkAdd([
+      { id: 'smea_1', name: 'Guiso', category: 'x', ingredients: [{ savedGroceryItemId: 'sgi_a' }], timesUsed: 1, createdAt: old },
+      { id: 'smea_2', name: 'Guiso', category: 'x', ingredients: [{ savedGroceryItemId: 'sgi_b' }], timesUsed: 1, createdAt: newer },
+      { id: 'smea_3', name: 'Guiso', category: 'x', ingredients: [{ savedGroceryItemId: 'sgi_a' }], timesUsed: 4, createdAt: newer }
+    ] as never)
+
+    await dedupeSyncedData(database)
+
+    expect((await database.savedMeals.toArray()).map(m => m.id).sort()).toEqual(['smea_1', 'smea_2'])
+    expect((await database.savedMeals.get('smea_1'))?.timesUsed).toBe(4)
+  })
+
+  it('copies fields only the removed copy had onto the kept record', async () => {
+    await database.homeSettings.bulkAdd([
+      { id: 'hst_a', homeName: 'Casa', address: { street: 'Calle 1' }, lastUpdated: old, createdAt: old },
+      { id: 'hst_b', homeName: 'Casa nueva', lastUpdated: newer, createdAt: newer }
+    ] as never)
+
+    await dedupeSyncedData(database)
+
+    const kept = (await database.homeSettings.toArray())[0] as unknown as Record<string, unknown>
+    expect(kept.id).toBe('hst_b')
+    expect(kept.homeName).toBe('Casa nueva')
+    expect(kept.address).toEqual({ street: 'Calle 1' })
+  })
+
+  it('keeps a local backup of every removed record', async () => {
+    localStorage.removeItem(DEDUPE_BACKUP_KEY)
+    await database.groceryCategories.bulkAdd([
+      { id: 'gcat_1', name: 'A', isDefault: false, createdAt: old },
+      { id: 'gcat_2', name: 'A', isDefault: false, color: '#fff', createdAt: newer }
+    ])
+
+    await dedupeSyncedData(database)
+
+    const backup = JSON.parse(localStorage.getItem(DEDUPE_BACKUP_KEY) || '[]')
+    expect(backup).toHaveLength(1)
+    expect(backup[0]).toMatchObject({ tableName: 'groceryCategories', record: { id: 'gcat_2', color: '#fff' } })
+    expect((await database.groceryCategories.get('gcat_1'))?.color).toBe('#fff')
   })
 
   it('is a no-op on clean data', async () => {

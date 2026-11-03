@@ -1,0 +1,143 @@
+import 'fake-indexeddb/auto'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import Dexie from 'dexie'
+import { DomusDatabase } from '@/lib/db'
+import { dedupeSyncedData, findDuplicateGroups } from '@/lib/dedupe'
+
+const old = new Date('2024-01-01T00:00:00.000Z')
+const newer = new Date('2025-06-01T00:00:00.000Z')
+
+let database: DomusDatabase
+
+beforeEach(async () => {
+  database = new DomusDatabase()
+  await database.open()
+  // Start from empty tables (ready handler seeds defaults)
+  await Promise.all([
+    database.groceryCategories.clear(), database.mealCategories.clear(),
+    database.taskCategories.clear(), database.expenseCategories.clear(),
+    database.personalCategories.clear(), database.deletionLog.clear()
+  ])
+})
+
+afterEach(async () => {
+  database.close()
+  await Dexie.delete('DomusDatabase')
+})
+
+describe('findDuplicateGroups', () => {
+  it('keeps stable default ids, then the oldest, then the smallest id', () => {
+    const groups = findDuplicateGroups([
+      { id: 'gcat_b', name: 'Produce', createdAt: old },
+      { id: 'gcat_a', name: 'produce ', createdAt: old },
+      { id: 'gcat_default_produce', name: 'Produce', createdAt: newer },
+      { id: 'gcat_c', name: 'Produce', createdAt: new Date('2023-01-01') }
+    ], r => r.name!.trim().toLowerCase())
+    expect(groups).toHaveLength(1)
+    expect(groups[0].keep.id).toBe('gcat_default_produce')
+
+    const withoutStable = findDuplicateGroups([
+      { id: 'gcat_b', name: 'X', createdAt: old },
+      { id: 'gcat_a', name: 'X', createdAt: old },
+      { id: 'gcat_c', name: 'X', createdAt: newer }
+    ], r => r.name!)
+    expect(withoutStable[0].keep.id).toBe('gcat_a')
+  })
+
+  it('picks the same canonical record regardless of input order', () => {
+    const records = [
+      { id: 'b', name: 'n', createdAt: old },
+      { id: 'a', name: 'n', createdAt: old },
+      { id: 'c', name: 'n', createdAt: newer }
+    ]
+    const forward = findDuplicateGroups(records, r => r.name!)[0].keep.id
+    const reverse = findDuplicateGroups([...records].reverse(), r => r.name!)[0].keep.id
+    expect(forward).toBe(reverse)
+  })
+})
+
+describe('dedupeSyncedData', () => {
+  it('merges duplicated grocery categories and logs tombstones for sync', async () => {
+    await database.groceryCategories.bulkAdd([
+      { id: 'gcat_1', name: 'defaultCategories.produce', isDefault: true, createdAt: old },
+      { id: 'gcat_2', name: 'defaultCategories.produce', isDefault: true, createdAt: newer },
+      { id: 'gcat_3', name: 'defaultCategories.dairy', isDefault: true, createdAt: old }
+    ])
+
+    const result = await dedupeSyncedData(database)
+
+    expect(result.removed.groceryCategories).toBe(1)
+    expect((await database.groceryCategories.toArray()).map(c => c.id).sort()).toEqual(['gcat_1', 'gcat_3'])
+    const log = await database.deletionLog.toArray()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({ tableName: 'groceryCategories', recordId: 'gcat_2' })
+  })
+
+  it('repoints tasks, recurring expenses and personal transactions to the kept category', async () => {
+    await database.taskCategories.bulkAdd([
+      { id: 'tcat_old', name: 'Home', isDefault: true, createdAt: old },
+      { id: 'tcat_dup', name: 'Home', isDefault: true, createdAt: newer }
+    ])
+    await database.tasks.add({ id: 'task_1', title: 't', category: 'tcat_dup', isCompleted: false, priority: 'medium', createdAt: newer } as never)
+
+    await database.expenseCategories.bulkAdd([
+      { id: 'ecat_old', name: 'Housing', isDefault: true, createdAt: old },
+      { id: 'ecat_dup', name: 'Housing', isDefault: true, createdAt: newer }
+    ])
+    await database.recurringExpenses.add({ id: 'rexp_1', name: 'Rent', category: 'ecat_dup', createdAt: newer } as never)
+
+    await database.personalCategories.bulkAdd([
+      { id: 'pc_a', userId: 'u1', name: 'Salary', type: 'income', color: '', icon: '', isActive: true, isDefault: true, createdAt: old, updatedAt: old },
+      { id: 'pc_b', userId: 'u1', name: 'Salary', type: 'income', color: '', icon: '', isActive: true, isDefault: true, createdAt: newer, updatedAt: newer },
+      // Same name, different user / type: not duplicates
+      { id: 'pc_c', userId: 'u2', name: 'Salary', type: 'income', color: '', icon: '', isActive: true, isDefault: true, createdAt: newer, updatedAt: newer },
+      { id: 'pc_d', userId: 'u1', name: 'Salary', type: 'expense', color: '', icon: '', isActive: true, isDefault: true, createdAt: newer, updatedAt: newer }
+    ])
+    await database.personalTransactions.add({ id: 'ptx_1', userId: 'u1', categoryId: 'pc_b', createdAt: newer } as never)
+
+    const result = await dedupeSyncedData(database)
+
+    expect(result.removed).toMatchObject({ taskCategories: 1, expenseCategories: 1, personalCategories: 1 })
+    expect(result.remapped).toBe(3)
+    expect((await database.tasks.get('task_1'))?.category).toBe('tcat_old')
+    expect((await database.recurringExpenses.get('rexp_1'))?.category).toBe('ecat_old')
+    expect((await database.personalTransactions.get('ptx_1'))?.categoryId).toBe('pc_a')
+    expect((await database.personalCategories.toArray()).map(c => c.id).sort()).toEqual(['pc_a', 'pc_c', 'pc_d'])
+  })
+
+  it('merges saved grocery items, keeps usage and repoints meal ingredients', async () => {
+    await database.savedGroceryItems.bulkAdd([
+      { id: 'sgi_1', name: 'Milk', category: 'defaultCategories.dairy', timesUsed: 2, createdAt: old },
+      { id: 'sgi_2', name: 'milk', category: 'defaultCategories.dairy', timesUsed: 5, lastUsed: newer, createdAt: newer },
+      { id: 'sgi_3', name: 'Milk', category: 'defaultCategories.beverages', timesUsed: 1, createdAt: newer }
+    ] as never)
+    await database.meals.add({ id: 'meal_1', title: 'x', date: newer, mealType: 'breakfast', ingredients: [{ savedGroceryItemId: 'sgi_2' }], createdAt: newer } as never)
+
+    await dedupeSyncedData(database)
+
+    const kept = await database.savedGroceryItems.get('sgi_1')
+    expect(kept?.timesUsed).toBe(5)
+    expect(await database.savedGroceryItems.get('sgi_2')).toBeUndefined()
+    expect(await database.savedGroceryItems.get('sgi_3')).toBeDefined()
+    const meal = await database.meals.get('meal_1')
+    expect(meal?.ingredients?.[0].savedGroceryItemId).toBe('sgi_1')
+  })
+
+  it('keeps the most recently edited home settings', async () => {
+    await database.homeSettings.bulkAdd([
+      { id: 'hst_a', homeName: 'Old', lastUpdated: old, createdAt: old },
+      { id: 'hst_b', homeName: 'New', lastUpdated: newer, createdAt: newer }
+    ] as never)
+
+    await dedupeSyncedData(database)
+
+    expect((await database.homeSettings.toArray()).map(h => h.id)).toEqual(['hst_b'])
+  })
+
+  it('is a no-op on clean data', async () => {
+    await database.groceryCategories.add({ id: 'gcat_1', name: 'A', isDefault: false, createdAt: old })
+    const result = await dedupeSyncedData(database)
+    expect(result).toEqual({ removed: {}, remapped: 0 })
+    expect(await database.deletionLog.count()).toBe(0)
+  })
+})

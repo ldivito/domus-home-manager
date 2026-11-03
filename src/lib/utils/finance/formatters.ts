@@ -78,7 +78,7 @@ export function formatBalance(
   const isNegative = amount < 0
   const sign = isNegative ? '-' : (showSign && amount > 0 ? '+' : '')
   
-  const formatted = `${sign}${formatCurrency(amount, currency, { compact })}`
+  const formatted = `${sign}${formatCurrency(Math.abs(amount), currency, { compact })}`
   
   const colorClass = isNegative 
     ? 'text-red-600 dark:text-red-400' 
@@ -96,7 +96,7 @@ export function formatBalance(
  */
 export function formatTransactionAmount(
   amount: number,
-  type: 'income' | 'expense' | 'transfer',
+  type: 'income' | 'expense' | 'transfer' | 'refund',
   currency: CurrencyType
 ): {
   formatted: string
@@ -120,6 +120,10 @@ export function formatTransactionAmount(
     case 'transfer':
       prefix = '↔'
       colorClass = 'text-blue-600 dark:text-blue-400'
+      break
+    case 'refund':
+      prefix = '+'
+      colorClass = 'text-teal-600 dark:text-teal-400'
       break
   }
 

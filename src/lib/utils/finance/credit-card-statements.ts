@@ -6,7 +6,7 @@ import {
   PersonalTransaction, 
   PersonalWallet
 } from '@/types/personal-finance'
-import { generateStatementId } from './helpers'
+import { statementIdFor } from './balance-math'
 
 /**
  * Get or create current statement for a credit card
@@ -39,19 +39,31 @@ export async function getCurrentStatement(walletId: string): Promise<CreditCardS
  */
 export async function createNewStatement(
   wallet: PersonalWallet,
-  currentDate: Date = new Date()
+  currentDate: Date = new Date(),
+  previous?: CreditCardStatement
 ): Promise<CreditCardStatement> {
   if (!wallet.closingDay || !wallet.dueDay) {
     throw new Error('Credit card missing closing/due day configuration')
   }
 
-  const { periodStart, periodEnd, dueDate } = calculateStatementPeriod(
-    wallet.closingDay,
-    wallet.dueDay,
-    currentDate
-  )
+  const estimated = calculateStatementPeriod(wallet.closingDay, wallet.dueDay, currentDate)
+  const { periodEnd, dueDate } = estimated
+  // Banks move the closing date every month: the new period starts the day
+  // after the previous statement's real (stored) closing date, not after the
+  // estimated one. periodEnd/dueDate are estimates the user or the API can
+  // correct on each statement.
+  let periodStart = estimated.periodStart
+  if (previous) {
+    periodStart = new Date(previous.periodEnd)
+    periodStart.setDate(periodStart.getDate() + 1)
+    periodStart.setHours(0, 0, 0, 0)
+  }
 
-  const statementId = generateStatementId()
+  // Deterministic id per card and closing month: devices that open the app
+  // independently create the same statement instead of parallel copies
+  const statementId = statementIdFor(wallet.id!, periodEnd)
+  const existing = await db.creditCardStatements.get(statementId)
+  if (existing) return existing
 
   const statement: CreditCardStatement = {
     id: statementId,
@@ -71,7 +83,7 @@ export async function createNewStatement(
     updatedAt: new Date()
   }
 
-  await db.creditCardStatements.add(statement)
+  await db.creditCardStatements.put(statement)
   return statement
 }
 
@@ -142,31 +154,46 @@ export async function addTransactionToStatement(
 export async function updateStatementTotals(statementId: string): Promise<void> {
   const statement = await db.creditCardStatements.get(statementId)
   if (!statement) return
+  // Totals copied from the bank's statement (e.g. loaded through the API)
+  // are authoritative; never overwrite them with a partial recomputation
+  if (statement.manualTotals) return
 
-  // Get all transactions for this statement
-  const transactions = await db.personalTransactions
+  const transactions = (await db.personalTransactions
     .where('creditCardStatementId')
     .equals(statementId)
-    .toArray()
+    .toArray())
+    .filter(t => t.status !== 'cancelled')
 
-  const totalCharges = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0)
+  // Charges in the statement currency go to the main fields; USD charges on
+  // an ARS card go to the USD fields (Argentine cards bill both)
+  const isUsdBucket = (t: PersonalTransaction) => statement.currency !== 'USD' && t.currency === 'USD'
+  const sum = (list: PersonalTransaction[], type: string) =>
+    list.filter(t => t.type === type).reduce((total, t) => total + t.amount, 0)
+  const totalsFor = (list: PersonalTransaction[]) => {
+    // Refunds reduce what was charged; payments show as income on the card
+    const charges = sum(list, 'expense') - sum(list, 'refund')
+    const payments = sum(list, 'income')
+    const balance = charges - payments
+    return { charges, payments, balance, minimum: balance > 0 ? Math.max(balance * 0.05, 20) : 0 }
+  }
 
-  const totalPayments = transactions
-    .filter(t => t.type === 'income') // Credit card payments show as income
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const currentBalance = totalCharges - totalPayments
-
-  // Calculate minimum payment (typically 5% of balance or minimum $20)
-  const minimumPayment = Math.max(currentBalance * 0.05, 20)
+  const main = totalsFor(transactions.filter(t => !isUsdBucket(t)))
+  const usdTransactions = transactions.filter(isUsdBucket)
+  const usd = usdTransactions.length > 0 ? totalsFor(usdTransactions) : null
 
   await db.creditCardStatements.update(statementId, {
-    totalCharges,
-    totalPayments,
-    currentBalance,
-    minimumPayment,
+    totalCharges: main.charges,
+    totalPayments: main.payments,
+    currentBalance: main.balance,
+    minimumPayment: main.minimum,
+    ...(usd
+      ? {
+          totalChargesUSD: usd.charges,
+          totalPaymentsUSD: usd.payments,
+          currentBalanceUSD: usd.balance,
+          minimumPaymentUSD: usd.minimum
+        }
+      : {}),
     updatedAt: new Date()
   })
 }
@@ -195,7 +222,7 @@ export async function closeStatement(statementId: string): Promise<CreditCardSta
   const nextStatementDate = new Date(statement.periodEnd)
   nextStatementDate.setDate(nextStatementDate.getDate() + 1)
   
-  return await createNewStatement(wallet, nextStatementDate)
+  return await createNewStatement(wallet, nextStatementDate, statement)
 }
 
 /**
@@ -224,16 +251,10 @@ export async function processAutomaticStatementClosings(): Promise<{
         // Update totals one final time
         await updateStatementTotals(statement.id!)
         
-        // Close the statement
+        // Close the statement (closeStatement also opens the next one)
         await closeStatement(statement.id!)
         closedCount++
-
-        // Create next statement
-        const wallet = await db.personalWallets.get(statement.walletId)
-        if (wallet && wallet.isActive) {
-          await createNewStatement(wallet, now)
-          createdCount++
-        }
+        createdCount++
       } catch (error) {
         errors.push(`Failed to close statement ${statement.id}: ${error}`)
         console.error('Error closing statement:', error)

@@ -16,7 +16,8 @@ beforeEach(async () => {
   await Promise.all([
     database.groceryCategories.clear(), database.mealCategories.clear(),
     database.taskCategories.clear(), database.expenseCategories.clear(),
-    database.personalCategories.clear(), database.deletionLog.clear()
+    database.personalCategories.clear(), database.deletionLog.clear(),
+    database.creditCardStatements.clear()
   ])
 })
 
@@ -174,6 +175,23 @@ describe('dedupeSyncedData', () => {
     expect(backup).toHaveLength(1)
     expect(backup[0]).toMatchObject({ tableName: 'groceryCategories', record: { id: 'gcat_2', color: '#fff' } })
     expect((await database.groceryCategories.get('gcat_1'))?.color).toBe('#fff')
+  })
+
+  it('removes only empty, unreferenced duplicate statements of the same card and month', async () => {
+    const base = { userId: 'u1', walletId: 'pw_visa', periodStart: new Date('2026-09-27'), periodEnd: new Date('2026-10-26'), dueDate: new Date('2026-11-06'), currency: 'ARS', status: 'open', totalCharges: 0, totalPayments: 0, currentBalance: 0, minimumPayment: 0, paidAmount: 0 }
+    await database.creditCardStatements.bulkAdd([
+      { ...base, id: 'ccs_a', createdAt: old, updatedAt: old },
+      { ...base, id: 'ccs_b', createdAt: newer, updatedAt: newer },
+      { ...base, id: 'ccs_c', createdAt: newer, updatedAt: newer },               // referenced by a transaction
+      { ...base, id: 'ccs_d', currentBalance: 1500, createdAt: newer, updatedAt: newer }, // has data
+      { ...base, id: 'ccs_other_month', periodEnd: new Date('2026-09-26'), createdAt: old, updatedAt: old }
+    ] as never)
+    await database.personalTransactions.add({ id: 'pt_1', userId: 'u1', creditCardStatementId: 'ccs_c', createdAt: newer } as never)
+
+    const result = await dedupeSyncedData(database)
+
+    expect(result.removed.creditCardStatements).toBe(2)
+    expect((await database.creditCardStatements.toArray()).map(s => s.id).sort()).toEqual(['ccs_c', 'ccs_d', 'ccs_other_month'])
   })
 
   it('is a no-op on clean data', async () => {

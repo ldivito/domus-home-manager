@@ -9,6 +9,7 @@
     "addExpense": "Add Expense",
     "addIncome": "Add Income",
     "transfer": "Transfer",
+    "refund": "Refund",
     "newWallet": "New Wallet",
     "viewAnalytics": "View Analytics",
     "expenseBreakdown": "Expense Breakdown",
@@ -261,6 +262,7 @@
     "income": "Income",
     "expense": "Expense",
     "transfer": "Transfer",
+    "refund": "Refund",
     "wallet": "Wallet",
     "allWallets": "All Wallets",
     "category": "Category",
@@ -553,5 +555,53 @@
     "paid": "Automatic payment made for {wallet}: {amount}",
     "insufficientFunds": "Automatic payment for {wallet} skipped: insufficient funds",
     "error": "Automatic payment for {wallet} failed"
+  },
+  "statements": {
+    "title": "Statements",
+    "empty": "No statements yet for this card.",
+    "period": "{start} – {end}",
+    "closesOn": "Closes {date}",
+    "dueOn": "Due {date}",
+    "balance": "Balance",
+    "charges": "Charges",
+    "minimum": "Minimum payment",
+    "paid": "Paid",
+    "manualTotals": "Totals copied from the bank's statement.",
+    "edit": "Edit statement",
+    "editTitle": "Edit statement",
+    "editHint": "Banks move the closing and due dates every month. Use the dates printed on this statement.",
+    "closingDate": "Closing date",
+    "dueDate": "Due date",
+    "notes": "Notes",
+    "dueBeforeClosing": "The due date must be on or after the closing date.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Statement updated",
+    "saveError": "Could not update the statement",
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "paid": "Paid",
+      "overdue": "Overdue"
+    }
+  },
+  "recalculate": {
+    "button": "Recalculate balance",
+    "title": "Recalculate balance",
+    "hint": "Balance = opening balance + completed transactions on or after the opening date. Leave both empty to count every transaction from zero.",
+    "openingBalance": "Opening balance",
+    "openingDate": "Opening date",
+    "current": "Current balance",
+    "recalculated": "Recalculated balance",
+    "counted": "{count, plural, one {# transaction counted} other {# transactions counted}}",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "done": "Balance updated to {balance}",
+    "error": "Could not recalculate the balance",
+    "skippedCurrency": "{count, plural, one {# transaction in another currency without an exchange rate was left out} other {# transactions in another currency without an exchange rate were left out}} (it belongs to the statement's USD balance)"
+  },
+  "installments": {
+    "badge": "Installment {number}/{count}",
+    "remaining": "{count, plural, one {# installment left} other {# installments left}} · {amount}"
   }
 }

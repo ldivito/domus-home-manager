@@ -6,6 +6,10 @@
  * next pull. Each record is normalized (ids, ISO dates, defaults, household)
  * and validated against the table metadata plus validateSyncPayload, the
  * same per-table validation push applies.
+ *
+ * Every write accepts `dryRun`: the full pipeline runs (validation, name
+ * resolution, LWW decision, exchange-rate fill) and returns the same results,
+ * but nothing is written.
  */
 import { validateSyncPayload } from '@/app/api/sync/table-schemas'
 import { generateId } from '@/lib/utils'
@@ -31,6 +35,11 @@ export interface WriteContext {
   userId: string
   householdId: string | null
   scope: SyncScope
+}
+
+export interface WriteOptions {
+  /** Run everything but write nothing. */
+  dryRun?: boolean
 }
 
 export type BulkMode = 'replace' | 'merge'
@@ -89,39 +98,77 @@ function checkType(name: string, spec: FieldSpec, value: unknown): string | null
 
 const isBlank = (value: unknown) => value === undefined || value === ''
 
-/** Create-time rules that depend on other fields (mirror the app's forms). */
-const CONDITIONAL_RULES: Partial<Record<SyncTableName, (record: Data) => string[]>> = {
-  personalTransactions: record => {
-    if (record.type === 'transfer') {
-      if (record.categoryId === undefined) record.categoryId = '' // the app stores transfers without category
-      return isBlank(record.targetWalletId) ? ['targetWalletId: required for transfers'] : []
+/** Rules that depend on other fields (mirror the app's forms). */
+const CONDITIONAL_RULES: Partial<Record<SyncTableName, { fields: string[]; check: (record: Data) => string[] }>> = {
+  personalTransactions: {
+    fields: ['type', 'categoryId', 'targetWalletId'],
+    check: record => {
+      if (record.type === 'transfer') {
+        if (record.categoryId === undefined) record.categoryId = '' // the app stores transfers without category
+        return isBlank(record.targetWalletId) ? ['targetWalletId: required for transfers'] : []
+      }
+      return isBlank(record.categoryId) ? ['categoryId: required'] : []
     }
-    return isBlank(record.categoryId) ? ['categoryId: required'] : []
   },
-  personalScheduledPayments: record =>
-    record.paymentType === 'fixed' && record.fixedAmount === undefined
-      ? ["fixedAmount: required when paymentType is 'fixed'"]
-      : []
+  personalScheduledPayments: {
+    fields: ['paymentType', 'fixedAmount'],
+    check: record =>
+      record.paymentType === 'fixed' && record.fixedAmount === undefined
+        ? ["fixedAmount: required when paymentType is 'fixed'"]
+        : []
+  }
+}
+
+/**
+ * Lenient normalization of a stored value the request did not touch: known
+ * legacy shapes (0/1 booleans, numeric strings, non-ISO dates) are converted,
+ * anything else is kept as it is.
+ */
+function coerceStoredValue(spec: FieldSpec, value: unknown): unknown {
+  switch (spec.type) {
+    case 'boolean':
+      return value === 0 || value === 1 ? value === 1 : value
+    case 'number':
+    case 'integer': {
+      if (typeof value !== 'string' || !value.trim()) return value
+      const num = Number(value)
+      if (!Number.isFinite(num) || (spec.type === 'integer' && !Number.isInteger(num))) return value
+      return num
+    }
+    case 'date':
+      return normalizeDate(value) ?? value
+    default:
+      return value
+  }
 }
 
 interface FinalizeOptions {
   isCreate: boolean
   ctx: WriteContext
   nowIso: string
+  /**
+   * Fields sent by the client when updating an existing record (merge mode,
+   * PATCH). Only these are validated strictly; stored fields get lenient
+   * legacy coercion. Omit for full validation (create / replace).
+   */
+  incoming?: Set<string>
 }
 
 /**
  * Apply defaults (on create), normalize dates, force householdId and check
- * types/enums/required fields. Mutates and returns `record`.
+ * types/enums/required fields. Mutates `record`.
  */
 function finalizeRecord(
   table: SyncTableName,
   record: Data,
-  { isCreate, ctx, nowIso }: FinalizeOptions
+  { isCreate, ctx, nowIso, incoming }: FinalizeOptions
 ): { errors: string[]; warnings: string[] } {
   const fields = allFields(table)
   const errors: string[] = []
   const warnings: string[] = []
+  // Server-managed fields are always checked
+  const isStrict = (name: string) =>
+    !incoming || incoming.has(name) || name === 'id' || name === 'updatedAt' || name === 'householdId'
 
   // null means "unset" (Dexie stores optional fields as undefined)
   for (const key of Object.keys(record)) {
@@ -144,6 +191,10 @@ function finalizeRecord(
 
   for (const [name, value] of Object.entries(record)) {
     const spec = fields[name]
+    if (!isStrict(name)) {
+      if (spec) record[name] = coerceStoredValue(spec, value)
+      continue
+    }
     if (!spec) {
       warnings.push(`unknown field "${name}" stored as-is`)
       continue
@@ -154,21 +205,38 @@ function finalizeRecord(
       else record[name] = iso
       continue
     }
+    if (spec.type === 'boolean' && (value === 0 || value === 1)) {
+      record[name] = value === 1
+      warnings.push(`${name}: converted ${value} to ${value === 1}; send a JSON boolean`)
+      continue
+    }
     const typeError = checkType(name, spec, value)
     if (typeError) errors.push(typeError)
   }
 
+  const rule = CONDITIONAL_RULES[table]
   if (isCreate) {
     for (const [name, spec] of Object.entries(fields)) {
-      if (spec.required && (record[name] === undefined || record[name] === '')) {
-        errors.push(`${name}: required`)
+      if (spec.required && isBlank(record[name])) errors.push(`${name}: required`)
+    }
+    if (rule) errors.push(...rule.check(record))
+  } else {
+    // Updates: a sent field may not clear a required one
+    for (const [name, spec] of Object.entries(fields)) {
+      if (spec.required && (!incoming || incoming.has(name)) && isBlank(record[name])) {
+        errors.push(`${name}: required, cannot be cleared`)
       }
     }
-    errors.push(...(CONDITIONAL_RULES[table]?.(record) ?? []))
+    // Cross-field rules are re-checked when the update touches their fields
+    if (rule && (!incoming || rule.fields.some(f => incoming.has(f)))) errors.push(...rule.check(record))
   }
 
   if (errors.length === 0) {
-    const check = validateSyncPayload(table, record)
+    // Device-sync payload validation over the fields this request is responsible for
+    const subject = incoming
+      ? Object.fromEntries(Object.entries(record).filter(([name]) => isStrict(name)))
+      : record
+    const check = validateSyncPayload(table, subject)
     if (check.ok === false) errors.push(check.error)
   }
 
@@ -189,7 +257,7 @@ const NAME_FIELDS: Partial<Record<SyncTableName, Record<string, { idField: strin
   }
 }
 
-type LookupCache = Map<SyncTableName, StoredRecord[]>
+export type LookupCache = Map<SyncTableName, StoredRecord[]>
 
 async function loadLookup(db: SyncDB, scope: SyncScope, table: SyncTableName, cache: LookupCache) {
   let records = cache.get(table)
@@ -200,11 +268,16 @@ async function loadLookup(db: SyncDB, scope: SyncScope, table: SyncTableName, ca
   return records
 }
 
-/** Replace `categoryName`/`walletName`-style fields with resolved ids. */
+/**
+ * Replace `categoryName`/`walletName`-style fields with resolved ids. An id
+ * sent explicitly in `input` wins over the name; a stored id (merge/PATCH)
+ * does not.
+ */
 async function resolveNames(
   db: SyncDB,
   table: SyncTableName,
   record: Data,
+  input: Data,
   ctx: WriteContext,
   cache: LookupCache
 ): Promise<string[]> {
@@ -216,7 +289,7 @@ async function resolveNames(
     if (!(nameField in record)) continue
     const wanted = record[nameField]
     delete record[nameField]
-    if (record[idField] !== undefined) continue // explicit id wins
+    if (input[idField] !== undefined) continue // explicit id wins
     if (typeof wanted !== 'string' || !wanted.trim()) {
       errors.push(`${nameField}: expected non-empty string`)
       continue
@@ -229,9 +302,10 @@ async function resolveNames(
       r.data.name.trim().toLowerCase() === needle &&
       (r.data.userId === undefined || r.data.userId === owner)
     )
-    // Categories: prefer the one matching the transaction type
+    // Categories: prefer the one matching the transaction type (refunds use expense categories)
     if (lookupTable === 'personalCategories' && matches.length > 1 && typeof record.type === 'string') {
-      const sameType = matches.filter(r => r.data.type === record.type)
+      const wantedType = record.type === 'refund' ? 'expense' : record.type
+      const sameType = matches.filter(r => r.data.type === wantedType)
       if (sameType.length > 0) matches = sameType
     }
 
@@ -242,15 +316,71 @@ async function resolveNames(
   return errors
 }
 
+/** Fields an update request is responsible for (sent fields + ids resolved from names). */
+function incomingFields(table: SyncTableName, input: Data): Set<string> {
+  const fields = new Set(Object.keys(input))
+  for (const [nameField, { idField }] of Object.entries(NAME_FIELDS[table] ?? {})) {
+    if (fields.delete(nameField)) fields.add(idField)
+  }
+  return fields
+}
+
+// ------------------------------------------------------------------ Exchange rate
+
+/**
+ * personalTransactions in USD without exchangeRate: fill it from
+ * monthlyExchangeRates for the transaction's month (UTC). Returns a warning
+ * describing what happened, or null when nothing applied.
+ */
+async function fillExchangeRate(
+  db: SyncDB,
+  table: SyncTableName,
+  record: Data,
+  ctx: WriteContext,
+  cache: LookupCache
+): Promise<string | null> {
+  if (table !== 'personalTransactions' || record.currency !== 'USD' || record.exchangeRate !== undefined) return null
+  const date = typeof record.date === 'string' ? new Date(record.date) : null
+  if (!date || isNaN(date.getTime())) return null
+  const month = date.getUTCMonth() + 1
+  const year = date.getUTCFullYear()
+  const label = `${year}-${String(month).padStart(2, '0')}`
+
+  const rates = (await loadLookup(db, ctx.scope, 'monthlyExchangeRates', cache))
+    .filter(r => Number(r.data.month) === month && Number(r.data.year) === year)
+    .filter(r => typeof r.data.rate === 'number' && Number.isFinite(r.data.rate) && r.data.rate > 0)
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+  if (rates.length === 0) {
+    return `exchangeRate: no monthlyExchangeRates record for ${label}; left empty`
+  }
+  const chosen = rates[0]
+  record.exchangeRate = chosen.data.rate
+  const extra = rates.length > 1 ? ` (most recent of ${rates.length} for that month)` : ''
+  return `exchangeRate: filled ${chosen.data.rate} from monthlyExchangeRates ${chosen.recordId} (${label})${extra}`
+}
+
 // ------------------------------------------------------------------ Bulk upsert
+
+export interface BulkWrite {
+  id: string
+  data: Data
+  /** Live version before this write, when the record existed. */
+  previous?: Data
+}
+
+export interface BulkOptions extends WriteOptions {
+  mode?: BulkMode
+  /** Stamped on every record as importBatchId. */
+  importBatchId?: string
+}
 
 export async function bulkUpsert(
   db: SyncDB,
   ctx: WriteContext,
   table: SyncTableName,
   items: unknown[],
-  mode: BulkMode = 'replace'
-): Promise<RecordResult[]> {
+  { mode = 'replace', dryRun = false, importBatchId }: BulkOptions = {}
+): Promise<{ results: RecordResult[]; writes: BulkWrite[] }> {
   const now = Date.now()
   const nowIso = new Date(now).toISOString()
   const prefix = TABLE_METADATA[table].idPrefix
@@ -277,21 +407,23 @@ export async function bulkUpsert(
       return
     }
     seenIds.add(id)
+    if (importBatchId !== undefined) data.importBatchId = importBatchId
     candidates.push({ index, id, data })
   })
 
   const existing = await fetchLatestVersions(db, ctx.scope, table, candidates.map(c => c.id))
 
   // Pass 2: normalize, validate, decide
-  const writes: Array<{ index: number; id: string; status: 'created' | 'updated'; warnings: string[]; data: Data; updatedAt: string }> = []
+  const writes: Array<{ index: number; id: string; status: 'created' | 'updated'; warnings: string[]; data: Data; updatedAt: string; previous?: Data }> = []
   for (const { index, id, data: input } of candidates) {
     const stored = existing.get(id)
     const live = stored && stored.operation !== 'delete' ? stored : undefined
+    const isMerge = mode === 'merge' && !!live
 
-    const record: Data = mode === 'merge' && live ? { ...live.data, ...input } : input
+    const record: Data = isMerge ? { ...live.data, ...input } : { ...input }
     record.id = id
 
-    const nameErrors = await resolveNames(db, table, record, ctx, cache)
+    const nameErrors = await resolveNames(db, table, record, input, ctx, cache)
 
     // Server-stamped writes (no updatedAt supplied) are "now" and always land
     // after the stored version, even within the same millisecond
@@ -314,12 +446,19 @@ export async function bulkUpsert(
       record.createdAt = live.data.createdAt
     }
 
-    const { errors, warnings } = finalizeRecord(table, record, { isCreate: !live || mode === 'replace', ctx, nowIso })
+    const { errors, warnings } = finalizeRecord(table, record, {
+      isCreate: !isMerge,
+      ctx,
+      nowIso,
+      incoming: isMerge ? incomingFields(table, input) : undefined
+    })
     errors.unshift(...nameErrors)
     if (errors.length > 0) {
       results[index] = { index, id, status: 'error', error: errors.join('; ') }
       continue
     }
+    const fx = await fillExchangeRate(db, table, record, ctx, cache)
+    if (fx) warnings.push(fx)
 
     // Last-writer-wins: never overwrite (or resurrect over) a newer version
     if (stored && stored.updatedAt >= updatedAt) {
@@ -335,38 +474,40 @@ export async function bulkUpsert(
       continue
     }
 
-    writes.push({ index, id, status: live ? 'updated' : 'created', warnings, data: record, updatedAt })
+    writes.push({ index, id, status: live ? 'updated' : 'created', warnings, data: record, updatedAt, previous: live?.data })
   }
 
-  await executeSyncWrites(
-    db,
-    writes.map(w =>
-      prepareSyncWrite(db, ctx.scope, {
-        table,
-        recordId: w.id,
-        operation: 'upsert',
-        data: w.data,
-        updatedAt: w.updatedAt,
-        receivedAt: nowIso
-      })
+  if (!dryRun) {
+    await executeSyncWrites(
+      db,
+      writes.map(w =>
+        prepareSyncWrite(db, ctx.scope, {
+          table,
+          recordId: w.id,
+          operation: 'upsert',
+          data: w.data,
+          updatedAt: w.updatedAt,
+          receivedAt: nowIso
+        })
+      )
     )
-  )
+  }
   for (const w of writes) {
     results[w.index] = { index: w.index, id: w.id, status: w.status, ...(w.warnings.length ? { warnings: w.warnings } : {}) }
   }
-  return results
+  return { results, writes: writes.map(w => ({ id: w.id, data: w.data, previous: w.previous })) }
 }
 
 // ------------------------------------------------------------------ Patch / delete
 
 /** Edit time for an explicit single-record write: now, but always after the stored version. */
-function nextUpdatedAt(stored: StoredRecord, now: number): string {
+export function nextUpdatedAt(stored: StoredRecord, now: number): string {
   const storedMs = new Date(stored.updatedAt).getTime()
   return new Date(Number.isFinite(storedMs) && storedMs >= now ? storedMs + 1 : now).toISOString()
 }
 
 export type PatchOutcome =
-  | { ok: true; record: Data; warnings: string[] }
+  | { ok: true; record: Data; previous: Data; warnings: string[] }
   | { ok: false; status: 404 | 422; error: string }
 
 export async function patchRecord(
@@ -374,7 +515,8 @@ export async function patchRecord(
   ctx: WriteContext,
   table: SyncTableName,
   id: string,
-  patch: Data
+  patch: Data,
+  { dryRun = false }: WriteOptions = {}
 ): Promise<PatchOutcome> {
   const stored = (await fetchLatestVersions(db, ctx.scope, table, [id])).get(id)
   if (!stored || stored.operation === 'delete') return { ok: false, status: 404, error: 'record not found' }
@@ -388,19 +530,45 @@ export async function patchRecord(
   delete changes.updatedAt
   const record: Data = { ...stored.data, ...changes, id, updatedAt }
 
-  const nameErrors = await resolveNames(db, table, record, ctx, new Map())
-  const { errors, warnings } = finalizeRecord(table, record, { isCreate: false, ctx, nowIso })
+  const cache: LookupCache = new Map()
+  const nameErrors = await resolveNames(db, table, record, changes, ctx, cache)
+  const { errors, warnings } = finalizeRecord(table, record, {
+    isCreate: false,
+    ctx,
+    nowIso,
+    incoming: incomingFields(table, changes)
+  })
   errors.unshift(...nameErrors)
-  // Clearing (null) a required field is not allowed
-  for (const [name, spec] of Object.entries(allFields(table))) {
-    if (spec.required && patch[name] === null) errors.push(`${name}: required, cannot be cleared`)
-  }
   if (errors.length > 0) return { ok: false, status: 422, error: errors.join('; ') }
+  const fx = await fillExchangeRate(db, table, record, ctx, cache)
+  if (fx) warnings.push(fx)
 
-  await executeSyncWrites(db, [
-    prepareSyncWrite(db, ctx.scope, { table, recordId: id, operation: 'upsert', data: record, updatedAt, receivedAt: nowIso })
-  ])
-  return { ok: true, record, warnings }
+  if (!dryRun) {
+    await executeSyncWrites(db, [
+      prepareSyncWrite(db, ctx.scope, { table, recordId: id, operation: 'upsert', data: record, updatedAt, receivedAt: nowIso })
+    ])
+  }
+  return { ok: true, record, previous: stored.data, warnings }
+}
+
+/** Tombstone statement exactly like a client deletion writes. */
+export function prepareTombstone(
+  db: SyncDB,
+  ctx: WriteContext,
+  table: string,
+  stored: StoredRecord,
+  now: number
+) {
+  // Same payload shape as the client's deletion log entries
+  const data: Data = { id: stored.recordId, householdId: ctx.householdId ?? undefined }
+  return prepareSyncWrite(db, ctx.scope, {
+    table,
+    recordId: stored.recordId,
+    operation: 'delete',
+    data,
+    updatedAt: nextUpdatedAt(stored, now),
+    receivedAt: new Date(now).toISOString()
+  })
 }
 
 /** Write a delete tombstone exactly like a client deletion does. */
@@ -408,24 +576,11 @@ export async function deleteRecord(
   db: SyncDB,
   ctx: WriteContext,
   table: SyncTableName,
-  id: string
+  id: string,
+  { dryRun = false }: WriteOptions = {}
 ): Promise<boolean> {
   const stored = (await fetchLatestVersions(db, ctx.scope, table, [id])).get(id)
   if (!stored || stored.operation === 'delete') return false
-
-  const now = Date.now()
-  const updatedAt = nextUpdatedAt(stored, now)
-  // Same payload shape as the client's deletion log entries
-  const data: Data = { id, householdId: ctx.householdId ?? undefined }
-  await executeSyncWrites(db, [
-    prepareSyncWrite(db, ctx.scope, {
-      table,
-      recordId: id,
-      operation: 'delete',
-      data,
-      updatedAt,
-      receivedAt: new Date(now).toISOString()
-    })
-  ])
+  if (!dryRun) await executeSyncWrites(db, [prepareTombstone(db, ctx, table, stored, Date.now())])
   return true
 }

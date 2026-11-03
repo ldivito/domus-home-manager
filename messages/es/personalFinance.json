@@ -261,6 +261,7 @@
     "income": "Ingreso",
     "expense": "Gasto",
     "transfer": "Transferencia",
+    "refund": "Reintegro",
     "wallet": "Billetera",
     "allWallets": "Todas las Billeteras",
     "category": "Categoría",
@@ -553,5 +554,53 @@
     "paid": "Pago automático realizado para {wallet}: {amount}",
     "insufficientFunds": "Pago automático de {wallet} omitido: fondos insuficientes",
     "error": "Falló el pago automático de {wallet}"
+  },
+  "statements": {
+    "title": "Resúmenes",
+    "empty": "Esta tarjeta todavía no tiene resúmenes.",
+    "period": "{start} – {end}",
+    "closesOn": "Cierra {date}",
+    "dueOn": "Vence {date}",
+    "balance": "Saldo",
+    "charges": "Consumos",
+    "minimum": "Pago mínimo",
+    "paid": "Pagado",
+    "manualTotals": "Totales copiados del resumen del banco.",
+    "edit": "Editar resumen",
+    "editTitle": "Editar resumen",
+    "editHint": "Los bancos mueven el cierre y el vencimiento cada mes. Usá las fechas que figuran en este resumen.",
+    "closingDate": "Fecha de cierre",
+    "dueDate": "Fecha de vencimiento",
+    "notes": "Notas",
+    "dueBeforeClosing": "El vencimiento tiene que ser igual o posterior al cierre.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "saved": "Resumen actualizado",
+    "saveError": "No se pudo actualizar el resumen",
+    "status": {
+      "open": "Abierto",
+      "closed": "Cerrado",
+      "paid": "Pagado",
+      "overdue": "Vencido"
+    }
+  },
+  "recalculate": {
+    "button": "Recalcular saldo",
+    "title": "Recalcular saldo",
+    "hint": "Saldo = saldo inicial + movimientos completados desde la fecha inicial. Dejá los dos vacíos para contar todos los movimientos desde cero.",
+    "openingBalance": "Saldo inicial",
+    "openingDate": "Fecha del saldo inicial",
+    "current": "Saldo actual",
+    "recalculated": "Saldo recalculado",
+    "counted": "{count, plural, one {# movimiento contado} other {# movimientos contados}}",
+    "apply": "Aplicar",
+    "cancel": "Cancelar",
+    "done": "Saldo actualizado a {balance}",
+    "error": "No se pudo recalcular el saldo",
+    "skippedCurrency": "{count, plural, one {# movimiento en otra moneda sin cotización quedó afuera} other {# movimientos en otra moneda sin cotización quedaron afuera}} (va al saldo en USD del resumen)"
+  },
+  "installments": {
+    "badge": "Cuota {number}/{count}",
+    "remaining": "{count, plural, one {Falta # cuota} other {Faltan # cuotas}} · {amount}"
   }
 }

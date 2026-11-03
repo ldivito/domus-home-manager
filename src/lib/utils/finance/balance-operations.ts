@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db'
 import { PersonalTransaction } from '@/types/personal-finance'
+import { computeWalletBalance } from './balance-math'
 
 /**
  * Update a wallet's balance in the database
@@ -31,6 +32,7 @@ export async function processTransactionBalanceUpdate(
 ): Promise<void> {
   switch (transaction.type) {
     case 'income':
+    case 'refund':
       await updateWalletBalanceInDb(transaction.walletId, transaction.amount)
       break
       
@@ -73,7 +75,8 @@ export async function reverseTransactionBalanceUpdate(
 ): Promise<void> {
   switch (transaction.type) {
     case 'income':
-      // Remove the income from wallet
+    case 'refund':
+      // Remove the income / refund from wallet
       await updateWalletBalanceInDb(transaction.walletId, -transaction.amount)
       break
       
@@ -190,46 +193,19 @@ export async function getWalletBalanceSummary(userId: string): Promise<WalletBal
 }
 
 /**
- * Recalculate wallet balance from transactions (for consistency check)
+ * Recalculate wallet balance from its opening balance plus every completed
+ * transaction since the opening date (same math as the data API).
  */
 export async function recalculateWalletBalance(walletId: string): Promise<number> {
-  // Get all transactions for this wallet. targetWalletId is not indexed,
-  // so incoming transfers must be matched with an in-memory filter
-  // (a .or('targetWalletId') clause would throw SchemaError).
+  const wallet = await db.personalWallets.get(walletId)
+  if (!wallet) throw new Error('Wallet not found')
+  // targetWalletId is not indexed: incoming transfers need an in-memory filter
   const transactions = await db.personalTransactions
-    .filter(tx =>
-      (tx.walletId === walletId || tx.targetWalletId === walletId) &&
-      tx.status === 'completed'
-    )
+    .filter(tx => tx.walletId === walletId || tx.targetWalletId === walletId)
     .toArray()
-  
-  let calculatedBalance = 0
-  
-  for (const transaction of transactions) {
-    if (transaction.walletId === walletId) {
-      // This wallet is the source
-      switch (transaction.type) {
-        case 'income':
-          calculatedBalance += transaction.amount
-          break
-        case 'expense':
-          calculatedBalance -= transaction.amount
-          break
-        case 'transfer':
-          calculatedBalance -= transaction.amount
-          break
-      }
-    } else if (transaction.targetWalletId === walletId) {
-      // This wallet is the target of a transfer
-      let amountReceived = transaction.amount
-      if (transaction.exchangeRate) {
-        amountReceived = transaction.amount * transaction.exchangeRate
-      }
-      calculatedBalance += amountReceived
-    }
-  }
-  
-  return calculatedBalance
+  const wallets = await db.personalWallets.toArray()
+  const currencies = new Map(wallets.map(w => [w.id!, w.currency]))
+  return computeWalletBalance({ ...wallet, id: walletId }, transactions, id => currencies.get(id))
 }
 
 /**

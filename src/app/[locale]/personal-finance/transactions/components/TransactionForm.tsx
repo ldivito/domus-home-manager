@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/form'
 import {
   ArrowUpDown,
+  RotateCcw,
   TrendingUp,
   TrendingDown
 } from 'lucide-react'
@@ -50,7 +51,7 @@ import { useToast } from '@/hooks/use-toast'
 
 // Form validation schema
 const transactionSchema = z.object({
-  type: z.enum(['income', 'expense', 'transfer']),
+  type: z.enum(['income', 'expense', 'transfer', 'refund']),
   walletId: z.string().min(1, 'Wallet is required'),
   categoryId: z.string().optional(),
   targetWalletId: z.string().optional(),
@@ -182,7 +183,9 @@ export function TransactionForm({
 
   const getFilteredCategories = () => {
     if (watchType === 'transfer') return []
-    return categories.filter(cat => cat.type === watchType)
+    // A refund gives back money spent in an expense category
+    const categoryType = watchType === 'refund' ? 'expense' : watchType
+    return categories.filter(cat => cat.type === categoryType)
   }
 
   const getAvailableTargetWallets = () => {
@@ -390,6 +393,7 @@ export function TransactionForm({
           {watchType === 'income' && <TrendingUp className="h-5 w-5 text-green-600" />}
           {watchType === 'expense' && <TrendingDown className="h-5 w-5 text-red-600" />}
           {watchType === 'transfer' && <ArrowUpDown className="h-5 w-5 text-blue-600" />}
+          {watchType === 'refund' && <RotateCcw className="h-5 w-5 text-teal-600" />}
           {t('transactionForm.newTitle', { type: watchType.charAt(0).toUpperCase() + watchType.slice(1) })}
         </CardTitle>
       </CardHeader>
@@ -428,6 +432,12 @@ export function TransactionForm({
                         <div className="flex items-center gap-2">
                           <ArrowUpDown className="h-4 w-4 text-blue-600" />
                           {t('transactionList.transfer')}
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="refund">
+                        <div className="flex items-center gap-2">
+                          <RotateCcw className="h-4 w-4 text-teal-600" />
+                          {t('transactionList.refund')}
                         </div>
                       </SelectItem>
                     </SelectContent>

@@ -21,6 +21,7 @@ import type { Table } from 'dexie'
 import type { DomusDatabase } from './db'
 import { generateId } from './utils'
 import { dbLogger } from './logger'
+import { statementIdFor } from './utils/finance/balance-math'
 
 export interface DedupeResult {
   /** Removed duplicate records per table */
@@ -241,6 +242,60 @@ function mergeUsage<T extends AnyRecord>(keep: T, remove: T[]): Partial<T> | nul
   return Object.keys(patch).length > 0 ? (patch as Partial<T>) : null
 }
 
+const STATEMENT_MONEY_FIELDS = [
+  'totalCharges', 'totalPayments', 'currentBalance', 'minimumPayment', 'paidAmount',
+  'totalChargesUSD', 'totalPaymentsUSD', 'currentBalanceUSD', 'minimumPaymentUSD', 'paidAmountUSD'
+]
+
+/**
+ * Credit card statements used to get random ids, so every device opened its
+ * own empty "current statement" for the same card and month. Only removes
+ * copies that are empty (all amounts zero, no notes) and referenced by no
+ * transaction or payment, and only when another statement for the same card
+ * and closing month exists. Statements with real data are never touched.
+ */
+async function dedupeEmptyStatements(database: DomusDatabase): Promise<number> {
+  const statements = (await database.creditCardStatements.toArray()) as unknown as AnyRecord[]
+  const referenced = new Set<string>()
+  for (const tx of await database.personalTransactions.toArray()) {
+    if (tx.creditCardStatementId) referenced.add(tx.creditCardStatementId)
+  }
+  for (const payment of await database.creditCardPayments.toArray()) {
+    if (payment.statementId) referenced.add(payment.statementId)
+  }
+
+  const isEmpty = (st: AnyRecord) =>
+    !referenced.has(st.id!) &&
+    !st.notes &&
+    !st.manualTotals &&
+    STATEMENT_MONEY_FIELDS.every(f => !Number(st[f]))
+
+  const monthKey = (st: AnyRecord) => {
+    const d = new Date(st.periodEnd as string)
+    return isNaN(d.getTime()) ? null : `${st.walletId}|${d.getFullYear()}-${d.getMonth() + 1}`
+  }
+
+  const toRemove: AnyRecord[] = []
+  for (const { keep, remove } of findDuplicateGroups(statements, monthKey, (a, b) => {
+    // Keep statements with data first, then the stable id, then the oldest
+    const dataDiff = Number(isEmpty(a)) - Number(isEmpty(b))
+    if (dataDiff !== 0) return dataDiff
+    const stable = (st: AnyRecord) => st.id === statementIdFor(st.walletId as string, st.periodEnd as string)
+    const stableDiff = Number(stable(b)) - Number(stable(a))
+    if (stableDiff !== 0) return stableDiff
+    return compareCanonical(a, b)
+  })) {
+    void keep
+    toRemove.push(...remove.filter(isEmpty))
+  }
+  if (toRemove.length === 0) return 0
+
+  backupRemovedRecords('creditCardStatements', toRemove)
+  await database.creditCardStatements.bulkDelete(toRemove.map(r => r.id!))
+  await logDeletions(database, 'creditCardStatements', toRemove)
+  return toRemove.length
+}
+
 /**
  * Merge duplicated categories, saved items, saved meals and home settings.
  * Safe to run repeatedly: a database without duplicates is left untouched.
@@ -294,6 +349,9 @@ export async function dedupeSyncedData(database: DomusDatabase): Promise<DedupeR
       const diff = editTime(b) - editTime(a)
       return diff !== 0 ? diff : (a.id ?? '').localeCompare(b.id ?? '')
     }))
+
+  const removedStatements = await dedupeEmptyStatements(database)
+  if (removedStatements > 0) result.removed.creditCardStatements = removedStatements
 
   const total = Object.values(result.removed).reduce((sum, n) => sum + n, 0)
   if (total > 0) {

@@ -128,7 +128,7 @@ const tableSchemas: Record<string, z.ZodType> = {
     walletId: boundedString.optional(),
     targetWalletId: boundedString.optional(),
     categoryId: boundedString.optional(),
-    type: z.enum(['income', 'expense', 'transfer']).optional(),
+    type: z.enum(['income', 'expense', 'transfer', 'refund']).optional(),
     amount: finiteNumber.optional(),
     currency: currency.optional(),
     exchangeRate: finiteNumber.positive().nullable().optional(),

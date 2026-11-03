@@ -33,6 +33,7 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpDown,
+  RotateCcw,
   Search,
   Filter,
   MoreHorizontal,
@@ -52,6 +53,7 @@ import {
   getLastNMonthsRange,
   reverseTransactionBalanceUpdate
 } from '@/lib/utils/finance'
+import { getInstallmentInfo } from '@/lib/utils/finance/installments'
 import {
   PersonalTransaction,
   PersonalWallet,
@@ -251,6 +253,7 @@ export function TransactionList() {
       case 'income': return <TrendingUp className="h-4 w-4 text-green-600" />
       case 'expense': return <TrendingDown className="h-4 w-4 text-red-600" />
       case 'transfer': return <ArrowUpDown className="h-4 w-4 text-blue-600" />
+      case 'refund': return <RotateCcw className="h-4 w-4 text-teal-600" />
     }
   }
 
@@ -259,6 +262,7 @@ export function TransactionList() {
       case 'income': return 'text-green-600'
       case 'expense': return 'text-red-600'
       case 'transfer': return 'text-blue-600'
+      case 'refund': return 'text-teal-600'
     }
   }
 
@@ -378,6 +382,12 @@ export function TransactionList() {
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4 text-blue-600" />
                         {t('transactionList.transfer')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="refund">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="h-4 w-4 text-teal-600" />
+                        {t('transactionList.refund')}
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -542,8 +552,16 @@ export function TransactionList() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium truncate">{transaction.description}</h3>
                         <Badge variant="outline" className="text-xs">
-                          {transaction.type}
+                          {t(`transactionList.${transaction.type}`)}
                         </Badge>
+                        {(() => {
+                          const info = getInstallmentInfo(transaction)
+                          return info ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {t('installments.badge', { number: info.number, count: info.count })}
+                            </Badge>
+                          ) : null
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -582,6 +600,19 @@ export function TransactionList() {
                           </div>
                         )}
                       </div>
+
+                      {/* Installments still to be billed */}
+                      {(() => {
+                        const info = getInstallmentInfo(transaction)
+                        return info && info.remainingCount > 0 ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t('installments.remaining', {
+                              count: info.remainingCount,
+                              amount: formatCurrency(info.remainingAmount, transaction.currency)
+                            })}
+                          </p>
+                        ) : null
+                      })()}
 
                       {/* Notes */}
                       {transaction.notes && (

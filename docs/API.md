@@ -55,8 +55,9 @@ cannot be recovered. Create a new one and revoke the old one instead.
 Authorization: Bearer domus_sk_...
 ```
 
-- **Scopes.** `read` covers GET endpoints. `write` covers bulk, PATCH and DELETE.
-  A key with only `write` cannot list or read records.
+- **Scopes.** `read` covers GET endpoints. `write` covers bulk, PATCH, DELETE,
+  wallet recalculation and import-batch deletion. A key with only `write`
+  cannot list or read records. `GET /api/v1/me` works with any valid key.
 - **Data scope.** A key is bound to the household its creator belonged to when
   it was created. It reads and writes that household's data only. Without a
   household, it is bound to the creator's personal data. The creator's household
@@ -81,7 +82,7 @@ Every error has this shape:
 | 403 | `insufficient_scope` / `forbidden` | Missing scope / owner left the household |
 | 404 | `not_found` | Unknown table or record |
 | 413 | `payload_too_large` | More than 500 records, or a body over 10 MB |
-| 422 | `validation_failed` | PATCH produced an invalid record |
+| 422 | `validation_failed` | PATCH produced an invalid record, or an invalid recalculate body |
 | 429 | `rate_limited` | See below. Honour `Retry-After`. |
 
 ### Rate limits
@@ -119,6 +120,9 @@ rather than many small ones.
     overwritten.
   - `createdAt` defaults to now.
   - `updatedAt` defaults to now.
+  - `importBatchId` (optional, any table) labels the load a record came
+    from. Bulk `?importBatchId=...` stamps it on every record of the request.
+    See [import batches](#import-batches).
 - **Last-writer-wins.** Each stored version carries `updatedAt`, the edit
   time. On bulk, if you send `updatedAt`, the write applies only if it is newer
   than the stored version. Otherwise the result is `skipped`. Omit `updatedAt`
@@ -129,6 +133,22 @@ rather than many small ones.
   enums, and required fields on create. It also goes through the same
   per-table payload validation that device sync uses. Unknown fields are
   stored as they are and reported in `warnings`, which helps you catch typos.
+  - Creates and `mode=replace` validate the whole record.
+  - `mode=merge` and PATCH on an existing record validate **only the fields
+    you send**. Values already stored (possibly written by an old app
+    version) never block an unrelated change: legacy shapes are converted
+    (`0`/`1` to booleans, numeric strings to numbers) and anything else is
+    kept as it is. Sent fields still may not clear a required field, and
+    cross-field rules (for example "transfers need `targetWalletId`") are
+    re-checked when you send one of their fields.
+  - `0` and `1` sent for a boolean field are converted to `false`/`true`,
+    with a warning.
+- **Dry runs.** Bulk, PATCH, DELETE, wallet recalculation and import-batch
+  deletion accept `?dryRun=true`. The request runs completely (validation,
+  name resolution, last-writer-wins decision, exchange-rate fill,
+  recalculation) and returns exactly the results a real run would, plus
+  `"dryRun": true`, but writes nothing. Use it to check a large load before
+  sending it for real.
 - **null.** Sending `null` for a field removes it. You cannot clear a required
   field this way.
 - **Category references differ by module:**
@@ -139,11 +159,21 @@ rather than many small ones.
   - The app's built-in categories store a translation key as their name, e.g.
     `defaultExpenseCategories.utilities` or `defaultCategories.produce`. List
     the category table first to see the real names and ids.
-- **No cascades and no derived updates.** The API does not run the app's
+- **Automatic exchange rate.** A `personalTransactions` write with
+  `currency: "USD"` and no `exchangeRate` gets the `rate` of the
+  `monthlyExchangeRates` record for the transaction's month and year (UTC). A
+  warning names the rate and record used. When there is no rate for that
+  month, the transaction is still written, without `exchangeRate`, and a
+  warning says so. Send `exchangeRate` yourself to use another rate.
+- **No cascades and few derived updates.** The API does not run the app's
   business logic:
   - Writing personal transactions does **not** change the stored `balance` of
-    a wallet. PATCH the wallet's `balance` yourself if you need it to be
-    correct.
+    a wallet by itself. Call
+    [`POST /api/v1/personalWallets/{id}/recalculate`](#post-apiv1personalwalletsidrecalculate-write),
+    or add `?recalculateBalances=true` to the transactions bulk request.
+  - Statement totals are never derived from transactions: statements created
+    through the API default to `manualTotals: true`, and you send the bank's
+    totals.
   - Deleting a wallet does not delete its transactions.
   - Writing an expense payment does not touch its recurring expense.
 
@@ -151,10 +181,22 @@ rather than many small ones.
 
 ## 3. Endpoints
 
+### `GET /api/v1/me` (any valid key)
+
+Describes the calling key. Useful to check which household a key writes to
+before a load.
+
+```json
+{ "keyId": "...", "name": "Claude finance agent", "prefix": "domus_sk_AbCdEfGh",
+  "scopes": ["read", "write"], "userId": "...", "householdId": "...",
+  "createdAt": "2026-11-01 10:00:00", "lastUsedAt": "2026-11-03T15:00:00.000Z" }
+```
+
 ### `GET /api/v1/tables` (read)
 
-Lists every table with its module, description, id prefix and fields: type,
-required, enum, default and references.
+Lists every table with its module, description, id prefix, main date field
+(`dateField`, used by `dateFrom`/`dateTo`) and fields: type, required, enum,
+default and references.
 
 ### `GET /api/v1/{table}` (read)
 
@@ -162,9 +204,33 @@ Lists the latest version of each non-deleted record.
 
 | Query | Meaning |
 |---|---|
-| `limit` | 1–500 records per page. Default 100. |
+| `limit` | 1 to 500 records per page. Default 100. |
 | `cursor` | The `nextCursor` value from the previous page. |
 | `updatedSince` | Only records the server received after this ISO time. For incremental fetches, pass the `serverTime` from a previous response. |
+| `dateFrom`, `dateTo` | Inclusive range on the table's main date field (see below). A date-only value covers the whole UTC day. |
+| `<field>=<value>` | Equality filter on any field of the table, e.g. `walletId=pw_visa`, `type=expense`, `creditCardStatementId=ccs_...`, `categoryId=pc_food`, `status=completed`, `importBatchId=visa-2026-10`, `isActive=true`. |
+
+Field filters:
+- The field must exist in the table (`GET /api/v1/tables`), otherwise 400.
+- Values are converted to the field type: numbers, `true`/`false` (or
+  `1`/`0`) and dates. Enum values are checked. Stored legacy values compare
+  by meaning, so a stored `isActive: 1` matches `isActive=true`.
+- Repeat a parameter to match any of several values:
+  `?type=expense&type=refund`.
+- An empty value (`?creditCardStatementId=`) matches records where the field
+  is missing or empty.
+- Array and object fields cannot be filtered.
+- Filters combine with AND, and `limit`, `cursor` and `hasMore` apply to the
+  filtered result: page with `nextCursor` as usual.
+
+Main date fields: `personalTransactions.date`,
+`creditCardStatements.periodEnd`, `creditCardPayments.paymentDate`,
+`expensePayments.dueDate`, `settlementPayments.paidDate`, `meals.date`,
+`tasks.dueDate`, `chores.nextDue`, `calendarEvents.date`,
+`reminders.reminderTime`, `subscriptions.nextBillingDate`,
+`subscriptionPayments.paymentDate`, the keto entries' `date`, and more (see
+`dateField` in `GET /api/v1/tables`). Tables without one answer `dateFrom`
+and `dateTo` with 400.
 
 ```json
 { "table": "tasks", "data": [ { "id": "tsk_...", "title": "..." } ], "count": 1,
@@ -184,7 +250,10 @@ also works). The batch never fails as a whole: each record gets its own result.
 | Query | Meaning |
 |---|---|
 | `mode=replace` (default) | Each record is written exactly as sent, as a full replacement. Defaults fill in missing fields, and required fields must be present. When an existing record is replaced, its original `createdAt` is kept. |
-| `mode=merge` | Each record's fields are merged onto the existing record. Useful for partial updates of many records. |
+| `mode=merge` | Each record's fields are merged onto the existing record, and only the sent fields are validated. Useful for partial updates of many records. A record that does not exist yet is created (and fully validated). |
+| `dryRun=true` | Validate and report, write nothing. The response has `"dryRun": true`. |
+| `importBatchId=<id>` | Stamp `importBatchId` on every record (up to 200 characters). Overrides an `importBatchId` inside the records. |
+| `recalculateBalances=true` | `personalTransactions` only. After writing, recalculate every wallet the batch touched (as `walletId` or `targetWalletId`, including the previous wallet of a moved transaction) and report them in `balances`. With `dryRun=true`, reports the balances the batch would produce. |
 
 Records in the `personalTransactions` table also accept `categoryName`,
 `walletName` and `targetWalletName` in place of the matching ids. Matching
@@ -211,17 +280,74 @@ The `status` of each result is one of:
 - `skipped`: a newer version is already stored (see `reason`)
 - `error`: nothing was written for this record
 
+With `recalculateBalances=true` the response also has:
+
+```json
+"balances": [
+  { "walletId": "pw_visa", "previousBalance": 0, "balance": -412530.5,
+    "transactionsCounted": 380, "skippedCurrency": 12 }
+]
+```
+
 ### `PATCH /api/v1/{table}/{id}` (write)
 
 Merges the JSON body onto the latest stored version and returns the full
-record. `id` and `updatedAt` in the body are ignored. If the body's `id`
-differs from the URL, the request fails with 400.
+record. Only the sent fields are validated (see Validation). `id` and
+`updatedAt` in the body are ignored. If the body's `id` differs from the URL,
+the request fails with 400. Accepts `?dryRun=true`.
 
 ### `DELETE /api/v1/{table}/{id}` (write)
 
 Writes a delete tombstone, exactly as a device deletion does. Devices remove
 the record on their next sync. A later bulk write whose `updatedAt` is older
-than the deletion cannot bring the record back.
+than the deletion cannot bring the record back. Accepts `?dryRun=true` (still
+404 when the record does not exist).
+
+### `POST /api/v1/personalWallets/{id}/recalculate` (write)
+
+Recalculates a wallet's balance from its stored transactions and writes it to
+the wallet's `balance`. The math is the app's own:
+
+- balance = `openingBalance` (0 when unset) + every **completed** transaction
+  dated on or after `openingBalanceDate` (all of them when unset)
+- the wallet's own transactions count by type: `income` and `refund` add,
+  `expense` and `transfer` subtract
+- incoming transfers (`targetWalletId` = this wallet) add their amount,
+  times `exchangeRate` when the two wallets have different currencies
+- `pending` and `cancelled` transactions are ignored
+- a transaction whose `currency` differs from the wallet's is converted
+  with its `exchangeRate`, or **left out** when it has none (counted in
+  `skippedCurrency`). A USD charge on an ARS card belongs to the
+  statement's USD fields, not to the ARS balance.
+
+The body is optional. `openingBalance` and `openingBalanceDate`, when given,
+are stored on the wallet first (`null` clears them):
+
+```http
+POST /api/v1/personalWallets/pw_visa/recalculate
+{ "openingBalance": 0, "openingBalanceDate": "2026-06-26" }
+```
+
+```json
+{ "walletId": "pw_visa", "previousBalance": 0, "balance": -412530.5,
+  "transactionsCounted": 380, "skippedCurrency": 12,
+  "openingBalance": 0, "openingBalanceDate": "2026-06-26T12:00:00.000Z" }
+```
+
+Accepts `?dryRun=true`. Other tables answer 404.
+
+### Import batches
+
+Stamp a load with bulk `?importBatchId=visa-2026-10` (or an `importBatchId`
+field in each record). Then:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/import-batches/{batchId}` (read) | `{ "batchId", "tables": { "personalTransactions": 380, ... }, "total" }`: live records per table carrying that id. 404 when there are none. |
+| `DELETE /api/v1/import-batches/{batchId}` (write) | Undo the load: writes a tombstone for every live record with that id, in every table. Returns `{ "batchId", "deleted": { table: count }, "total" }`. Accepts `?dryRun=true`, and `?recalculateBalances=true` to recalculate the wallets of the batch's transactions afterwards (reported in `balances`). |
+
+A record whose latest version no longer carries the id (for example after a
+PATCH with `"importBatchId": null`) is not part of the batch any more.
 
 ---
 
@@ -232,7 +358,7 @@ These tables are generated from the server's metadata registry
 authoritative list and covers every table.
 
 Every record also has the system fields `id`, `householdId`, `createdAt` and
-`updatedAt`.
+`updatedAt`, and can carry the optional `importBatchId`.
 
 ### Household finance
 
@@ -314,7 +440,9 @@ Personal wallets: cash, bank accounts and credit cards.
 | `name` | string | yes |  |  |
 | `type` | `physical` \| `bank` \| `credit_card` | yes |  |  |
 | `currency` | `ARS` \| `USD` |  | `"ARS"` |  |
-| `balance` | number |  | `0` | Stored balance. NOT recalculated when transactions are written through the API. |
+| `balance` | number |  | `0` | Stored balance. Not updated by transaction writes: call `POST /api/v1/personalWallets/{id}/recalculate` (or bulk `?recalculateBalances=true`) after loading transactions. |
+| `openingBalance` | number |  |  | Balance at `openingBalanceDate`; recalculation = openingBalance + completed transactions since then |
+| `openingBalanceDate` | date |  |  | Transactions dated before this are ignored by recalculation |
 | `creditLimit` | number |  |  |  |
 | `closingDay` | integer |  |  | Credit cards: day of month 1-31 |
 | `dueDay` | integer |  |  | Credit cards: days after closing |
@@ -346,21 +474,32 @@ Personal income/expense/transfer transactions. Accepts categoryName/walletName/t
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
 | `userId` | string |  | key owner |  |
-| `type` | `income` \| `expense` \| `transfer` | yes |  |  |
-| `amount` | number | yes |  | Always positive; direction comes from type |
+| `type` | `income` \| `expense` \| `transfer` \| `refund` | yes |  | `refund` = money back (returns, tax credits like RG 5617): adds to the wallet and reduces a card statement's charges; uses an expense category |
+| `amount` | number | yes |  | Always positive; direction comes from type (use type `refund` for credits, never a negative amount) |
 | `currency` | `ARS` \| `USD` |  | `"ARS"` |  |
 | `walletId` | string | yes |  | Or pass walletName → `personalWallets.id` |
 | `targetWalletId` | string |  |  | Required for transfers. Or pass targetWalletName → `personalWallets.id` |
 | `categoryId` | string |  |  | Required unless type is transfer (transfers use ""). Or pass categoryName → `personalCategories.id` |
 | `description` | string | yes |  |  |
-| `exchangeRate` | number |  |  |  |
-| `date` | date | yes |  |  |
+| `exchangeRate` | number |  |  | ARS per USD. Filled from `monthlyExchangeRates` for USD transactions when omitted |
+| `date` | date | yes |  | Main date field (`dateFrom`/`dateTo`) |
 | `creditCardStatementId` | string |  |  | → `creditCardStatements.id` |
 | `isFromCreditCard` | boolean |  | `false` |  |
 | `sharedWithHousehold` | boolean |  | `false` |  |
 | `householdContribution` | number |  |  |  |
-| `status` | `pending` \| `completed` \| `cancelled` |  | `"completed"` |  |
+| `status` | `pending` \| `completed` \| `cancelled` |  | `"completed"` | Only completed transactions count toward balances |
 | `notes` | string |  |  |  |
+| `refundOfTransactionId` | string |  |  | Refunds: the purchase being refunded (optional) → `personalTransactions.id` |
+| `installmentNumber` | integer |  |  | Installments ("cuotas"): this is installment n (1-based)... |
+| `installmentCount` | integer |  |  | ...of N |
+| `installmentGroupId` | string |  |  | Same value on every installment of one purchase |
+| `originalPurchaseDate` | date |  |  | Date of the original purchase |
+| `originalTotalAmount` | number |  |  | Total of the original purchase (all installments) |
+
+For an installment, `amount` is the installment charged on this statement and
+`date` is the date it appears on the statement. Keep the purchase itself in
+`originalPurchaseDate` and `originalTotalAmount`, and give every installment
+of one purchase the same `installmentGroupId`.
 
 #### `creditCardStatements` (id prefix `ccs_`)
 
@@ -371,7 +510,7 @@ Credit card statements (billing periods).
 | `userId` | string |  | key owner |  |
 | `walletId` | string | yes |  | → `personalWallets.id` |
 | `periodStart` | date | yes |  |  |
-| `periodEnd` | date | yes |  | Closing date |
+| `periodEnd` | date | yes |  | Closing date. Main date field (`dateFrom`/`dateTo`) |
 | `dueDate` | date | yes |  |  |
 | `totalCharges` | number |  | `0` |  |
 | `totalPayments` | number |  | `0` |  |
@@ -381,6 +520,19 @@ Credit card statements (billing periods).
 | `paidAmount` | number |  | `0` |  |
 | `paidDate` | date |  |  |  |
 | `status` | `open` \| `closed` \| `paid` \| `overdue` |  | `"open"` |  |
+| `totalChargesUSD` | number |  |  | USD part of an ARS card statement |
+| `totalPaymentsUSD` | number |  |  |  |
+| `currentBalanceUSD` | number |  |  |  |
+| `minimumPaymentUSD` | number |  |  |  |
+| `paidAmountUSD` | number |  |  |  |
+| `notes` | string |  |  |  |
+| `manualTotals` | boolean |  | `true` | Totals come from the bank's statement; the app never recomputes them. Defaults to true for statements created through the API |
+
+Argentine cards bill ARS and USD on one statement: the main totals are in
+`currency`, the `*USD` fields always hold the USD part. Take
+`periodStart`, `periodEnd` (closing date) and `dueDate` from **each real
+statement**. Banks move closing dates around holidays and weekends, so don't
+derive them from the wallet's `closingDay`/`dueDay`.
 
 #### `creditCardPayments` (id prefix `ccp_`)
 
@@ -664,8 +816,81 @@ curl -s "${H[@]}" -X POST "$DOMUS/api/v1/personalTransactions/bulk" -d '{
   ]
 }' | jq '.summary, (.results[] | select(.status == "error"))'
 
-# Wallet balances are not recalculated by the API: set them explicitly if needed
-curl -s "${H[@]}" -X PATCH "$DOMUS/api/v1/personalWallets/pw_cash" -d '{ "balance": 101650 }'
+# Bring the stored wallet balances up to date
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/personalWallets/pw_cash/recalculate"
+```
+
+### Personal finance: loading a credit card statement
+
+The recommended order for loading a card statement (for example, one PDF
+per month):
+
+1. **Wallet.** Create the card once (`type: "credit_card"`). Set
+   `openingBalance` and `openingBalanceDate` if you are not loading its full
+   history.
+2. **Statement.** One `creditCardStatements` record per real statement,
+   with the dates printed **on that statement** (`periodStart`, `periodEnd`
+   = closing date, `dueDate`) and the bank's totals (`totalCharges`,
+   `currentBalance`, `minimumPayment`, plus the `*USD` fields for the USD
+   part). `manualTotals` defaults to `true`, so the app keeps the bank's
+   figures.
+3. **Transactions.** Every line of the statement as a `personalTransactions`
+   record with `creditCardStatementId` set to that statement. Use type
+   `refund` for credits and bonuses, and the installment fields for
+   "cuotas". USD lines keep `currency: "USD"`: with no `exchangeRate` the
+   month's `monthlyExchangeRates` rate is filled in, and without one they
+   stay out of the ARS balance and belong to the statement's USD totals.
+4. **Recalculate** the card's balance: `?recalculateBalances=true` on the
+   transactions bulk request, or `POST .../recalculate`.
+
+Send each step with `?dryRun=true` first, then without it. Stamp everything
+with one `importBatchId` so a wrong load can be undone in one call.
+
+```bash
+BATCH=visa-2026-10
+
+# 1. Card (once)
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/personalWallets/bulk" -d '{
+  "records": [ { "id": "pw_visa", "name": "Visa", "type": "credit_card", "currency": "ARS",
+                 "creditLimit": 2000000, "closingDay": 23, "dueDay": 10,
+                 "openingBalance": 0, "openingBalanceDate": "2026-09-26" } ]
+}'
+
+# 2. Statement, with the dates and totals printed on it
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/creditCardStatements/bulk?importBatchId=$BATCH" -d '{
+  "records": [ { "id": "ccs_pw_visa_2026-10", "walletId": "pw_visa",
+                 "periodStart": "2026-09-26", "periodEnd": "2026-10-23", "dueDate": "2026-11-04",
+                 "currency": "ARS", "totalCharges": 412830.5, "currentBalance": 412530.5, "minimumPayment": 41250,
+                 "totalChargesUSD": 35.99, "currentBalanceUSD": 35.99, "status": "closed" } ]
+}'
+
+# 3. Lines of the statement: dry run first, then for real with recalculation
+LINES='{ "records": [
+  { "id": "pt_visa_2026-10_001", "type": "expense", "amount": 18350, "date": "2026-10-02",
+    "walletId": "pw_visa", "categoryName": "Food", "description": "Supermarket",
+    "creditCardStatementId": "ccs_pw_visa_2026-10" },
+  { "id": "pt_visa_2026-10_002", "type": "expense", "amount": 50000, "date": "2026-10-05",
+    "walletId": "pw_visa", "categoryName": "Home", "description": "Fridge 2/6",
+    "installmentNumber": 2, "installmentCount": 6, "installmentGroupId": "fridge-2026-09",
+    "originalPurchaseDate": "2026-09-05", "originalTotalAmount": 300000,
+    "creditCardStatementId": "ccs_pw_visa_2026-10" },
+  { "id": "pt_visa_2026-10_003", "type": "refund", "amount": 300, "date": "2026-10-20",
+    "walletId": "pw_visa", "categoryName": "Food", "description": "Promo credit",
+    "creditCardStatementId": "ccs_pw_visa_2026-10" },
+  { "id": "pt_visa_2026-10_004", "type": "expense", "amount": 35.99, "currency": "USD", "date": "2026-10-12",
+    "walletId": "pw_visa", "categoryName": "Subscriptions", "description": "Streaming",
+    "creditCardStatementId": "ccs_pw_visa_2026-10" }
+] }'
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/personalTransactions/bulk?importBatchId=$BATCH&recalculateBalances=true&dryRun=true" -d "$LINES" \
+  | jq '.summary, .balances, (.results[] | select(.status == "error" or .warnings))'
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/personalTransactions/bulk?importBatchId=$BATCH&recalculateBalances=true" -d "$LINES"
+
+# Check what is on the statement
+curl -s "${H[@]}" "$DOMUS/api/v1/personalTransactions?creditCardStatementId=ccs_pw_visa_2026-10&limit=500" | jq '.count'
+
+# Wrong load? Undo it completely
+curl -s "${H[@]}" "$DOMUS/api/v1/import-batches/$BATCH"
+curl -s "${H[@]}" -X DELETE "$DOMUS/api/v1/import-batches/$BATCH?recalculateBalances=true"
 ```
 
 ### Meals: recipes and the weekly plan
@@ -720,13 +945,22 @@ done
 
 ## 7. Tips for agents
 
-1. Call `GET /api/v1/tables` once and use it as the schema.
+1. Call `GET /api/v1/me` to confirm the household and scopes, then
+   `GET /api/v1/tables` once and use it as the schema.
 2. List the category and wallet tables before writing records that reference
    them.
 3. Use deterministic ids, such as `pt_<source>_<row>`, so a retried load
    updates records instead of duplicating them.
 4. Send batches of up to 500 records. Check `summary.error` and fix only the
    failed indexes. A failed record never blocks the rest of the batch.
-5. Treat `warnings` about unknown fields as likely typos.
-6. Stay below 120 requests per minute per key. On a 429, wait for
+5. Treat `warnings` about unknown fields as likely typos, and read the
+   exchange-rate warnings on USD transactions.
+6. Run big loads with `?dryRun=true` first and stamp them with
+   `?importBatchId=...`, so a mistake can be undone with one
+   `DELETE /api/v1/import-batches/{batchId}`.
+7. After loading transactions, recalculate the wallets
+   (`?recalculateBalances=true`). Never PATCH a computed balance by hand.
+8. Use list filters (`?walletId=...&dateFrom=...`) instead of downloading
+   whole tables to check what is already stored.
+9. Stay below 120 requests per minute per key. On a 429, wait for
    `Retry-After` seconds before retrying.

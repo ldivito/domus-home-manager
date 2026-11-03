@@ -24,7 +24,7 @@ describe('sync table whitelist', () => {
     const description = describeTable('personalTransactions')
     expect(description.idPrefix).toBe('pt')
     expect(description.fields.slice(0, 4).map(f => f.name)).toEqual(['id', 'householdId', 'createdAt', 'updatedAt'])
-    expect(description.fields.find(f => f.name === 'type')?.enum).toEqual(['income', 'expense', 'transfer'])
+    expect(description.fields.find(f => f.name === 'type')?.enum).toEqual(['income', 'expense', 'transfer', 'refund'])
   })
 
   it('builds an OpenAPI document covering every table', () => {
@@ -33,8 +33,14 @@ describe('sync table whitelist', () => {
       components: { schemas: Record<string, { required?: string[] }> }
     }
     expect(Object.keys(doc.paths)).toEqual(
-      expect.arrayContaining(['/api/v1/tables', '/api/v1/{table}', '/api/v1/{table}/bulk', '/api/v1/{table}/{id}'])
+      expect.arrayContaining([
+        '/api/v1/me', '/api/v1/tables', '/api/v1/{table}', '/api/v1/{table}/bulk', '/api/v1/{table}/{id}',
+        '/api/v1/personalWallets/{id}/recalculate', '/api/v1/import-batches/{batchId}'
+      ])
     )
+    const bulkParams = (doc.paths['/api/v1/{table}/bulk'] as { post: { parameters: Array<{ name: string }> } }).post.parameters
+    expect(bulkParams.map(p => p.name)).toEqual(expect.arrayContaining(['dryRun', 'recalculateBalances', 'importBatchId']))
+    expect(doc.components.schemas.tasks).toHaveProperty('properties.importBatchId')
     for (const table of SYNC_TABLE_NAMES) expect(doc.components.schemas[table]).toBeDefined()
     expect(doc.components.schemas.meals.required).toEqual(expect.arrayContaining(['title', 'date', 'mealType']))
   })

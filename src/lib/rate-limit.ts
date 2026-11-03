@@ -82,3 +82,8 @@ export async function isRateLimitedKV(
     return false
   }
 }
+
+/** Clear all in-memory counters (tests only). */
+export function resetRateLimits(): void {
+  buckets.clear()
+}

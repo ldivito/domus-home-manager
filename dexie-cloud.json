@@ -1,5 +1,0 @@
-{
-  "serviceUrl": "https://dexie.cloud",
-  "dbUrl": "https://zjuoc6zhr.dexie.cloud",
-  "comment": "This file is used by Dexie Cloud CLI tools. Runtime configuration is handled via environment variables in src/lib/db.ts"
-}

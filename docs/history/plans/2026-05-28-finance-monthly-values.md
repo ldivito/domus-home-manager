@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 15 (App Router, client components), Dexie.js (IndexedDB), next-intl, recharts, Vitest, TypeScript.
 
-**Spec de referencia:** `docs/superpowers/specs/2026-05-28-finance-monthly-values-design.md`
+**Spec de referencia:** `docs/history/specs/2026-05-28-finance-monthly-values-design.md`
 
 ---
 

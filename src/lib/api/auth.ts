@@ -77,10 +77,11 @@ async function authFailure(request: Request, env: CloudflareEnv | undefined, mes
 }
 
 /**
- * Authenticate the request's bearer key and require `requiredScope`.
+ * Authenticate the request's bearer key and require `requiredScope` (null:
+ * any valid key, used by GET /api/v1/me).
  * Returns the key context (owner, household scope) or a ready error response.
  */
-export async function authenticateApiKey(request: Request, requiredScope: ApiScope): Promise<AuthResult> {
+export async function authenticateApiKey(request: Request, requiredScope: ApiScope | null): Promise<AuthResult> {
   const env = getRequestEnv(request)
 
   const ip = getClientIp(request)
@@ -133,7 +134,7 @@ export async function authenticateApiKey(request: Request, requiredScope: ApiSco
   }
 
   const scopes = parseScopes(match.scopes)
-  if (!scopes.includes(requiredScope)) {
+  if (requiredScope && !scopes.includes(requiredScope)) {
     return {
       ok: false,
       response: apiError('insufficient_scope', `This API key lacks the "${requiredScope}" scope.`)

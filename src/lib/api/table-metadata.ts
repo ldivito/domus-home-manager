@@ -44,6 +44,8 @@ export interface TableMeta {
   module: string
   description: string
   idPrefix: string
+  /** Main date field: what dateFrom/dateTo list filters apply to. */
+  dateField?: string
   fields: Record<string, FieldSpec>
 }
 
@@ -54,12 +56,13 @@ function define<T>(meta: Omit<TableMeta, 'fields'> & { fields: FieldMap<T> }): T
   return meta
 }
 
-/** Fields every record carries; filled by the API when missing. */
-export const SYSTEM_FIELDS: Record<SystemField, FieldSpec> = {
+/** Fields every record can carry (importBatchId is optional, on any table); filled by the API when missing. */
+export const SYSTEM_FIELDS: Record<SystemField | 'importBatchId', FieldSpec> = {
   id: { type: 'string', description: 'Record id. Assigned by the server (with the table prefix) when omitted.' },
   householdId: { type: 'string', description: "Filled with the API key's household; any other value is overwritten." },
   createdAt: { type: 'date', description: 'Set to the current time when omitted on create.' },
-  updatedAt: { type: 'date', description: 'Last edit time (last-writer-wins). Set to the current time when omitted.' }
+  updatedAt: { type: 'date', description: 'Last edit time (last-writer-wins). Set to the current time when omitted.' },
+  importBatchId: { type: 'string', description: 'Optional load identifier (any table). Bulk ?importBatchId= stamps it on every record; GET/DELETE /api/v1/import-batches/{batchId} summarizes or undoes a load.' }
 }
 
 const CURRENCY = ['ARS', 'USD'] as const
@@ -129,6 +132,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'chores',
     description: 'Recurring household chores.',
     idPrefix: 'chr',
+    dateField: 'nextDue',
     fields: {
       title: s({ required: true }),
       description: s(),
@@ -184,6 +188,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'tasks',
     description: 'To-do tasks.',
     idPrefix: 'tsk',
+    dateField: 'dueDate',
     fields: {
       title: s({ required: true }),
       description: s(),
@@ -226,6 +231,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'meals',
     description: 'Planned meals (meal planner entries).',
     idPrefix: 'mea',
+    dateField: 'date',
     fields: {
       title: s({ required: true }),
       description: s(),
@@ -263,6 +269,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'reminders',
     description: 'Reminders.',
     idPrefix: 'rem',
+    dateField: 'reminderTime',
     fields: {
       title: s({ required: true }),
       description: s(),
@@ -276,6 +283,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'planner',
     description: 'Planner/calendar events.',
     idPrefix: 'evt',
+    dateField: 'date',
     fields: {
       title: s({ required: true }),
       description: s(),
@@ -326,6 +334,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'keto',
     description: 'Daily keto status.',
     idPrefix: 'keto',
+    dateField: 'date',
     fields: {
       userId: s({ required: true, ref: 'users.id' }),
       date: d({ required: true }),
@@ -336,6 +345,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'keto',
     description: 'Weight log.',
     idPrefix: 'weight',
+    dateField: 'date',
     fields: {
       userId: s({ required: true, ref: 'users.id' }),
       date: d({ required: true }),
@@ -348,6 +358,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'keto',
     description: 'Body measurements log.',
     idPrefix: 'measurement',
+    dateField: 'date',
     fields: {
       userId: s({ required: true, ref: 'users.id' }),
       date: d({ required: true }),
@@ -360,6 +371,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'keto',
     description: 'Daily water intake.',
     idPrefix: 'water',
+    dateField: 'date',
     fields: {
       userId: s({ required: true, ref: 'users.id' }),
       date: d({ required: true }),
@@ -371,6 +383,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'keto',
     description: 'Symptom log.',
     idPrefix: 'symptom',
+    dateField: 'date',
     fields: {
       userId: s({ required: true, ref: 'users.id' }),
       date: d({ required: true }),
@@ -434,6 +447,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'finance',
     description: 'Per-month value and payment status of a recurring expense.',
     idPrefix: 'pay',
+    dateField: 'dueDate',
     fields: {
       recurringExpenseId: s({ required: true, ref: 'recurringExpenses.id' }),
       amount: n({ required: true }),
@@ -451,6 +465,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'finance',
     description: 'Settlements between household members.',
     idPrefix: 'sett',
+    dateField: 'paidDate',
     fields: {
       fromUserId: s({ required: true, ref: 'users.id' }),
       toUserId: s({ required: true, ref: 'users.id' }),
@@ -504,6 +519,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'personalFinance',
     description: 'Personal income/expense/transfer transactions. Accepts categoryName/walletName/targetWalletName instead of ids on write.',
     idPrefix: 'pt',
+    dateField: 'date',
     fields: {
       userId: s({ default: KEY_OWNER }),
       type: e(['income', 'expense', 'transfer', 'refund'], { required: true, description: "refund = money back (returns, tax credits like RG 5617): adds to the wallet and reduces a card statement's charges; uses an expense category" }),
@@ -533,6 +549,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'personalFinance',
     description: 'Credit card statements (billing periods).',
     idPrefix: 'ccs',
+    dateField: 'periodEnd',
     fields: {
       userId: s({ default: KEY_OWNER }),
       walletId: s({ required: true, ref: 'personalWallets.id' }),
@@ -560,6 +577,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'personalFinance',
     description: 'Payments made towards credit card statements.',
     idPrefix: 'ccp',
+    dateField: 'paymentDate',
     fields: {
       userId: s({ default: KEY_OWNER }),
       statementId: s({ required: true, ref: 'creditCardStatements.id' }),
@@ -661,6 +679,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'maintenance',
     description: 'Scheduled maintenance tasks for an item.',
     idPrefix: 'task',
+    dateField: 'nextDue',
     fields: {
       maintenanceItemId: s({ required: true, ref: 'maintenanceItems.id' }),
       name: s({ required: true }),
@@ -687,6 +706,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'maintenance',
     description: 'Completed maintenance history.',
     idPrefix: 'log',
+    dateField: 'completedDate',
     fields: {
       maintenanceItemId: s({ required: true, ref: 'maintenanceItems.id' }),
       maintenanceTaskId: s({ ref: 'maintenanceTasks.id' }),
@@ -708,6 +728,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'subscriptions',
     description: 'Recurring subscriptions (streaming, software...).',
     idPrefix: 'sub',
+    dateField: 'nextBillingDate',
     fields: {
       name: s({ required: true }),
       description: s(),
@@ -740,6 +761,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'subscriptions',
     description: 'Payments recorded for subscriptions.',
     idPrefix: 'sp',
+    dateField: 'paymentDate',
     fields: {
       subscriptionId: s({ required: true, ref: 'subscriptions.id' }),
       amount: n({ required: true }),
@@ -803,6 +825,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'pets',
     description: 'Feeding log.',
     idPrefix: 'feedlog',
+    dateField: 'fedDate',
     fields: {
       feedingScheduleId: s({ ref: 'petFeedingSchedules.id' }),
       petId: s({ required: true, ref: 'pets.id' }),
@@ -838,6 +861,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'pets',
     description: 'Medication administration log.',
     idPrefix: 'medlog',
+    dateField: 'givenDate',
     fields: {
       medicationId: s({ required: true, ref: 'petMedications.id' }),
       petId: s({ required: true, ref: 'pets.id' }),
@@ -853,6 +877,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'pets',
     description: 'Vet visits.',
     idPrefix: 'vet',
+    dateField: 'visitDate',
     fields: {
       petId: s({ required: true, ref: 'pets.id' }),
       visitDate: d({ required: true }),
@@ -875,6 +900,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'pets',
     description: 'Vaccinations.',
     idPrefix: 'vax',
+    dateField: 'dateAdministered',
     fields: {
       petId: s({ required: true, ref: 'pets.id' }),
       vaccineName: s({ required: true }),
@@ -942,6 +968,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'savings',
     description: 'Contributions to a campaign.',
     idPrefix: 'scn',
+    dateField: 'contributionDate',
     fields: {
       campaignId: s({ required: true, ref: 'savingsCampaigns.id' }),
       participantId: s({ required: true, ref: 'savingsParticipants.id' }),
@@ -958,6 +985,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'mealPrep',
     description: 'Batch-cooking plans: one cooking day covering meals from startDate to endDate.',
     idPrefix: 'mpp',
+    dateField: 'cookingDate',
     fields: {
       name: s({ required: true }),
       description: s(),
@@ -1117,6 +1145,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'mealPrep',
     description: 'Which components make up each meal slot of a plan.',
     idPrefix: 'mpc',
+    dateField: 'date',
     fields: {
       mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
       dayIndex: int({ required: true, description: '0-based day of the plan' }),
@@ -1146,6 +1175,7 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     module: 'activity',
     description: 'Activity feed entries (normally written by the app).',
     idPrefix: 'act',
+    dateField: 'timestamp',
     fields: {
       userId: s({ ref: 'users.id' }),
       action: s({ required: true }),
@@ -1175,6 +1205,7 @@ export interface TableDescription {
   module: string
   description: string
   idPrefix: string
+  dateField?: string
   fields: Array<{ name: string } & FieldSpec>
 }
 
@@ -1186,6 +1217,7 @@ export function describeTable(table: SyncTableName): TableDescription {
     module: meta.module,
     description: meta.description,
     idPrefix: meta.idPrefix,
+    ...(meta.dateField ? { dateField: meta.dateField } : {}),
     fields: Object.entries(allFields(table)).map(([name, spec]) => ({ name, ...spec }))
   }
 }

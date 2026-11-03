@@ -239,6 +239,78 @@ export async function listRecords(
   return { records, hasMore }
 }
 
+/** Rows read per round trip when filtering in memory. */
+const FILTER_SCAN_PAGE = 500
+
+/**
+ * Like listRecords, but only returns records matching `predicate`. Filtering
+ * happens in memory over the latest versions, scanning pages in the same
+ * (receivedAt, recordId) order, so cursors stay valid: the cursor of the last
+ * returned record resumes right after it, and `hasMore` is true only when
+ * another matching record exists.
+ */
+export async function listFilteredRecords(
+  db: SyncDB,
+  scope: SyncScope,
+  table: string,
+  options: ListOptions & { predicate: (record: StoredRecord) => boolean }
+): Promise<{ records: StoredRecord[]; hasMore: boolean }> {
+  const matches: StoredRecord[] = []
+  let cursor = options.cursor ?? null
+  for (;;) {
+    const page = await listRecords(db, scope, table, { since: options.since, cursor, limit: FILTER_SCAN_PAGE })
+    for (const record of page.records) {
+      if (!options.predicate(record)) continue
+      if (matches.length === options.limit) return { records: matches, hasMore: true }
+      matches.push(record)
+    }
+    const last = page.records[page.records.length - 1]
+    if (!page.hasMore || !last) return { records: matches, hasMore: false }
+    cursor = { receivedAt: last.receivedAt, recordId: last.recordId }
+  }
+}
+
+/**
+ * Latest non-deleted records of every table carrying `importBatchId`.
+ * Pre-filters rows in SQL with instr() on the serialized JSON (no JSON1
+ * dependency, tolerant of corrupt payloads) and confirms after parsing.
+ */
+export async function listRecordsByImportBatch(
+  db: SyncDB,
+  scope: SyncScope,
+  importBatchId: string
+): Promise<Array<StoredRecord & { table: string }>> {
+  const inner = scopeCondition(scope)
+  const outer = scopeCondition(scope, 'sm')
+  const needle = `"importBatchId":${JSON.stringify(importBatchId)}`
+  const rows = await db
+    .prepare(`
+      SELECT sm.tableName, sm.recordId, sm.operation, sm.data, sm.createdAt, sm.updatedAt
+      FROM sync_metadata sm
+      INNER JOIN (
+        SELECT tableName, recordId, MAX(updatedAt) AS maxUpdated
+        FROM sync_metadata
+        WHERE ${inner.sql} AND deletedAt IS NULL
+        GROUP BY tableName, recordId
+      ) latest ON sm.tableName = latest.tableName AND sm.recordId = latest.recordId AND sm.updatedAt = latest.maxUpdated
+      WHERE ${outer.sql} AND sm.deletedAt IS NULL AND sm.operation != 'delete' AND instr(sm.data, ?) > 0
+      ORDER BY sm.tableName ASC, sm.createdAt ASC, sm.recordId ASC
+    `)
+    .bind(inner.value, outer.value, needle)
+    .all<StoredRow & { tableName: string }>()
+
+  const seen = new Set<string>()
+  const out: Array<StoredRecord & { table: string }> = []
+  for (const row of rows.results || []) {
+    const key = `${row.tableName}\u0000${row.recordId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const record = parseRow(row)
+    if (record.data.importBatchId === importBatchId) out.push({ ...record, table: row.tableName })
+  }
+  return out
+}
+
 /** All latest non-deleted records of a table (bounded), for name lookups. */
 export async function listAllRecords(
   db: SyncDB,

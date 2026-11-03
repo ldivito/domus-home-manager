@@ -520,6 +520,44 @@ Task categories (referenced by id from tasks.category).
 | `isDefault` | boolean |  | `false` |  |
 | `locale` | string |  |  |  |
 
+### Meal prep
+
+The meal prep planner groups batch cooking around a **plan**. Every other
+meal-prep table points back to its plan through `mealPrepPlanId`. Use
+`GET /api/v1/tables` for the full field list.
+
+| Table (prefix) | Purpose | Required on create |
+|---|---|---|
+| `mealPrepPlans` (`mpp_`) | One cooking day covering meals from `startDate` to `endDate`. `status`: `planning` \| `shopping` \| `cooking` \| `completed` (default `planning`). | `name`, `cookingDate`, `startDate`, `endDate`, `numberOfMeals` |
+| `mealPrepItems` (`mpi_`) | A meal cooked in the plan. `assignedDays` is a list of ISO dates and `mealTypes` a list of `breakfast` / `lunch` / `dinner` / `snack`. | `mealPrepPlanId`, `mealName` |
+| `mealPrepIngredients` (`mpig_`) | Aggregated shopping ingredients for the plan. | `mealPrepPlanId`, `name`, `amount` |
+| `mealPrepComponents` (`comp_`) | Modular components (`type`: `protein` \| `carb` \| `vegetable`). | `mealPrepPlanId`, `name`, `type` |
+| `mealPrepCombinations` (`mpc_`) | Which components make up each meal slot (`dayIndex` is 0-based). | `mealPrepPlanId`, `dayIndex`, `date`, `mealType` |
+| `mealPrepSteps` (`step_`) | Ordered cooking checklist. | `mealPrepPlanId`, `mealPrepItemId`, `stepNumber`, `instruction` |
+| `mealPrepContainers` (`cont_`) | Stored portions and when they expire. | `mealPrepPlanId`, `mealPrepItemId`, `containerNumber`, `label`, `expiresAt` |
+| `mealPrepSessions` (`mps_`) | Timer/checklist session. | `mealPrepPlanId` |
+| `mealPrepSchedules` (`mpsch_`) | AI-optimized cooking order and timeline. | `mealPrepPlanId` |
+| `mealPrepRecipes` (`mpr_`) | Recipe details for a saved meal. | `savedMealId`, `instructions` |
+| `savedMealComponents` (`smc_`) | Library of reusable components. | `name`, `type` |
+
+The example below loads a plan and its meals in two calls. It gives the plan
+an explicit id so the items can reference it:
+
+```bash
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/mealPrepPlans/bulk" -d '{
+  "records": [ { "id": "mpp_week45", "name": "Week 45 prep", "cookingDate": "2026-11-08",
+                 "startDate": "2026-11-09", "endDate": "2026-11-13", "numberOfMeals": 10, "servingsPerMeal": 2 } ]
+}'
+curl -s "${H[@]}" -X POST "$DOMUS/api/v1/mealPrepItems/bulk" -d '{
+  "records": [
+    { "mealPrepPlanId": "mpp_week45", "mealName": "Chicken and rice", "quantity": 6,
+      "assignedDays": ["2026-11-09", "2026-11-10", "2026-11-11"], "mealTypes": ["lunch"], "storageType": "refrigerator", "storageDays": 4 },
+    { "mealPrepPlanId": "mpp_week45", "mealName": "Lentil stew", "quantity": 4,
+      "assignedDays": ["2026-11-12", "2026-11-13"], "mealTypes": ["dinner"], "storageType": "freezer" }
+  ]
+}'
+```
+
 ---
 
 ## 5. Id prefixes (all tables)
@@ -543,6 +581,7 @@ Task categories (referenced by id from tasks.category).
 | subscriptions | `subscriptions` → `sub_`, `subscriptionPayments` → `sp_` |
 | pets | `pets` → `pet_`, `petFeedingSchedules` → `feed_`, `petFeedingLogs` → `feedlog_`, `petMedications` → `med_`, `petMedicationLogs` → `medlog_`, `petVetVisits` → `vet_`, `petVaccinations` → `vax_` |
 | savings | `savingsCampaigns` → `sav_`, `savingsMilestones` → `sml_`, `savingsParticipants` → `spt_`, `savingsContributions` → `scn_` |
+| mealPrep | `mealPrepPlans` → `mpp_`, `mealPrepItems` → `mpi_`, `mealPrepIngredients` → `mpig_`, `mealPrepRecipes` → `mpr_`, `mealPrepSessions` → `mps_`, `mealPrepSteps` → `step_`, `mealPrepContainers` → `cont_`, `mealPrepSchedules` → `mpsch_`, `mealPrepComponents` → `comp_`, `mealPrepCombinations` → `mpc_`, `savedMealComponents` → `smc_` |
 | activity | `activityLogs` → `act_` |
 
 ---

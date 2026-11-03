@@ -166,6 +166,10 @@ The application features a sidebar navigation optimized for tablet use with larg
 - Follow the warm/cozy design system
 - Ensure responsive design for various tablet sizes
 
+## Documentation
+
+- [Data API for agents and external clients](docs/API.md): API keys, `/api/v1` endpoints, record shapes and curl examples
+
 ## Deployment
 
 ### Vercel Deployment

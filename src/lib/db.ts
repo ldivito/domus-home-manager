@@ -932,6 +932,226 @@ export interface PetVaccination {
   updatedAt?: Date
 }
 
+// Meal Prep Planner Module interfaces
+export type MealPrepStatus = 'planning' | 'shopping' | 'cooking' | 'completed'
+export type StorageType = 'refrigerator' | 'freezer' | 'pantry'
+export type ContainerSize = 'small' | 'medium' | 'large' | 'extra-large'
+export type DietaryRestriction =
+  | 'vegetarian' | 'vegan' | 'keto' | 'low-carb' | 'paleo'
+  | 'gluten-free' | 'dairy-free' | 'nut-free' | 'halal' | 'kosher'
+  | 'low-sodium' | 'low-fat' | 'high-protein' | 'pescatarian'
+export type PrepStepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+// Component types for modular meal prep
+export type MealComponentType = 'protein' | 'carb' | 'vegetable'
+
+// Meal component for modular meal prep (protein + carb + vegetable)
+export interface MealPrepComponent {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  name: string                         // Component name (e.g., "Pollo a la plancha")
+  type: MealComponentType              // protein, carb, or vegetable
+  description?: string
+  servings: number                     // Number of portions to prepare
+  // AI-generated fields
+  prepInstructions?: string
+  cookingTime?: number                 // Minutes
+  storageInstructions?: string
+  storageType?: StorageType
+  storageDays?: number
+  containerSize?: ContainerSize
+  containerCount?: number
+  reheatingInstructions?: string
+  nutritionEstimate?: {
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+  }
+  isCustom?: boolean                   // If created by AI
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Combination of components for a meal
+export interface MealPrepCombination {
+  id?: string
+  mealPrepPlanId: string
+  dayIndex: number                     // Day number (0-based)
+  date: Date                           // Actual date
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  proteinComponentId?: string          // Reference to MealPrepComponent
+  carbComponentId?: string             // Reference to MealPrepComponent
+  vegetableComponentId?: string        // Reference to MealPrepComponent
+  description?: string                 // AI suggestion for why this combination works
+  householdId?: string
+  createdAt: Date
+}
+
+// Saved component for quick reuse
+export interface SavedMealComponent {
+  id?: string
+  name: string
+  type: MealComponentType              // protein, carb, or vegetable
+  description?: string
+  timesUsed: number                    // For sorting by popularity
+  lastUsed?: Date
+  householdId?: string
+  createdAt: Date
+}
+
+export interface MealPrepPlan {
+  id?: string
+  name: string
+  description?: string
+  cookingDate: Date                    // The day they plan to cook
+  startDate: Date                      // First day meals are for
+  endDate: Date                        // Last day meals are for
+  servingsPerMeal: number              // How many people per meal
+  numberOfMeals: number                // Total meals to prep
+  status: MealPrepStatus
+  dietaryRestrictions?: DietaryRestriction[]  // Diet filters
+  isTemplate?: boolean                 // If this is saved as a template
+  templateName?: string                // Template display name
+  useComponents?: boolean              // If using component-based system (protein+carb+veg)
+  householdId?: string
+  createdByUserId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MealPrepItem {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  savedMealId?: string                 // Reference to SavedMeal (optional, can be new meal)
+  mealName: string
+  mealDescription?: string
+  category?: string                    // Meal category
+  quantity: number                     // How many servings of this meal
+  assignedDays: string[]               // Array of dates in ISO format
+  mealTypes: ('breakfast' | 'lunch' | 'dinner' | 'snack')[]  // Which meal slots
+  // AI-generated fields
+  prepInstructions?: string            // How to prepare this meal
+  cookingTime?: number                 // Minutes
+  storageInstructions?: string         // How to store
+  storageType?: StorageType
+  storageDays?: number                 // How many days it keeps
+  containerSize?: ContainerSize
+  containerCount?: number              // How many containers needed
+  reheatingInstructions?: string
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface MealPrepIngredient {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  mealPrepItemId?: string              // Reference to MealPrepItem (optional)
+  savedGroceryItemId?: string          // Reference to SavedGroceryItem (if exists)
+  name: string                         // Ingredient name
+  category?: string                    // Grocery category
+  amount: string                       // Calculated amount for prep
+  originalAmount?: string              // Original recipe amount (per serving)
+  unit?: string                        // Unit of measurement
+  isNewIngredient: boolean             // If this was created by AI
+  addedToGroceryList: boolean          // If already added to shopping list
+  householdId?: string
+  createdAt: Date
+}
+
+export interface MealPrepRecipe {
+  id?: string
+  savedMealId: string                  // Reference to SavedMeal
+  servings: number                     // Base servings for recipe
+  prepTime?: number                    // Minutes
+  cookTime?: number                    // Minutes
+  totalTime?: number                   // Minutes
+  instructions: string                 // Step-by-step instructions (from AI or user)
+  tips?: string                        // Meal prep tips
+  nutritionInfo?: {
+    calories?: number
+    protein?: number
+    carbs?: number
+    fat?: number
+  }
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Prep Session for timer/checklist mode
+export interface MealPrepSession {
+  id?: string
+  mealPrepPlanId: string               // Reference to MealPrepPlan
+  startedAt: Date                      // When cooking session started
+  completedAt?: Date                   // When session finished
+  isActive: boolean                    // Currently in progress
+  currentMealIndex: number             // Which meal they're working on
+  totalElapsedTime: number             // Total time spent (seconds)
+  pausedAt?: Date                      // If session is paused
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Individual prep steps with checklist tracking
+export interface MealPrepStep {
+  id?: string
+  mealPrepPlanId: string
+  mealPrepItemId: string               // Which meal this step belongs to
+  stepNumber: number                   // Order of steps
+  instruction: string                  // Step description
+  estimatedTime?: number               // Expected time in minutes
+  status: PrepStepStatus
+  startedAt?: Date
+  completedAt?: Date
+  notes?: string                       // User notes
+  householdId?: string
+  createdAt: Date
+}
+
+// Individual container/portion tracking
+export interface MealPrepContainer {
+  id?: string
+  mealPrepPlanId: string
+  mealPrepItemId: string               // Which meal is in this container
+  containerNumber: number              // Container 1, 2, 3, etc.
+  label: string                        // What to write on container
+  storageType: StorageType
+  storedAt: Date                       // When it was stored
+  expiresAt: Date                      // When it expires
+  consumedAt?: Date                    // When it was eaten
+  isConsumed: boolean                  // Has it been eaten
+  isExpired: boolean                   // Has it expired
+  notes?: string                       // Storage notes
+  householdId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+// Smart scheduling optimization data from AI
+export interface MealPrepSchedule {
+  id?: string
+  mealPrepPlanId: string
+  optimizedOrder: string[]             // Meal names in optimal order
+  parallelTasks?: {                    // Tasks that can run simultaneously
+    group: number
+    meals: string[]
+    reason: string
+  }[]
+  equipmentNeeded?: string[]           // List of required equipment
+  timelineSteps?: {
+    time: string                       // e.g., "0:00", "0:30"
+    action: string
+    meal: string
+  }[]
+  totalEstimatedTime: number           // Total prep time in minutes
+  efficiencyTips: string[]
+  householdId?: string
+  createdAt: Date
+}
+
 // Savings Module interfaces
 export type SavingMethod = '52_week_challenge' | 'envelope_method' | 'round_up' | 'fixed_monthly' | 'bi_weekly' | 'custom'
 export type DistributionMethod = 'equal' | 'percentage'
@@ -1115,6 +1335,19 @@ export class DomusDatabase extends Dexie {
   savingsMilestones!: Table<SavingsMilestone>
   savingsParticipants!: Table<SavingsParticipant>
   savingsContributions!: Table<SavingsContribution>
+  // Meal Prep Planner tables
+  mealPrepPlans!: Table<MealPrepPlan>
+  mealPrepItems!: Table<MealPrepItem>
+  mealPrepIngredients!: Table<MealPrepIngredient>
+  mealPrepRecipes!: Table<MealPrepRecipe>
+  mealPrepSessions!: Table<MealPrepSession>
+  mealPrepSteps!: Table<MealPrepStep>
+  mealPrepContainers!: Table<MealPrepContainer>
+  mealPrepSchedules!: Table<MealPrepSchedule>
+  // Component-based meal prep tables
+  mealPrepComponents!: Table<MealPrepComponent>
+  mealPrepCombinations!: Table<MealPrepCombination>
+  savedMealComponents!: Table<SavedMealComponent>
   // Sync support
   deletionLog!: Table<DeletionLog>
   // Activity tracking
@@ -1256,6 +1489,23 @@ export class DomusDatabase extends Dexie {
     // v28: Add deletion log for sync support
     this.version(28).stores({
       deletionLog: 'id, tableName, recordId, householdId, deletedAt'
+    })
+
+    // v35: Meal Prep Planner module (plans, items, ingredients, recipes,
+    // sessions, steps, containers, schedules, components). Declares ONLY the
+    // new tables: re-declaring existing tables here would drop their indexes.
+    this.version(35).stores({
+      mealPrepPlans: 'id, name, cookingDate, startDate, endDate, status, householdId, createdByUserId, createdAt',
+      mealPrepItems: 'id, mealPrepPlanId, savedMealId, mealName, householdId, createdAt',
+      mealPrepIngredients: 'id, mealPrepPlanId, mealPrepItemId, savedGroceryItemId, name, householdId, createdAt',
+      mealPrepRecipes: 'id, savedMealId, householdId, createdAt',
+      mealPrepSessions: 'id, mealPrepPlanId, isActive, householdId, createdAt',
+      mealPrepSteps: 'id, mealPrepPlanId, mealPrepItemId, stepNumber, status, householdId, createdAt',
+      mealPrepContainers: 'id, mealPrepPlanId, mealPrepItemId, isConsumed, isExpired, expiresAt, householdId, createdAt',
+      mealPrepSchedules: 'id, mealPrepPlanId, householdId, createdAt',
+      mealPrepComponents: 'id, mealPrepPlanId, name, type, householdId, createdAt',
+      mealPrepCombinations: 'id, mealPrepPlanId, dayIndex, date, mealType, proteinComponentId, carbComponentId, vegetableComponentId, householdId, createdAt',
+      savedMealComponents: 'id, name, type, timesUsed, lastUsed, householdId, createdAt'
     })
 
     // v27: Add Savings module tables
@@ -2123,6 +2373,18 @@ const SYNCABLE_TABLES = [
   'creditCardStatements',
   'creditCardPayments',
   'personalScheduledPayments',
+  // Meal Prep Planner module
+  'mealPrepPlans',
+  'mealPrepItems',
+  'mealPrepIngredients',
+  'mealPrepRecipes',
+  'mealPrepSessions',
+  'mealPrepSteps',
+  'mealPrepContainers',
+  'mealPrepSchedules',
+  'mealPrepComponents',
+  'mealPrepCombinations',
+  'savedMealComponents',
   // Activity tracking
   'activityLogs'
 ] as const

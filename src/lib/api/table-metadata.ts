@@ -18,7 +18,8 @@ import type {
   PetFeedingLog, PetFeedingSchedule, PetMedication, PetMedicationLog, PetVaccination, PetVetVisit,
   RecurringExpense, Reminder, SavedGroceryItem, SavedMeal, SavingsCampaign, SavingsContribution,
   SavingsMilestone, SavingsParticipant, SettlementPayment, Subscription, SubscriptionPayment, Task,
-  TaskCategory, User
+  TaskCategory, User, MealPrepPlan, MealPrepItem, MealPrepIngredient, MealPrepRecipe, MealPrepSession,
+  MealPrepStep, MealPrepContainer, MealPrepSchedule, MealPrepComponent, MealPrepCombination, SavedMealComponent
 } from '@/lib/db'
 import type { SyncTableName } from '@/lib/sync-tables'
 
@@ -63,6 +64,13 @@ export const SYSTEM_FIELDS: Record<SystemField, FieldSpec> = {
 
 const CURRENCY = ['ARS', 'USD'] as const
 const PRIORITY = ['low', 'medium', 'high'] as const
+const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const
+const MEAL_PREP_STATUS = ['planning', 'shopping', 'cooking', 'completed'] as const
+const STORAGE = ['refrigerator', 'freezer', 'pantry'] as const
+const CONTAINER_SIZE = ['small', 'medium', 'large', 'extra-large'] as const
+const COMPONENT_TYPE = ['protein', 'carb', 'vegetable'] as const
+const DIETARY = ['vegetarian', 'vegan', 'keto', 'low-carb', 'paleo', 'gluten-free', 'dairy-free', 'nut-free',
+  'halal', 'kosher', 'low-sodium', 'low-fat', 'high-protein', 'pescatarian'] as const
 
 const s = (extra: Partial<FieldSpec> = {}): FieldSpec => ({ type: 'string', ...extra })
 const n = (extra: Partial<FieldSpec> = {}): FieldSpec => ({ type: 'number', ...extra })
@@ -927,6 +935,194 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
       currency: currency({ default: 'ARS' }),
       contributionDate: d({ required: true }),
       notes: s()
+    }
+  }),
+
+  // ---------------------------------------------------------------- Meal prep
+  mealPrepPlans: define<MealPrepPlan>({
+    module: 'mealPrep',
+    description: 'Batch-cooking plans: one cooking day covering meals from startDate to endDate.',
+    idPrefix: 'mpp',
+    fields: {
+      name: s({ required: true }),
+      description: s(),
+      cookingDate: d({ required: true, description: 'Day the food is cooked' }),
+      startDate: d({ required: true, description: 'First day the meals are for' }),
+      endDate: d({ required: true, description: 'Last day the meals are for' }),
+      servingsPerMeal: int({ default: 1 }),
+      numberOfMeals: int({ required: true }),
+      status: e(MEAL_PREP_STATUS, { default: 'planning' }),
+      dietaryRestrictions: arr({ description: `Values: ${DIETARY.join(', ')}` }),
+      isTemplate: b(),
+      templateName: s(),
+      useComponents: b({ description: 'true when the plan uses protein + carb + vegetable components' }),
+      createdByUserId: s({ ref: 'users.id' })
+    }
+  }),
+  mealPrepItems: define<MealPrepItem>({
+    module: 'mealPrep',
+    description: 'Meals cooked in a plan, with AI-generated prep/storage info.',
+    idPrefix: 'mpi',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      savedMealId: s({ ref: 'savedMeals.id' }),
+      mealName: s({ required: true }),
+      mealDescription: s(),
+      category: s({ ref: 'mealCategories.name' }),
+      quantity: int({ default: 1, description: 'Servings of this meal' }),
+      assignedDays: arr({ default: [], description: 'ISO date strings' }),
+      mealTypes: arr({ default: [], description: `Values: ${MEAL_TYPES.join(', ')}` }),
+      prepInstructions: s(),
+      cookingTime: int({ description: 'Minutes' }),
+      storageInstructions: s(),
+      storageType: e(STORAGE),
+      storageDays: int(),
+      containerSize: e(CONTAINER_SIZE),
+      containerCount: int(),
+      reheatingInstructions: s()
+    }
+  }),
+  mealPrepIngredients: define<MealPrepIngredient>({
+    module: 'mealPrep',
+    description: 'Aggregated shopping ingredients for a plan.',
+    idPrefix: 'mpig',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      mealPrepItemId: s({ ref: 'mealPrepItems.id' }),
+      savedGroceryItemId: s({ ref: 'savedGroceryItems.id' }),
+      name: s({ required: true }),
+      category: s({ ref: 'groceryCategories.name' }),
+      amount: s({ required: true, description: 'Total for the plan, e.g. "1.5 kg"' }),
+      originalAmount: s(),
+      unit: s(),
+      isNewIngredient: b({ default: false }),
+      addedToGroceryList: b({ default: false })
+    }
+  }),
+  mealPrepRecipes: define<MealPrepRecipe>({
+    module: 'mealPrep',
+    description: 'Recipe details for a saved meal.',
+    idPrefix: 'mpr',
+    fields: {
+      savedMealId: s({ required: true, ref: 'savedMeals.id' }),
+      servings: int({ default: 1 }),
+      prepTime: int({ description: 'Minutes' }),
+      cookTime: int({ description: 'Minutes' }),
+      totalTime: int({ description: 'Minutes' }),
+      instructions: s({ required: true }),
+      tips: s(),
+      nutritionInfo: obj({ description: '{ calories?, protein?, carbs?, fat? }' })
+    }
+  }),
+  mealPrepSessions: define<MealPrepSession>({
+    module: 'mealPrep',
+    description: 'Cooking session (timer/checklist mode) for a plan.',
+    idPrefix: 'mps',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      startedAt: d({ default: '$now' }),
+      completedAt: d(),
+      isActive: b({ default: true }),
+      currentMealIndex: int({ default: 0 }),
+      totalElapsedTime: int({ default: 0, description: 'Seconds' }),
+      pausedAt: d()
+    }
+  }),
+  mealPrepSteps: define<MealPrepStep>({
+    module: 'mealPrep',
+    description: 'Ordered prep steps with checklist status.',
+    idPrefix: 'step',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      mealPrepItemId: s({ required: true, ref: 'mealPrepItems.id' }),
+      stepNumber: int({ required: true }),
+      instruction: s({ required: true }),
+      estimatedTime: int({ description: 'Minutes' }),
+      status: e(['pending', 'in_progress', 'completed', 'skipped'], { default: 'pending' }),
+      startedAt: d(),
+      completedAt: d(),
+      notes: s()
+    }
+  }),
+  mealPrepContainers: define<MealPrepContainer>({
+    module: 'mealPrep',
+    description: 'Stored containers/portions and their expiry.',
+    idPrefix: 'cont',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      mealPrepItemId: s({ required: true, ref: 'mealPrepItems.id' }),
+      containerNumber: int({ required: true }),
+      label: s({ required: true }),
+      storageType: e(STORAGE, { default: 'refrigerator' }),
+      storedAt: d({ default: '$now' }),
+      expiresAt: d({ required: true }),
+      consumedAt: d(),
+      isConsumed: b({ default: false }),
+      isExpired: b({ default: false }),
+      notes: s()
+    }
+  }),
+  mealPrepSchedules: define<MealPrepSchedule>({
+    module: 'mealPrep',
+    description: 'AI-optimized cooking order and timeline for a plan.',
+    idPrefix: 'mpsch',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      optimizedOrder: arr({ default: [], description: 'Meal names in cooking order' }),
+      parallelTasks: arr({ description: '{ group: number, meals: string[], reason: string }[]' }),
+      equipmentNeeded: arr(),
+      timelineSteps: arr({ description: '{ time: "0:30", action: string, meal: string }[]' }),
+      totalEstimatedTime: int({ default: 0, description: 'Minutes' }),
+      efficiencyTips: arr({ default: [] })
+    }
+  }),
+  mealPrepComponents: define<MealPrepComponent>({
+    module: 'mealPrep',
+    description: 'Modular components (protein, carb, vegetable) cooked for a plan.',
+    idPrefix: 'comp',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      name: s({ required: true }),
+      type: e(COMPONENT_TYPE, { required: true }),
+      description: s(),
+      servings: int({ default: 1 }),
+      prepInstructions: s(),
+      cookingTime: int({ description: 'Minutes' }),
+      storageInstructions: s(),
+      storageType: e(STORAGE),
+      storageDays: int(),
+      containerSize: e(CONTAINER_SIZE),
+      containerCount: int(),
+      reheatingInstructions: s(),
+      nutritionEstimate: obj({ description: '{ calories, protein, carbs, fat }' }),
+      isCustom: b()
+    }
+  }),
+  mealPrepCombinations: define<MealPrepCombination>({
+    module: 'mealPrep',
+    description: 'Which components make up each meal slot of a plan.',
+    idPrefix: 'mpc',
+    fields: {
+      mealPrepPlanId: s({ required: true, ref: 'mealPrepPlans.id' }),
+      dayIndex: int({ required: true, description: '0-based day of the plan' }),
+      date: d({ required: true }),
+      mealType: e(MEAL_TYPES, { required: true }),
+      proteinComponentId: s({ ref: 'mealPrepComponents.id' }),
+      carbComponentId: s({ ref: 'mealPrepComponents.id' }),
+      vegetableComponentId: s({ ref: 'mealPrepComponents.id' }),
+      description: s()
+    }
+  }),
+  savedMealComponents: define<SavedMealComponent>({
+    module: 'mealPrep',
+    description: 'Library of reusable components for quick-add.',
+    idPrefix: 'smc',
+    fields: {
+      name: s({ required: true }),
+      type: e(COMPONENT_TYPE, { required: true }),
+      description: s(),
+      timesUsed: int({ default: 0 }),
+      lastUsed: d()
     }
   }),
 

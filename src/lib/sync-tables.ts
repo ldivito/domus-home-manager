@@ -68,6 +68,18 @@ export const SYNC_TABLE_NAMES = [
   'savingsMilestones',
   'savingsParticipants',
   'savingsContributions',
+  // Meal Prep Planner module
+  'mealPrepPlans',
+  'mealPrepItems',
+  'mealPrepIngredients',
+  'mealPrepRecipes',
+  'mealPrepSessions',
+  'mealPrepSteps',
+  'mealPrepContainers',
+  'mealPrepSchedules',
+  'mealPrepComponents',
+  'mealPrepCombinations',
+  'savedMealComponents',
   // Activity tracking
   'activityLogs'
 ] as const

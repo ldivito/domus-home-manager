@@ -18,6 +18,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { performSync, resetSyncState, isAuthenticated, getSyncStatus } from '@/lib/sync'
 import { logger } from '@/lib/logger'
+import { ApiKeysCard } from './components/ApiKeysCard'
 
 interface HouseholdInfo {
   id: string
@@ -1419,6 +1420,9 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
           
+          {/* API keys for external clients (agents) */}
+          {isAuth && <ApiKeysCard />}
+
           {/* Data Management */}
           <Card className="glass-card shadow-modern">
             <CardHeader className="pb-4 md:pb-6">

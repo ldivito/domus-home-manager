@@ -596,7 +596,8 @@
     "apply": "Aplicar",
     "cancel": "Cancelar",
     "done": "Saldo actualizado a {balance}",
-    "error": "No se pudo recalcular el saldo"
+    "error": "No se pudo recalcular el saldo",
+    "skippedCurrency": "{count, plural, one {# movimiento} other {# movimientos}} en otra moneda sin cotización quedaron afuera (van al saldo en USD del resumen)"
   },
   "installments": {
     "badge": "Cuota {number}/{count}",

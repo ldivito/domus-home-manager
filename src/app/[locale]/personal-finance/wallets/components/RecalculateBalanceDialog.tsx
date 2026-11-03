@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils/finance'
-import { computeWalletBalance } from '@/lib/utils/finance/balance-math'
+import { computeWalletBalanceDetailed } from '@/lib/utils/finance/balance-math'
 
 const toInputDate = (value: Date | string | undefined) => {
   if (!value) return ''
@@ -43,7 +43,7 @@ export function RecalculateBalanceDialog({
   const { toast } = useToast()
   const [openingBalance, setOpeningBalance] = useState('')
   const [openingDate, setOpeningDate] = useState('')
-  const [preview, setPreview] = useState<{ balance: number; counted: number } | null>(null)
+  const [preview, setPreview] = useState<{ balance: number; counted: number; skippedCurrency: number } | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -69,16 +69,12 @@ export function RecalculateBalanceDialog({
         db.personalWallets.toArray()
       ])
       const currencies = new Map(wallets.map(w => [w.id!, w.currency]))
-      const from = openingDateValue?.getTime()
-      const counted = transactions.filter(tx =>
-        tx.status === 'completed' && (from === undefined || new Date(tx.date).getTime() >= from)
-      ).length
-      const balance = computeWalletBalance(
-        { id: wallet.id!, openingBalance: opening, openingBalanceDate: openingDateValue },
+      const result = computeWalletBalanceDetailed(
+        { id: wallet.id!, currency: wallet.currency, openingBalance: opening, openingBalanceDate: openingDateValue },
         transactions,
         id => currencies.get(id)
       )
-      if (!cancelled) setPreview({ balance, counted })
+      if (!cancelled) setPreview(result)
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,6 +137,9 @@ export function RecalculateBalanceDialog({
           </div>
           {preview && (
             <div className="text-xs text-muted-foreground">{t('counted', { count: preview.counted })}</div>
+          )}
+          {preview && preview.skippedCurrency > 0 && (
+            <div className="text-xs text-muted-foreground">{t('skippedCurrency', { count: preview.skippedCurrency })}</div>
           )}
         </div>
 

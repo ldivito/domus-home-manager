@@ -597,7 +597,8 @@
     "apply": "Apply",
     "cancel": "Cancel",
     "done": "Balance updated to {balance}",
-    "error": "Could not recalculate the balance"
+    "error": "Could not recalculate the balance",
+    "skippedCurrency": "{count, plural, one {# transaction} other {# transactions}} in another currency without exchange rate left out (they belong to the statement's USD balance)"
   },
   "installments": {
     "badge": "Installment {number}/{count}",

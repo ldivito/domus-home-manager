@@ -6,6 +6,7 @@ type TxType = 'income' | 'expense' | 'transfer' | 'refund'
 export interface BalanceTransaction {
   type: TxType | string
   amount: number
+  currency?: string
   walletId: string
   targetWalletId?: string
   exchangeRate?: number
@@ -20,14 +21,24 @@ export interface BalanceWallet {
   openingBalanceDate?: Date | string
 }
 
-/** Signed effect of one transaction on `walletId`'s balance. */
+/**
+ * Signed effect of one transaction on `walletId`'s balance, in the wallet's
+ * currency. Returns null when it can't be expressed in that currency (a USD
+ * charge on an ARS card without exchangeRate): such amounts belong to the
+ * statement's USD fields, not to the wallet balance.
+ */
 export function transactionEffect(
   tx: BalanceTransaction,
   walletId: string,
   currencyOf: (walletId: string) => string | undefined = () => undefined
-): number {
-  const amount = Number(tx.amount) || 0
+): number | null {
+  let amount = Number(tx.amount) || 0
   if (tx.walletId === walletId) {
+    const walletCurrency = currencyOf(walletId)
+    if (tx.currency && walletCurrency && tx.currency !== walletCurrency) {
+      if (!tx.exchangeRate) return null
+      amount = amount * tx.exchangeRate
+    }
     switch (tx.type) {
       case 'income':
       case 'refund':
@@ -53,28 +64,54 @@ const toTime = (value: Date | string | undefined): number | null => {
   return isNaN(t) ? null : t
 }
 
+export interface WalletBalanceBreakdown {
+  balance: number
+  /** Transactions that changed the balance */
+  counted: number
+  /** Foreign-currency transactions without exchangeRate (left out) */
+  skippedCurrency: number
+}
+
 /**
  * Balance of a wallet = openingBalance + every completed transaction dated on
  * or after openingBalanceDate (all of them when there is no opening date).
- * Cancelled and pending transactions don't count.
+ * Cancelled and pending transactions don't count. Transactions in another
+ * currency are converted with their exchangeRate, or left out without one.
  */
-export function computeWalletBalance(
+export function computeWalletBalanceDetailed(
   wallet: BalanceWallet & { id: string },
   transactions: BalanceTransaction[],
   currencyOf: (walletId: string) => string | undefined = () => undefined
-): number {
+): WalletBalanceBreakdown {
   const from = toTime(wallet.openingBalanceDate)
+  const lookup = (id: string) => (id === wallet.id && wallet.currency ? wallet.currency : currencyOf(id))
   let balance = Number(wallet.openingBalance) || 0
+  let counted = 0
+  let skippedCurrency = 0
   for (const tx of transactions) {
     if ((tx.status ?? 'completed') !== 'completed') continue
     if (from !== null) {
       const at = toTime(tx.date)
       if (at !== null && at < from) continue
     }
-    balance += transactionEffect(tx, wallet.id, currencyOf)
+    const effect = transactionEffect(tx, wallet.id, lookup)
+    if (effect === null) {
+      skippedCurrency++
+      continue
+    }
+    if (tx.walletId === wallet.id || tx.targetWalletId === wallet.id) counted++
+    balance += effect
   }
   // Avoid float noise like 0.30000000000000004
-  return Math.round(balance * 100) / 100
+  return { balance: Math.round(balance * 100) / 100, counted, skippedCurrency }
+}
+
+export function computeWalletBalance(
+  wallet: BalanceWallet & { id: string },
+  transactions: BalanceTransaction[],
+  currencyOf: (walletId: string) => string | undefined = () => undefined
+): number {
+  return computeWalletBalanceDetailed(wallet, transactions, currencyOf).balance
 }
 
 /**

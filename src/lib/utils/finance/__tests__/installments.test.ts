@@ -43,6 +43,21 @@ describe('computeWalletBalance', () => {
   })
 })
 
+describe('computeWalletBalanceDetailed', () => {
+  it('converts foreign-currency charges with their rate and leaves out the ones without', async () => {
+    const { computeWalletBalanceDetailed } = await import('../balance-math')
+    const result = computeWalletBalanceDetailed(
+      { id: 'card', currency: 'ARS' },
+      [
+        { type: 'expense', amount: 1000, currency: 'ARS', walletId: 'card', status: 'completed' },
+        { type: 'expense', amount: 10, currency: 'USD', walletId: 'card', exchangeRate: 1200, status: 'completed' },
+        { type: 'expense', amount: 86.4, currency: 'USD', walletId: 'card', status: 'completed' }
+      ]
+    )
+    expect(result).toEqual({ balance: -13000, counted: 2, skippedCurrency: 1 })
+  })
+})
+
 describe('statementIdFor', () => {
   it('is stable per card and closing month', () => {
     expect(statementIdFor('pw_visa', new Date(2026, 9, 29))).toBe('ccs_pw_visa_2026-10')

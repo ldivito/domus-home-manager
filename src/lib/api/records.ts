@@ -275,7 +275,9 @@ export async function bulkUpsert(
 
     const nameErrors = await resolveNames(db, table, record, ctx, cache)
 
-    let updatedAt = nowIso
+    // Server-stamped writes (no updatedAt supplied) are "now" and always land
+    // after the stored version, even within the same millisecond
+    let updatedAt = stored ? nextUpdatedAt(stored, now) : nowIso
     if (input.updatedAt !== undefined && input.updatedAt !== null) {
       const iso = normalizeDate(input.updatedAt)
       if (iso === null) {

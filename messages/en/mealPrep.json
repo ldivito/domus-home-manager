@@ -1,0 +1,248 @@
+{
+  "title": "Meal Prep Planner",
+  "subtitle": "Plan your weekly meal prep with AI-powered calculations",
+  "settings": "Settings",
+  "defaultPlanName": "Meal Prep - {date}",
+  "apiKeyRequired": "OpenAI API Key Required",
+  "apiKeyDescription": "Enter your OpenAI API key to enable AI-powered ingredient calculations and meal prep instructions. Your key is stored locally and never sent to our servers.",
+  "saveApiKey": "Save Key",
+  "back": "Back",
+  "next": "Next",
+  "savePlan": "Save Plan",
+  "calculateWithAI": "Calculate with AI",
+
+  "steps": {
+    "setup": "Setup",
+    "meals": "Meals",
+    "calculate": "Calculate",
+    "review": "Review",
+    "prep": "Prep Guide"
+  },
+
+  "setup": {
+    "title": "Setup Your Meal Prep",
+    "description": "Set the cooking day, date range, and number of people",
+    "planName": "Plan Name",
+    "planNamePlaceholder": "e.g., Week 1 Meal Prep",
+    "cookingDate": "Cooking Day",
+    "cookingDateHint": "The day you'll prepare all meals",
+    "startDate": "First Day",
+    "endDate": "Last Day",
+    "numberOfPeople": "People per Meal",
+    "mealsPerDay": "Meals per Day",
+    "mealsPerDayHint": "Main meals to prep each day (lunch, dinner)",
+    "summary": "Summary",
+    "summaryText": "You're planning meals for {days} days, serving {people} people per meal.",
+    "dietaryRestrictions": "Dietary Restrictions",
+    "dietaryRestrictionsHint": "Select any dietary restrictions to filter meal suggestions",
+    "dietLabel": "Diet"
+  },
+
+  "dietaryRestrictions": {
+    "vegetarian": "Vegetarian",
+    "vegan": "Vegan",
+    "keto": "Keto",
+    "low-carb": "Low Carb",
+    "paleo": "Paleo",
+    "gluten-free": "Gluten Free",
+    "dairy-free": "Dairy Free",
+    "nut-free": "Nut Free",
+    "halal": "Halal",
+    "kosher": "Kosher",
+    "low-sodium": "Low Sodium",
+    "low-fat": "Low Fat",
+    "high-protein": "High Protein",
+    "pescatarian": "Pescatarian"
+  },
+
+  "templates": {
+    "title": "Templates",
+    "show": "Show Templates",
+    "hide": "Hide Templates",
+    "noTemplates": "No saved templates. Save a meal prep plan as a template to reuse it later.",
+    "meals": "meals",
+    "load": "Use",
+    "saveAsTemplate": "Save as Template"
+  },
+
+  "savedPlans": {
+    "title": "Saved Plans",
+    "show": "Show Saved Plans",
+    "hide": "Hide Plans",
+    "noPlans": "No saved plans yet. Complete a meal prep session to save a plan.",
+    "view": "View",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this plan?",
+    "deleted": "Plan deleted",
+    "cookingDate": "Cooking Day",
+    "dateRange": "Date Range",
+    "status": "Status",
+    "ingredients": "ingredients",
+    "steps": "steps",
+    "viewDetails": "View Full Details",
+    "closeDetails": "Close",
+    "statusLabels": {
+      "planning": "Planning",
+      "shopping": "Shopping",
+      "cooking": "Cooking",
+      "completed": "Completed"
+    }
+  },
+
+  "meals": {
+    "title": "Select Your Meals",
+    "description": "Choose meals to prep from your saved recipes or add custom ones",
+    "savedMeals": "Saved Meals",
+    "customMeal": "Custom Meal",
+    "searchPlaceholder": "Search saved meals...",
+    "noSavedMeals": "No saved meals found. Add a custom meal or save some meals first.",
+    "customPlaceholder": "Enter meal name (e.g., Chicken Stir Fry)",
+    "add": "Add",
+    "aiWillGenerate": "AI will generate ingredients and instructions for custom meals",
+    "selected": "Selected Meals",
+    "totalServings": "{count} total servings",
+    "ai": "AI"
+  },
+
+  "components": {
+    "title": "Build Your Meals",
+    "description": "Select proteins, sides, and vegetables to create your meal combinations",
+    "modeToggle": "Component Mode",
+    "modeDescription": "Build meals from individual components (protein + side + vegetable)",
+    "proteins": "Proteins",
+    "sides": "Sides",
+    "vegetables": "Vegetables & Greens",
+    "proteinExamples": "Chicken, beef, fish, eggs, legumes...",
+    "sideExamples": "Rice, potatoes, pasta, quinoa, beans...",
+    "vegetableExamples": "Broccoli, spinach, salad, carrots...",
+    "addProtein": "Add Protein",
+    "addSide": "Add Side",
+    "addVegetable": "Add Vegetable",
+    "customPlaceholder": "Enter component name...",
+    "selectedComponents": "Selected Components",
+    "combinations": "Meal Combinations",
+    "suggestCombinations": "Suggest Combinations",
+    "combinationDescription": "AI will suggest how to combine your components for each day",
+    "noComponents": "Add at least one component from each category to start",
+    "servingsPerComponent": "{count} servings",
+    "proteinLabel": "Protein",
+    "sideLabel": "Side",
+    "vegetableLabel": "Vegetable",
+    "savedComponents": "Quick Add",
+    "noSavedComponents": "No saved components yet. Components you use will appear here.",
+    "saveComponent": "Save for later",
+    "componentSaved": "Component saved for quick access"
+  },
+
+  "calculating": {
+    "title": "Calculating Your Meal Prep",
+    "description": "AI is calculating ingredients, instructions, and storage guidance...",
+    "button": "Calculating...",
+    "ingredients": "Calculating ingredients...",
+    "instructions": "Generating prep instructions...",
+    "containers": "Planning container storage...",
+    "schedule": "Optimizing cooking schedule...",
+    "complete": "Calculations complete!"
+  },
+
+  "review": {
+    "title": "Review Your Plan",
+    "description": "Check ingredients and meal schedule",
+    "ingredients": "Shopping List",
+    "schedule": "Meal Schedule",
+    "consolidated": "Combined",
+    "addToGrocery": "Add All to Grocery List",
+    "allAdded": "All Added to Grocery",
+    "servings": "servings",
+    "assignedDays": "Scheduled for",
+    "addToCalendar": "Add Meals to Calendar"
+  },
+
+  "prep": {
+    "title": "Prep Guide",
+    "description": "Follow this guide on cooking day for maximum efficiency",
+    "order": "Order",
+    "smartSchedule": "Schedule",
+    "instructions": "Instructions",
+    "storage": "Storage",
+    "orderDescription": "Follow this order for the most efficient meal prep session:",
+    "time": "{time} min total",
+    "tips": "Pro Tips",
+    "prepTime": "Prep: {time}min",
+    "cookTime": "Cook: {time}min",
+    "steps": "Steps",
+    "mealTips": "Tips",
+    "calories": "Calories",
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat",
+    "container": {
+      "small": "Small (~250ml)",
+      "medium": "Medium (~500ml)",
+      "large": "Large (~1L)",
+      "extra-large": "XL (~1.5L+)"
+    },
+    "storageType": {
+      "refrigerator": "Refrigerate",
+      "freezer": "Freeze",
+      "pantry": "Pantry"
+    },
+    "storageDuration": "Keeps for",
+    "days": "{count} days",
+    "containers": "Containers needed",
+    "label": "Label",
+    "reheating": "Reheating",
+    "organizationTips": "Organization Tips",
+    "minutes": "minutes",
+    "totalEstimatedTime": "Total Estimated Time",
+    "parallelTasks": "Parallel Tasks",
+    "group": "Group",
+    "timeline": "Timeline",
+    "equipmentNeeded": "Equipment Needed",
+    "efficiencyTips": "Efficiency Tips",
+    "noScheduleData": "No smart schedule data available. Try recalculating."
+  },
+
+  "timer": {
+    "title": "Timer Mode",
+    "description": "Interactive cooking session with step-by-step guidance",
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Reset",
+    "stepsCompleted": "steps completed",
+    "currentStep": "Current Step",
+    "markComplete": "Complete",
+    "skip": "Skip"
+  },
+
+  "portions": {
+    "title": "Portion Tracking",
+    "startTracking": "Start Tracking",
+    "remaining": "remaining",
+    "consumed": "Consumed",
+    "expiringToday": "Expiring Today",
+    "expired": "Expired",
+    "expiringWarning": "{count} container(s) expiring today! Use them soon.",
+    "expiresInDay": "Expires tomorrow",
+    "expiresInDays": "Expires in {count} days"
+  },
+
+  "notifications": {
+    "addedToGrocery": "Ingredients added to grocery list",
+    "planSaved": "Meal prep plan saved successfully",
+    "mealsCreated": "Meals added to your calendar",
+    "apiKeySaved": "API key saved",
+    "templateLoaded": "Template loaded successfully",
+    "templateSaved": "Template saved successfully"
+  },
+
+  "errors": {
+    "noApiKey": "Please add your OpenAI API key to use AI features",
+    "calculationFailed": "Failed to calculate meal prep. Please try again.",
+    "saveFailed": "Failed to save meal prep plan",
+    "addToGroceryFailed": "Failed to add ingredients to grocery list",
+    "createMealsFailed": "Failed to create calendar meals",
+    "templateNameRequired": "Please enter a plan name before saving as template",
+    "templateSaveFailed": "Failed to save template"
+  }
+}

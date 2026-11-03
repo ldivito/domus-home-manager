@@ -76,6 +76,18 @@ const ALLOWED_SYNC_TABLES = new Set([
   'savingsMilestones',
   'savingsParticipants',
   'savingsContributions',
+  // Meal Prep Planner module
+  'mealPrepPlans',
+  'mealPrepItems',
+  'mealPrepIngredients',
+  'mealPrepRecipes',
+  'mealPrepSessions',
+  'mealPrepSteps',
+  'mealPrepContainers',
+  'mealPrepSchedules',
+  'mealPrepComponents',
+  'mealPrepCombinations',
+  'savedMealComponents',
   // Activity tracking
   'activityLogs'
 ])

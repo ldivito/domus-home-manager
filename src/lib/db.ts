@@ -3,6 +3,26 @@ import { generateId } from './utils'
 import { checkMigrationNeeded, performMigration, importMigratedData, isMigrationCompleted } from './migration'
 import { dbLogger } from './logger'
 
+/**
+ * Default categories are seeded locally on every fresh install, before the
+ * first sync pull. Random ids made each install push a whole new set of
+ * defaults, so households accumulated dozens of copies. Deterministic ids make
+ * every device seed the *same* records, and the fixed old timestamp means a
+ * re-seed never wins last-writer-wins against a real edit or deletion.
+ */
+export const DEFAULT_SEED_DATE = new Date('2020-01-01T00:00:00.000Z')
+
+/** e.g. ('gcat', 'defaultCategories.produce') -> 'gcat_default_produce' */
+export function defaultCategoryId(prefix: string, nameKey: string): string {
+  return `${prefix}_default_${nameKey.split('.').pop()}`
+}
+
+/** e.g. ('usr_1', 'Bills & Utilities') -> 'pc_default_usr_1_bills-utilities' */
+export function defaultPersonalCategoryId(userId: string, name: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  return `pc_default_${userId}_${slug}`
+}
+
 export interface User {
   id?: string
   name: string
@@ -1812,9 +1832,9 @@ export class DomusDatabase extends Dexie {
 
       if (existingCategories > 0) return // Already seeded
 
-      const now = new Date()
+      const now = DEFAULT_SEED_DATE
       const data = this.getDefaultPersonalCategories().map(cat => ({
-        id: `pc_${crypto.randomUUID()}`,
+        id: defaultPersonalCategoryId(userId, cat.name),
         userId,
         name: cat.name,
         type: cat.type,
@@ -1826,8 +1846,9 @@ export class DomusDatabase extends Dexie {
         updatedAt: now
       }))
 
-      // Add all categories
-      await this.personalCategories.bulkAdd(data)
+      // bulkPut: ids are deterministic, so a concurrent seed (e.g. the
+      // users 'creating' hook racing the ready handler) must not throw
+      await this.personalCategories.bulkPut(data)
 
       dbLogger.debug(`Personal Finance categories seeded for user ${userId}`)
     } catch (error) {
@@ -1852,8 +1873,8 @@ export class DomusDatabase extends Dexie {
     for (const def of this.getDefaultPersonalCategories()) {
       const match = existing.find(c => c.name === def.name && c.type === def.type)
       if (!match) {
-        await this.personalCategories.add({
-          id: `pc_${crypto.randomUUID()}`,
+        await this.personalCategories.put({
+          id: defaultPersonalCategoryId(userId, def.name),
           userId,
           name: def.name,
           type: def.type,
@@ -1880,16 +1901,16 @@ export class DomusDatabase extends Dexie {
       // Seed expense categories if needed (separate check for existing DBs)
       const expenseCategoryCount = await this.expenseCategories.count()
       if (expenseCategoryCount === 0) {
-        const now = new Date()
-        await this.expenseCategories.bulkAdd([
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.housing', icon: 'Home', color: '#8B5CF6', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.utilities', icon: 'Zap', color: '#F59E0B', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.internet', icon: 'Wifi', color: '#3B82F6', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.insurance', icon: 'Shield', color: '#10B981', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.taxes', icon: 'FileText', color: '#EF4444', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.subscriptions', icon: 'Tv', color: '#EC4899', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.maintenance', icon: 'Wrench', color: '#6B7280', isDefault: true, createdAt: now },
-          { id: `ecat_${crypto.randomUUID()}`, name: 'defaultExpenseCategories.other', icon: 'MoreHorizontal', color: '#9CA3AF', isDefault: true, createdAt: now }
+        const now = DEFAULT_SEED_DATE
+        await this.expenseCategories.bulkPut([
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.housing'), name: 'defaultExpenseCategories.housing', icon: 'Home', color: '#8B5CF6', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.utilities'), name: 'defaultExpenseCategories.utilities', icon: 'Zap', color: '#F59E0B', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.internet'), name: 'defaultExpenseCategories.internet', icon: 'Wifi', color: '#3B82F6', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.insurance'), name: 'defaultExpenseCategories.insurance', icon: 'Shield', color: '#10B981', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.taxes'), name: 'defaultExpenseCategories.taxes', icon: 'FileText', color: '#EF4444', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.subscriptions'), name: 'defaultExpenseCategories.subscriptions', icon: 'Tv', color: '#EC4899', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.maintenance'), name: 'defaultExpenseCategories.maintenance', icon: 'Wrench', color: '#6B7280', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('ecat', 'defaultExpenseCategories.other'), name: 'defaultExpenseCategories.other', icon: 'MoreHorizontal', color: '#9CA3AF', isDefault: true, createdAt: now }
         ])
         dbLogger.debug('Default expense categories seeded successfully')
       }
@@ -1897,16 +1918,16 @@ export class DomusDatabase extends Dexie {
       // Seed task categories if needed
       const taskCategoryCount = await this.taskCategories.count()
       if (taskCategoryCount === 0) {
-        const now = new Date()
-        await this.taskCategories.bulkAdd([
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.personal', icon: 'User', color: '#8B5CF6', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.work', icon: 'Briefcase', color: '#3B82F6', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.home', icon: 'Home', color: '#10B981', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.shopping', icon: 'ShoppingCart', color: '#F59E0B', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.health', icon: 'Heart', color: '#EF4444', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.finance', icon: 'DollarSign', color: '#22C55E', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.errands', icon: 'MapPin', color: '#EC4899', isDefault: true, createdAt: now },
-          { id: `tcat_${crypto.randomUUID()}`, name: 'defaultTaskCategories.other', icon: 'MoreHorizontal', color: '#6B7280', isDefault: true, createdAt: now }
+        const now = DEFAULT_SEED_DATE
+        await this.taskCategories.bulkPut([
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.personal'), name: 'defaultTaskCategories.personal', icon: 'User', color: '#8B5CF6', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.work'), name: 'defaultTaskCategories.work', icon: 'Briefcase', color: '#3B82F6', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.home'), name: 'defaultTaskCategories.home', icon: 'Home', color: '#10B981', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.shopping'), name: 'defaultTaskCategories.shopping', icon: 'ShoppingCart', color: '#F59E0B', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.health'), name: 'defaultTaskCategories.health', icon: 'Heart', color: '#EF4444', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.finance'), name: 'defaultTaskCategories.finance', icon: 'DollarSign', color: '#22C55E', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.errands'), name: 'defaultTaskCategories.errands', icon: 'MapPin', color: '#EC4899', isDefault: true, createdAt: now },
+          { id: defaultCategoryId('tcat', 'defaultTaskCategories.other'), name: 'defaultTaskCategories.other', icon: 'MoreHorizontal', color: '#6B7280', isDefault: true, createdAt: now }
         ])
         dbLogger.debug('Default task categories seeded successfully')
       }
@@ -1914,34 +1935,34 @@ export class DomusDatabase extends Dexie {
       const categoryCount = await this.groceryCategories.count()
       if (categoryCount > 0) return // Already seeded
 
-      const now = new Date()
+      const now = DEFAULT_SEED_DATE
 
       // Add default grocery categories
-      await this.groceryCategories.bulkAdd([
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.produce', color: '#10b981', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, locale: undefined, createdAt: now },
-        { id: `gcat_${crypto.randomUUID()}`, name: 'defaultCategories.household', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
+      await this.groceryCategories.bulkPut([
+        { id: defaultCategoryId('gcat', 'defaultCategories.produce'), name: 'defaultCategories.produce', color: '#10b981', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.dairy'), name: 'defaultCategories.dairy', color: '#3b82f6', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.meatFish'), name: 'defaultCategories.meatFish', color: '#ef4444', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.bakery'), name: 'defaultCategories.bakery', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.pantry'), name: 'defaultCategories.pantry', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.frozen'), name: 'defaultCategories.frozen', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.beverages'), name: 'defaultCategories.beverages', color: '#84cc16', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.snacks'), name: 'defaultCategories.snacks', color: '#f97316', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.healthBeauty'), name: 'defaultCategories.healthBeauty', color: '#ec4899', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('gcat', 'defaultCategories.household'), name: 'defaultCategories.household', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
       ])
 
       // Add default meal categories
-      await this.mealCategories.bulkAdd([
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: now },
-        { id: `mcat_${crypto.randomUUID()}`, name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
+      await this.mealCategories.bulkPut([
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.meat'), name: 'defaultMealCategories.meat', color: '#dc2626', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.vegetarian'), name: 'defaultMealCategories.vegetarian', color: '#16a34a', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.seafood'), name: 'defaultMealCategories.seafood', color: '#06b6d4', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.pasta'), name: 'defaultMealCategories.pasta', color: '#f59e0b', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.salad'), name: 'defaultMealCategories.salad', color: '#10b981', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.soup'), name: 'defaultMealCategories.soup', color: '#ef4444', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.dessert'), name: 'defaultMealCategories.dessert', color: '#ec4899', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.healthy'), name: 'defaultMealCategories.healthy', color: '#84cc16', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.comfort'), name: 'defaultMealCategories.comfort', color: '#8b5cf6', isDefault: true, locale: undefined, createdAt: now },
+        { id: defaultCategoryId('mcat', 'defaultMealCategories.international'), name: 'defaultMealCategories.international', color: '#6b7280', isDefault: true, locale: undefined, createdAt: now }
       ])
 
       dbLogger.debug('Default categories seeded successfully')

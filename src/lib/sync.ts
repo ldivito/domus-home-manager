@@ -1,6 +1,7 @@
 import { db, getDatabase, DeletionLog, setApplyingRemoteChanges } from './db'
 import { checkMigrationNeeded, performMigration } from './migration'
 import { logger } from '@/lib/logger'
+import { dedupeSyncedData } from './dedupe'
 
 // Sync configuration constants
 const PUSH_CHUNK_SIZE = 100       // Records per push request
@@ -761,6 +762,10 @@ export async function performSync(
   onProgress?: (progress: SyncProgress) => void
 ): Promise<SyncResult> {
   const lastSync = forceFullSync ? null : getLastSyncTime()
+  // Watermark for the next incremental sync. Taken before collecting so local
+  // edits made while this sync runs are still newer than it and get pushed
+  // next time (stamping the end time silently dropped them).
+  const syncStartedAt = new Date()
   const result: SyncResult = {
     success: false,
     pushed: 0,
@@ -937,9 +942,18 @@ export async function performSync(
     }
 
     // 5. Update last sync timestamp and clear checkpoint
-    setLastSyncTime(new Date())
+    setLastSyncTime(syncStartedAt)
     clearSyncCheckpoint()
     result.success = true
+
+    // 6. Merge duplicates (e.g. default categories seeded independently on
+    // several devices). Runs after the watermark is stored so the resulting
+    // edits and tombstones are pushed on the next sync.
+    try {
+      await dedupeSyncedData(db)
+    } catch (error) {
+      logger.error('Duplicate cleanup failed:', error)
+    }
 
     reportProgress({
       step: 'complete',

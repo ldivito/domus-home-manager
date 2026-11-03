@@ -319,6 +319,31 @@ describe('balance-operations', () => {
   })
 
   describe('recalculateWalletBalance', () => {
+    beforeEach(() => {
+      const w1 = createMockWallet({ id: 'w1', currency: 'ARS', balance: 0 })
+      mockDb.personalWallets.get.mockResolvedValue(w1)
+      mockDb.personalWallets.toArray.mockResolvedValue([w1, createMockWallet({ id: 'w-other', currency: 'USD' })])
+    })
+
+    it('should start from the opening balance and ignore older transactions', async () => {
+      mockDb.personalWallets.get.mockResolvedValue(createMockWallet({
+        id: 'w1', currency: 'ARS', openingBalance: 5000, openingBalanceDate: new Date('2026-10-01')
+      }))
+      const transactions = [
+        createMockIncome({ walletId: 'w1', amount: 999, status: 'completed', date: new Date('2026-09-15') }),
+        createMockTransaction({ walletId: 'w1', type: 'refund', amount: 200, status: 'completed', date: new Date('2026-10-05') }),
+        createMockTransaction({ walletId: 'w1', type: 'expense', amount: 1000, status: 'cancelled', date: new Date('2026-10-06') }),
+      ]
+      mockDb.personalTransactions.filter.mockImplementation((filterFn: (t: typeof transactions[0]) => boolean) => {
+        const filtered = transactions.filter(filterFn)
+        return { toArray: vi.fn().mockResolvedValue(filtered) }
+      })
+
+      // 5000 opening + 200 refund; the September income predates the opening
+      // date and the cancelled expense doesn't count
+      expect(await recalculateWalletBalance('w1')).toBe(5200)
+    })
+
     it('should sum income, subtract expenses, and handle transfers', async () => {
       const transactions = [
         createMockIncome({ walletId: 'w1', amount: 100000, status: 'completed' }),

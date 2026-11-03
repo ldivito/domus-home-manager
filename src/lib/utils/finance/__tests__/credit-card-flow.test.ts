@@ -100,7 +100,7 @@ describe('Credit Card Full Lifecycle Flow', () => {
       const result = await getCurrentStatement('pw_cc-1')
 
       expect(result.id).toBe(existingStatement.id)
-      expect(mockDb.creditCardStatements.add).not.toHaveBeenCalled()
+      expect(mockDb.creditCardStatements.put).not.toHaveBeenCalled()
     })
 
     it('should create new statement when no open statement exists', async () => {
@@ -110,7 +110,7 @@ describe('Credit Card Full Lifecycle Flow', () => {
       const result = await getCurrentStatement('pw_cc-1')
 
       expect(result.status).toBe('open')
-      expect(mockDb.creditCardStatements.add).toHaveBeenCalled()
+      expect(mockDb.creditCardStatements.put).toHaveBeenCalled()
     })
   })
 

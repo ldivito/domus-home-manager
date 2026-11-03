@@ -24,7 +24,7 @@ describe('sync table whitelist', () => {
     const description = describeTable('personalTransactions')
     expect(description.idPrefix).toBe('pt')
     expect(description.fields.slice(0, 4).map(f => f.name)).toEqual(['id', 'householdId', 'createdAt', 'updatedAt'])
-    expect(description.fields.find(f => f.name === 'type')?.enum).toEqual(['income', 'expense', 'transfer'])
+    expect(description.fields.find(f => f.name === 'type')?.enum).toEqual(['income', 'expense', 'transfer', 'refund'])
   })
 
   it('builds an OpenAPI document covering every table', () => {

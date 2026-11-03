@@ -116,7 +116,7 @@ describe('credit-card-statements', () => {
       expect(statement.totalPayments).toBe(0)
       expect(statement.currentBalance).toBe(0)
       expect(statement.currency).toBe('ARS')
-      expect(mockDb.creditCardStatements.add).toHaveBeenCalledWith(
+      expect(mockDb.creditCardStatements.put).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'open', walletId: 'pw_cc-1' })
       )
     })
@@ -161,7 +161,7 @@ describe('credit-card-statements', () => {
 
       expect(result.status).toBe('open')
       expect(result.walletId).toBe('pw_cc-1')
-      expect(mockDb.creditCardStatements.add).toHaveBeenCalled()
+      expect(mockDb.creditCardStatements.put).toHaveBeenCalled()
     })
 
     it('should throw for non-credit-card wallet', async () => {
@@ -269,7 +269,7 @@ describe('credit-card-statements', () => {
         dueDay: 10,
       })
 
-      mockDb.creditCardStatements.get.mockResolvedValue(statement)
+      mockDb.creditCardStatements.get.mockImplementation(async (id: string) => (id === 'ccs_stmt-1' ? statement : undefined))
       mockDb.personalWallets.get.mockResolvedValue(cc)
 
       const nextStatement = await closeStatement('ccs_stmt-1')
@@ -282,7 +282,11 @@ describe('credit-card-statements', () => {
 
       // Should create a new statement
       expect(nextStatement.status).toBe('open')
-      expect(mockDb.creditCardStatements.add).toHaveBeenCalled()
+      expect(mockDb.creditCardStatements.put).toHaveBeenCalled()
+      // Deterministic id per card + closing month, continuing from the
+      // previous statement's real closing date
+      expect(nextStatement.id).toBe('ccs_pw_cc-1_2025-07')
+      expect(new Date(nextStatement.periodStart).getDate()).toBe(new Date(statement.periodEnd).getDate() + 1)
     })
 
     it('should throw if statement not found', async () => {

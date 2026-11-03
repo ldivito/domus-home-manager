@@ -50,6 +50,22 @@ CREATE TABLE sync_metadata (
   deletedAt DATETIME
 );
 
+-- API keys for the agent data API (/api/v1). Only a SHA-256 hash of the key
+-- is stored; keyPrefix is a short non-secret lookup/display prefix.
+CREATE TABLE api_keys (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  householdId TEXT,          -- NULL/empty: key is scoped to the user's personal data
+  name TEXT NOT NULL,
+  keyPrefix TEXT NOT NULL,
+  keyHash TEXT NOT NULL UNIQUE,
+  scopes TEXT NOT NULL,      -- comma-separated: read,write
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  lastUsedAt DATETIME,
+  revokedAt DATETIME,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
 -- Bills table (servicios del hogar)
 CREATE TABLE bills (
   id TEXT PRIMARY KEY,
@@ -135,6 +151,12 @@ CREATE INDEX idx_household_members_user ON household_members(userId);
 CREATE INDEX idx_sync_user ON sync_metadata(userId);
 CREATE INDEX idx_sync_household ON sync_metadata(householdId);
 CREATE INDEX idx_sync_updated ON sync_metadata(updatedAt);
+CREATE INDEX idx_sync_scope_table ON sync_metadata(householdId, tableName, recordId);
+CREATE INDEX idx_sync_user_table ON sync_metadata(userId, tableName, recordId);
+
+-- API keys indexes
+CREATE INDEX idx_api_keys_prefix ON api_keys(keyPrefix);
+CREATE INDEX idx_api_keys_user ON api_keys(userId);
 
 -- Bills indexes
 CREATE INDEX idx_bills_household ON bills(householdId);

@@ -270,6 +270,25 @@ describe.skipIf(!hasNodeSqlite)('agent data API', () => {
       expect(created.body.data.updatedAt).toMatch(/Z$/)
     })
 
+    it('applies the app rules for transfers and categories', async () => {
+      const { secret } = await createKey(ALICE)
+      await bulk(secret, 'personalWallets', [
+        { id: 'pw_a', name: 'Bank', type: 'bank' },
+        { id: 'pw_b', name: 'Cash', type: 'physical' }
+      ])
+      const base = { amount: 10, walletId: 'pw_a', description: 'x', date: '2026-11-02' }
+      const { body } = await bulk(secret, 'personalTransactions', [
+        { ...base, type: 'transfer', targetWalletName: 'cash' },
+        { ...base, type: 'transfer' },
+        { ...base, type: 'expense' }
+      ])
+      expect(body.results[0].status).toBe('created')
+      expect(body.results[1].error).toMatch(/targetWalletId: required for transfers/)
+      expect(body.results[2].error).toMatch(/categoryId: required/)
+      const transfer = (await getRecord(secret, 'personalTransactions', body.results[0].id)).body.data
+      expect(transfer).toMatchObject({ targetWalletId: 'pw_b', categoryId: '' })
+    })
+
     it('writes rows exactly like sync push so devices pull them', async () => {
       const { secret } = await createKey(ALICE)
       const { body } = await bulk(secret, 'meals', [{ title: 'Pasta', date: '2026-11-04', mealType: 'dinner' }])

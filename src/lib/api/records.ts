@@ -87,6 +87,23 @@ function checkType(name: string, spec: FieldSpec, value: unknown): string | null
   }
 }
 
+const isBlank = (value: unknown) => value === undefined || value === ''
+
+/** Create-time rules that depend on other fields (mirror the app's forms). */
+const CONDITIONAL_RULES: Partial<Record<SyncTableName, (record: Data) => string[]>> = {
+  personalTransactions: record => {
+    if (record.type === 'transfer') {
+      if (record.categoryId === undefined) record.categoryId = '' // the app stores transfers without category
+      return isBlank(record.targetWalletId) ? ['targetWalletId: required for transfers'] : []
+    }
+    return isBlank(record.categoryId) ? ['categoryId: required'] : []
+  },
+  personalScheduledPayments: record =>
+    record.paymentType === 'fixed' && record.fixedAmount === undefined
+      ? ["fixedAmount: required when paymentType is 'fixed'"]
+      : []
+}
+
 interface FinalizeOptions {
   isCreate: boolean
   ctx: WriteContext
@@ -147,6 +164,7 @@ function finalizeRecord(
         errors.push(`${name}: required`)
       }
     }
+    errors.push(...(CONDITIONAL_RULES[table]?.(record) ?? []))
   }
 
   if (errors.length === 0) {

@@ -261,7 +261,9 @@ describe('TransactionList', () => {
 
     render(<TransactionList />)
 
-    expect(screen.getByText('expense')).toBeInTheDocument()
-    expect(screen.getByText('income')).toBeInTheDocument()
+    // Badges are translated (the filter dropdown renders the same keys)
+    expect(screen.getAllByText('personalFinance.transactionList.expense').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('personalFinance.transactionList.income').length).toBeGreaterThan(0)
+    expect(screen.queryByText('expense')).not.toBeInTheDocument()
   })
 })

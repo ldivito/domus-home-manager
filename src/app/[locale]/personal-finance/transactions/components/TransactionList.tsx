@@ -53,6 +53,7 @@ import {
   getLastNMonthsRange,
   reverseTransactionBalanceUpdate
 } from '@/lib/utils/finance'
+import { getInstallmentInfo } from '@/lib/utils/finance/installments'
 import {
   PersonalTransaction,
   PersonalWallet,
@@ -551,8 +552,16 @@ export function TransactionList() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium truncate">{transaction.description}</h3>
                         <Badge variant="outline" className="text-xs">
-                          {transaction.type}
+                          {t(`transactionList.${transaction.type}`)}
                         </Badge>
+                        {(() => {
+                          const info = getInstallmentInfo(transaction)
+                          return info ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {t('installments.badge', { number: info.number, count: info.count })}
+                            </Badge>
+                          ) : null
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -591,6 +600,19 @@ export function TransactionList() {
                           </div>
                         )}
                       </div>
+
+                      {/* Installments still to be billed */}
+                      {(() => {
+                        const info = getInstallmentInfo(transaction)
+                        return info && info.remainingCount > 0 ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t('installments.remaining', {
+                              count: info.remainingCount,
+                              amount: formatCurrency(info.remainingAmount, transaction.currency)
+                            })}
+                          </p>
+                        ) : null
+                      })()}
 
                       {/* Notes */}
                       {transaction.notes && (

@@ -18,11 +18,16 @@ import {
   Plus,
   Pencil,
   AlertCircle,
+  RotateCcw,
+  Calculator,
 } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { formatBalance, formatCurrency, calculateAvailableCredit } from '@/lib/utils/finance'
 import { EditWalletDialog } from '../components/EditWalletDialog'
 import { AutoPaymentSettings } from '../components/AutoPaymentSettings'
+import { StatementsCard } from '../components/StatementsCard'
+import { RecalculateBalanceDialog } from '../components/RecalculateBalanceDialog'
+import { getInstallmentInfo } from '@/lib/utils/finance/installments'
 
 const getWalletIcon = (type: string) => {
   switch (type) {
@@ -36,6 +41,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
   const { walletId } = use(params)
   const t = useTranslations('personalFinance')
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [recalcOpen, setRecalcOpen] = useState(false)
 
   const getWalletTypeName = (type: string) => {
     switch (type) {
@@ -118,13 +124,16 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
       case 'income': return <TrendingUp className="h-4 w-4 text-green-600" />
       case 'expense': return <TrendingDown className="h-4 w-4 text-red-600" />
       case 'transfer': return <ArrowUpDown className="h-4 w-4 text-blue-600" />
+      case 'refund': return <RotateCcw className="h-4 w-4 text-teal-600" />
       default: return <TrendingDown className="h-4 w-4 text-gray-600" />
     }
   }
 
   const getAmountDisplay = (amount: number, type: string, currency: 'ARS' | 'USD') => {
-    const sign = type === 'income' ? '+' : type === 'expense' ? '-' : ''
-    const colorClass = type === 'income' ? 'text-green-600' : type === 'expense' ? 'text-red-600' : 'text-blue-600'
+    const sign = type === 'income' || type === 'refund' ? '+' : type === 'expense' ? '-' : ''
+    const colorClass = type === 'income' ? 'text-green-600'
+      : type === 'refund' ? 'text-teal-600'
+      : type === 'expense' ? 'text-red-600' : 'text-blue-600'
     return <span className={`font-bold ${colorClass}`}>{sign}{formatCurrency(amount, currency)}</span>
   }
 
@@ -162,10 +171,16 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
           </div>
         </div>
 
-        <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-          <Pencil className="h-4 w-4 mr-2" />
-          {t('walletDetail.editWallet')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setRecalcOpen(true)}>
+            <Calculator className="h-4 w-4 mr-2" />
+            {t('recalculate.button')}
+          </Button>
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            {t('walletDetail.editWallet')}
+          </Button>
+        </div>
       </div>
 
       {/* Wallet Info Cards */}
@@ -257,6 +272,11 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
         <AutoPaymentSettings walletId={wallet.id} />
       )}
 
+      {/* Statements (credit cards only): real dates, ARS + USD */}
+      {wallet.type === 'credit_card' && wallet.id && (
+        <StatementsCard walletId={wallet.id} />
+      )}
+
       {/* Recent Transactions */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -300,6 +320,15 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
                           <span>{getCategoryName(txn.categoryId)}</span>
                         </>
                       )}
+                      {(() => {
+                        const info = getInstallmentInfo(txn)
+                        return info ? (
+                          <>
+                            <span>•</span>
+                            <Badge variant="outline">{t('installments.badge', { number: info.number, count: info.count })}</Badge>
+                          </>
+                        ) : null
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -327,6 +356,11 @@ export default function WalletDetailPage({ params }: { params: Promise<{ walletI
         wallet={wallet}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+      />
+      <RecalculateBalanceDialog
+        wallet={wallet}
+        open={recalcOpen}
+        onOpenChange={setRecalcOpen}
       />
     </div>
   )

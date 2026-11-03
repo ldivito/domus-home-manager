@@ -4,81 +4,8 @@ import { getDB, type CloudflareEnv } from '@/lib/cloudflare'
 import type { SyncRecord } from '@/lib/sync'
 import { validateSyncPayload } from '../table-schemas'
 import { logger } from '@/lib/logger'
-
-// Batch size for D1 operations (stays within D1 limits)
-const BATCH_SIZE = 50
-
-// Maximum accepted record id length
-const MAX_RECORD_ID_LENGTH = 200
-
-// Whitelist of tables accepted through the sync channel.
-// Keep in sync with SYNC_TABLES in src/lib/sync.ts.
-const ALLOWED_SYNC_TABLES = new Set([
-  // Core tables
-  'users',
-  'households',
-  'householdMembers',
-  'chores',
-  'groceryItems',
-  'groceryCategories',
-  'savedGroceryItems',
-  'tasks',
-  'taskCategories',
-  'homeImprovements',
-  'meals',
-  'mealCategories',
-  'savedMeals',
-  'reminders',
-  'calendarEvents',
-  'homeSettings',
-  // Keto module
-  'ketoSettings',
-  'ketoDays',
-  'ketoWeightEntries',
-  'ketoBodyMeasurements',
-  'ketoWaterEntries',
-  'ketoSymptomEntries',
-  // Finance module
-  'monthlyIncomes',
-  'monthlyExchangeRates',
-  'recurringExpenses',
-  'expenseCategories',
-  'expensePayments',
-  'settlementPayments',
-  // Personal Finance module
-  'personalWallets',
-  'personalCategories',
-  'personalTransactions',
-  'creditCardStatements',
-  'creditCardPayments',
-  'personalScheduledPayments',
-  // Document Vault module
-  'documents',
-  'documentFolders',
-  'documentTags',
-  // Maintenance Scheduler module
-  'maintenanceItems',
-  'maintenanceTasks',
-  'maintenanceLogs',
-  // Subscription Manager module
-  'subscriptions',
-  'subscriptionPayments',
-  // Pet Management module
-  'pets',
-  'petFeedingSchedules',
-  'petFeedingLogs',
-  'petMedications',
-  'petMedicationLogs',
-  'petVetVisits',
-  'petVaccinations',
-  // Savings module
-  'savingsCampaigns',
-  'savingsMilestones',
-  'savingsParticipants',
-  'savingsContributions',
-  // Activity tracking
-  'activityLogs'
-])
+import { ALLOWED_SYNC_TABLES, isValidRecordId } from '@/lib/sync-tables'
+import { prepareSyncWrite, executeSyncWrites } from '@/lib/sync-store'
 
 export async function POST(request: Request) {
   try {
@@ -120,7 +47,7 @@ export async function POST(request: Request) {
       }
 
       // Record id must be a non-empty, bounded string
-      if (typeof change.id !== 'string' || change.id.length === 0 || change.id.length > MAX_RECORD_ID_LENGTH) {
+      if (!isValidRecordId(change.id)) {
         logger.debug('Skipping change with invalid record id')
         return false
       }
@@ -168,60 +95,29 @@ export async function POST(request: Request) {
 
     // Prepare all statements for batch execution
     const now = new Date().toISOString()
-    const scopeId = session.householdId || session.userId
+    const scope = { userId: session.userId, householdId: session.householdId }
     const statements = validChanges.map(change => {
-      // Deterministic row id: one sync_metadata row per record, so repeated
-      // pushes replace the previous row instead of growing the table forever
-      const rowId = `sync_${scopeId}_${change.table}_${change.id}`
-      const operation = change.deletedAt ? 'delete' : 'upsert'
-
       // Preserve the client's real edit timestamp (last-writer-wins);
       // fall back to the push time when missing or invalid
       const clientUpdatedAt = new Date(change.updatedAt as unknown as string)
       const updatedAt = isNaN(clientUpdatedAt.getTime()) ? now : clientUpdatedAt.toISOString()
 
-      // Conflict resolution on the server:
-      // - updatedAt holds the client edit time; an incoming row only replaces
-      //   the stored one when it was edited later (stale re-uploads from
-      //   lagging devices can't overwrite newer edits or resurrect deletions,
-      //   because a delete tombstone keeps its newer updatedAt)
-      // - createdAt holds the server receive time and acts as the pull
-      //   watermark, so replaced rows are re-delivered to other devices
-      return db
-        .prepare(`
-          INSERT INTO sync_metadata
-          (id, userId, householdId, tableName, recordId, operation, data, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET
-            userId = excluded.userId,
-            operation = excluded.operation,
-            data = excluded.data,
-            createdAt = excluded.createdAt,
-            updatedAt = excluded.updatedAt
-          WHERE excluded.updatedAt > sync_metadata.updatedAt
-        `)
-        .bind(
-          rowId,
-          session.userId,
-          session.householdId || '',
-          change.table,
-          change.id,
-          operation,
-          JSON.stringify(change.data),
-          now,
-          updatedAt
-        )
+      // Deterministic row id + LWW upsert (see src/lib/sync-store.ts):
+      // stale re-uploads from lagging devices can't overwrite newer edits or
+      // resurrect deletions; createdAt (server receive time) is the pull
+      // watermark, so replaced rows are re-delivered to other devices
+      return prepareSyncWrite(db, scope, {
+        table: change.table,
+        recordId: change.id,
+        operation: change.deletedAt ? 'delete' : 'upsert',
+        data: change.data,
+        updatedAt,
+        receivedAt: now
+      })
     })
 
     // Execute statements in batches using D1's batch API
-    let pushed = 0
-    for (let i = 0; i < statements.length; i += BATCH_SIZE) {
-      const batch = statements.slice(i, i + BATCH_SIZE)
-      const results = await db.batch(batch)
-
-      // Count successful inserts
-      pushed += results.filter(r => r.success !== false).length
-    }
+    const pushed = await executeSyncWrites(db, statements)
 
     logger.debug(`Push sync: ${pushed}/${validChanges.length} records (chunk ${chunkIndex ?? 0}/${totalChunks ?? 1})`)
 

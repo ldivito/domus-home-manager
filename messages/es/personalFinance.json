@@ -261,6 +261,7 @@
     "income": "Ingreso",
     "expense": "Gasto",
     "transfer": "Transferencia",
+    "refund": "Reintegro",
     "wallet": "Billetera",
     "allWallets": "Todas las Billeteras",
     "category": "Categoría",

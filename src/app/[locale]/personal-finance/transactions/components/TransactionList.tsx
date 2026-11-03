@@ -33,6 +33,7 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpDown,
+  RotateCcw,
   Search,
   Filter,
   MoreHorizontal,
@@ -251,6 +252,7 @@ export function TransactionList() {
       case 'income': return <TrendingUp className="h-4 w-4 text-green-600" />
       case 'expense': return <TrendingDown className="h-4 w-4 text-red-600" />
       case 'transfer': return <ArrowUpDown className="h-4 w-4 text-blue-600" />
+      case 'refund': return <RotateCcw className="h-4 w-4 text-teal-600" />
     }
   }
 
@@ -259,6 +261,7 @@ export function TransactionList() {
       case 'income': return 'text-green-600'
       case 'expense': return 'text-red-600'
       case 'transfer': return 'text-blue-600'
+      case 'refund': return 'text-teal-600'
     }
   }
 
@@ -378,6 +381,12 @@ export function TransactionList() {
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4 text-blue-600" />
                         {t('transactionList.transfer')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="refund">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="h-4 w-4 text-teal-600" />
+                        {t('transactionList.refund')}
                       </div>
                     </SelectItem>
                   </SelectContent>

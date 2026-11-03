@@ -96,7 +96,7 @@ export function formatBalance(
  */
 export function formatTransactionAmount(
   amount: number,
-  type: 'income' | 'expense' | 'transfer',
+  type: 'income' | 'expense' | 'transfer' | 'refund',
   currency: CurrencyType
 ): {
   formatted: string
@@ -120,6 +120,10 @@ export function formatTransactionAmount(
     case 'transfer':
       prefix = '↔'
       colorClass = 'text-blue-600 dark:text-blue-400'
+      break
+    case 'refund':
+      prefix = '+'
+      colorClass = 'text-teal-600 dark:text-teal-400'
       break
   }
 

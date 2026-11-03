@@ -472,7 +472,9 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
       name: s({ required: true }),
       type: e(['physical', 'bank', 'credit_card'], { required: true }),
       currency: currency({ default: 'ARS' }),
-      balance: n({ default: 0, description: 'Stored balance. NOT recalculated when transactions are written through the API.' }),
+      balance: n({ default: 0, description: 'Stored balance. Not updated by transaction writes: call POST /api/v1/personalWallets/{id}/recalculate (or bulk ?recalculateBalances=true) after loading transactions.' }),
+      openingBalance: n({ description: 'Balance at openingBalanceDate; recalculation = openingBalance + completed transactions since then' }),
+      openingBalanceDate: d({ description: 'Transactions dated before this are ignored by recalculation' }),
       creditLimit: n(),
       closingDay: int({ description: 'Credit cards: day of month 1-31' }),
       dueDay: int({ description: 'Credit cards: days after closing' }),
@@ -504,8 +506,8 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
     idPrefix: 'pt',
     fields: {
       userId: s({ default: KEY_OWNER }),
-      type: e(['income', 'expense', 'transfer'], { required: true }),
-      amount: n({ required: true, description: 'Always positive; direction comes from type' }),
+      type: e(['income', 'expense', 'transfer', 'refund'], { required: true, description: "refund = money back (returns, tax credits like RG 5617): adds to the wallet and reduces a card statement's charges; uses an expense category" }),
+      amount: n({ required: true, description: 'Always positive; direction comes from type (use type refund for credits, never a negative amount)' }),
       currency: currency({ default: 'ARS' }),
       walletId: s({ required: true, ref: 'personalWallets.id', description: 'Or pass walletName' }),
       targetWalletId: s({ ref: 'personalWallets.id', description: 'Required for transfers. Or pass targetWalletName' }),
@@ -518,7 +520,13 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
       sharedWithHousehold: b({ default: false }),
       householdContribution: n(),
       status: e(['pending', 'completed', 'cancelled'], { default: 'completed' }),
-      notes: s()
+      notes: s(),
+      refundOfTransactionId: s({ ref: 'personalTransactions.id', description: 'Refunds: the purchase being refunded (optional)' }),
+      installmentNumber: int({ description: 'Installments ("cuotas"): this is installment n (1-based)...' }),
+      installmentCount: int({ description: '...of N' }),
+      installmentGroupId: s({ description: 'Same value on every installment of one purchase' }),
+      originalPurchaseDate: d({ description: 'Date of the original purchase' }),
+      originalTotalAmount: n({ description: 'Total of the original purchase (all installments)' })
     }
   }),
   creditCardStatements: define<CreditCardStatement>({
@@ -538,7 +546,14 @@ export const TABLE_METADATA: Record<SyncTableName, TableMeta> = {
       currency: currency({ default: 'ARS' }),
       paidAmount: n({ default: 0 }),
       paidDate: d(),
-      status: e(['open', 'closed', 'paid', 'overdue'], { default: 'open' })
+      status: e(['open', 'closed', 'paid', 'overdue'], { default: 'open' }),
+      totalChargesUSD: n({ description: 'USD part of an ARS card statement' }),
+      totalPaymentsUSD: n(),
+      currentBalanceUSD: n(),
+      minimumPaymentUSD: n(),
+      paidAmountUSD: n(),
+      notes: s(),
+      manualTotals: b({ default: true, description: "Totals come from the bank's statement; the app never recomputes them. Defaults to true for statements created through the API" })
     }
   }),
   creditCardPayments: define<CreditCardPayment>({

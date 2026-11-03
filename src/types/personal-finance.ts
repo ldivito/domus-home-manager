@@ -3,7 +3,7 @@
 
 export type WalletType = 'physical' | 'bank' | 'credit_card'
 export type CurrencyType = 'ARS' | 'USD'
-export type TransactionType = 'income' | 'expense' | 'transfer'
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'refund'
 export type TransactionStatus = 'pending' | 'completed' | 'cancelled'
 export type CategoryType = 'income' | 'expense'
 export type StatementStatus = 'open' | 'closed' | 'paid' | 'overdue'
@@ -17,6 +17,8 @@ export interface PersonalWallet {
   
   // Balance tracking
   balance: number              // Current balance (not for credit cards)
+  openingBalance?: number      // Balance at openingBalanceDate; recalculation starts here
+  openingBalanceDate?: Date    // Transactions on/after this date count toward balance
   
   // Credit Card Specific
   creditLimit?: number         // Total credit limit
@@ -95,6 +97,16 @@ export interface PersonalTransaction {
   
   // Metadata
   notes?: string
+
+  // Refunds: credit linked to the purchase it refunds (optional)
+  refundOfTransactionId?: string
+
+  // Installments ("cuotas"): this record is installment n of N of a purchase
+  installmentNumber?: number      // 1-based
+  installmentCount?: number       // N
+  installmentGroupId?: string     // Shared by every installment of the purchase
+  originalPurchaseDate?: Date
+  originalTotalAmount?: number    // Full purchase amount (all installments)
   
   // Audit
   createdAt: Date
@@ -121,6 +133,18 @@ export interface CreditCardStatement {
   // Payment tracking
   paidAmount: number
   paidDate?: Date
+
+  // Second currency (Argentine cards bill ARS and USD on one statement).
+  // The main fields above are in `currency`; these are always USD.
+  totalChargesUSD?: number
+  totalPaymentsUSD?: number
+  currentBalanceUSD?: number
+  minimumPaymentUSD?: number
+  paidAmountUSD?: number
+
+  notes?: string
+  // Totals were copied from the bank's statement: the app must not recompute them
+  manualTotals?: boolean
   
   // Status workflow
   status: StatementStatus

@@ -1,0 +1,248 @@
+{
+  "title": "Planificador de Meal Prep",
+  "subtitle": "Planifica tu meal prep semanal con cálculos potenciados por IA",
+  "settings": "Configuración",
+  "defaultPlanName": "Meal Prep - {date}",
+  "apiKeyRequired": "API Key de OpenAI Requerida",
+  "apiKeyDescription": "Ingresa tu API key de OpenAI para habilitar cálculos de ingredientes e instrucciones de meal prep con IA. Tu clave se almacena localmente y nunca se envía a nuestros servidores.",
+  "saveApiKey": "Guardar Clave",
+  "back": "Atrás",
+  "next": "Siguiente",
+  "savePlan": "Guardar Plan",
+  "calculateWithAI": "Calcular con IA",
+
+  "steps": {
+    "setup": "Configuración",
+    "meals": "Comidas",
+    "calculate": "Calcular",
+    "review": "Revisar",
+    "prep": "Guía de Prep"
+  },
+
+  "setup": {
+    "title": "Configura tu Meal Prep",
+    "description": "Establece el día de cocina, rango de fechas y número de personas",
+    "planName": "Nombre del Plan",
+    "planNamePlaceholder": "ej., Meal Prep Semana 1",
+    "cookingDate": "Día de Cocina",
+    "cookingDateHint": "El día que prepararás todas las comidas",
+    "startDate": "Primer Día",
+    "endDate": "Último Día",
+    "numberOfPeople": "Personas por Comida",
+    "mealsPerDay": "Comidas por Día",
+    "mealsPerDayHint": "Comidas principales a preparar cada día (almuerzo, cena)",
+    "summary": "Resumen",
+    "summaryText": "Estás planificando comidas para {days} días, sirviendo {people} personas por comida.",
+    "dietaryRestrictions": "Restricciones Dietéticas",
+    "dietaryRestrictionsHint": "Selecciona restricciones dietéticas para filtrar sugerencias de comidas",
+    "dietLabel": "Dieta"
+  },
+
+  "dietaryRestrictions": {
+    "vegetarian": "Vegetariano",
+    "vegan": "Vegano",
+    "keto": "Keto",
+    "low-carb": "Bajo en Carbos",
+    "paleo": "Paleo",
+    "gluten-free": "Sin Gluten",
+    "dairy-free": "Sin Lácteos",
+    "nut-free": "Sin Frutos Secos",
+    "halal": "Halal",
+    "kosher": "Kosher",
+    "low-sodium": "Bajo en Sodio",
+    "low-fat": "Bajo en Grasa",
+    "high-protein": "Alto en Proteína",
+    "pescatarian": "Pescatariano"
+  },
+
+  "templates": {
+    "title": "Plantillas",
+    "show": "Mostrar Plantillas",
+    "hide": "Ocultar Plantillas",
+    "noTemplates": "Sin plantillas guardadas. Guarda un plan de meal prep como plantilla para reutilizarlo.",
+    "meals": "comidas",
+    "load": "Usar",
+    "saveAsTemplate": "Guardar como Plantilla"
+  },
+
+  "savedPlans": {
+    "title": "Planes Guardados",
+    "show": "Ver Planes Guardados",
+    "hide": "Ocultar Planes",
+    "noPlans": "Sin planes guardados. Completa una sesión de meal prep para guardar un plan.",
+    "view": "Ver",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este plan?",
+    "deleted": "Plan eliminado",
+    "cookingDate": "Día de Cocina",
+    "dateRange": "Rango de Fechas",
+    "status": "Estado",
+    "ingredients": "ingredientes",
+    "steps": "pasos",
+    "viewDetails": "Ver Detalles Completos",
+    "closeDetails": "Cerrar",
+    "statusLabels": {
+      "planning": "Planificando",
+      "shopping": "Comprando",
+      "cooking": "Cocinando",
+      "completed": "Completado"
+    }
+  },
+
+  "meals": {
+    "title": "Selecciona tus Comidas",
+    "description": "Elige comidas de tus recetas guardadas o agrega personalizadas",
+    "savedMeals": "Comidas Guardadas",
+    "customMeal": "Comida Personalizada",
+    "searchPlaceholder": "Buscar comidas guardadas...",
+    "noSavedMeals": "No se encontraron comidas guardadas. Agrega una comida personalizada o guarda algunas comidas primero.",
+    "customPlaceholder": "Ingresa nombre de comida (ej., Pollo Salteado)",
+    "add": "Agregar",
+    "aiWillGenerate": "La IA generará ingredientes e instrucciones para comidas personalizadas",
+    "selected": "Comidas Seleccionadas",
+    "totalServings": "{count} porciones totales",
+    "ai": "IA"
+  },
+
+  "components": {
+    "title": "Arma tus Comidas",
+    "description": "Selecciona proteínas, acompañamientos y vegetales para crear tus combinaciones de comidas",
+    "modeToggle": "Modo Componentes",
+    "modeDescription": "Arma comidas desde componentes individuales (proteína + acompañamiento + vegetal)",
+    "proteins": "Proteínas",
+    "sides": "Acompañamientos",
+    "vegetables": "Vegetales y Verduras",
+    "proteinExamples": "Pollo, carne, pescado, huevos, legumbres...",
+    "sideExamples": "Arroz, papas, pasta, quinoa, frijoles...",
+    "vegetableExamples": "Brócoli, espinaca, ensalada, zanahorias...",
+    "addProtein": "Agregar Proteína",
+    "addSide": "Agregar Acompañamiento",
+    "addVegetable": "Agregar Vegetal",
+    "customPlaceholder": "Ingresa nombre del componente...",
+    "selectedComponents": "Componentes Seleccionados",
+    "combinations": "Combinaciones de Comidas",
+    "suggestCombinations": "Sugerir Combinaciones",
+    "combinationDescription": "La IA sugerirá cómo combinar tus componentes para cada día",
+    "noComponents": "Agrega al menos un componente de cada categoría para comenzar",
+    "servingsPerComponent": "{count} porciones",
+    "proteinLabel": "Proteína",
+    "sideLabel": "Acompañamiento",
+    "vegetableLabel": "Vegetal",
+    "savedComponents": "Agregar Rápido",
+    "noSavedComponents": "Sin componentes guardados. Los que uses aparecerán aquí.",
+    "saveComponent": "Guardar para después",
+    "componentSaved": "Componente guardado"
+  },
+
+  "calculating": {
+    "title": "Calculando tu Meal Prep",
+    "description": "La IA está calculando ingredientes, instrucciones y guía de almacenamiento...",
+    "button": "Calculando...",
+    "ingredients": "Calculando ingredientes...",
+    "instructions": "Generando instrucciones de prep...",
+    "containers": "Planificando almacenamiento de contenedores...",
+    "schedule": "Optimizando horario de cocina...",
+    "complete": "¡Cálculos completos!"
+  },
+
+  "review": {
+    "title": "Revisa tu Plan",
+    "description": "Verifica ingredientes y horario de comidas",
+    "ingredients": "Lista de Compras",
+    "schedule": "Horario de Comidas",
+    "consolidated": "Combinado",
+    "addToGrocery": "Agregar Todo a Lista de Compras",
+    "allAdded": "Todo Agregado a Compras",
+    "servings": "porciones",
+    "assignedDays": "Programado para",
+    "addToCalendar": "Agregar Comidas al Calendario"
+  },
+
+  "prep": {
+    "title": "Guía de Prep",
+    "description": "Sigue esta guía el día de cocina para máxima eficiencia",
+    "order": "Orden",
+    "smartSchedule": "Horario",
+    "instructions": "Instrucciones",
+    "storage": "Almacenamiento",
+    "orderDescription": "Sigue este orden para la sesión de meal prep más eficiente:",
+    "time": "{time} min total",
+    "tips": "Consejos Pro",
+    "prepTime": "Prep: {time}min",
+    "cookTime": "Cocción: {time}min",
+    "steps": "Pasos",
+    "mealTips": "Consejos",
+    "calories": "Calorías",
+    "protein": "Proteína",
+    "carbs": "Carbos",
+    "fat": "Grasa",
+    "container": {
+      "small": "Pequeño (~250ml)",
+      "medium": "Mediano (~500ml)",
+      "large": "Grande (~1L)",
+      "extra-large": "XL (~1.5L+)"
+    },
+    "storageType": {
+      "refrigerator": "Refrigerar",
+      "freezer": "Congelar",
+      "pantry": "Despensa"
+    },
+    "storageDuration": "Se conserva por",
+    "days": "{count} días",
+    "containers": "Contenedores necesarios",
+    "label": "Etiqueta",
+    "reheating": "Recalentamiento",
+    "organizationTips": "Consejos de Organización",
+    "minutes": "minutos",
+    "totalEstimatedTime": "Tiempo Total Estimado",
+    "parallelTasks": "Tareas Paralelas",
+    "group": "Grupo",
+    "timeline": "Cronograma",
+    "equipmentNeeded": "Equipo Necesario",
+    "efficiencyTips": "Consejos de Eficiencia",
+    "noScheduleData": "Sin datos de horario inteligente. Intenta recalcular."
+  },
+
+  "timer": {
+    "title": "Modo Temporizador",
+    "description": "Sesión de cocina interactiva con guía paso a paso",
+    "start": "Iniciar",
+    "pause": "Pausar",
+    "reset": "Reiniciar",
+    "stepsCompleted": "pasos completados",
+    "currentStep": "Paso Actual",
+    "markComplete": "Completar",
+    "skip": "Saltar"
+  },
+
+  "portions": {
+    "title": "Seguimiento de Porciones",
+    "startTracking": "Iniciar Seguimiento",
+    "remaining": "restantes",
+    "consumed": "Consumidas",
+    "expiringToday": "Expiran Hoy",
+    "expired": "Expiradas",
+    "expiringWarning": "{count} contenedor(es) expiran hoy! Úsalos pronto.",
+    "expiresInDay": "Expira mañana",
+    "expiresInDays": "Expira en {count} días"
+  },
+
+  "notifications": {
+    "addedToGrocery": "Ingredientes agregados a la lista de compras",
+    "planSaved": "Plan de meal prep guardado exitosamente",
+    "mealsCreated": "Comidas agregadas a tu calendario",
+    "apiKeySaved": "API key guardada",
+    "templateLoaded": "Plantilla cargada exitosamente",
+    "templateSaved": "Plantilla guardada exitosamente"
+  },
+
+  "errors": {
+    "noApiKey": "Por favor agrega tu API key de OpenAI para usar funciones de IA",
+    "calculationFailed": "Error al calcular meal prep. Por favor intenta de nuevo.",
+    "saveFailed": "Error al guardar plan de meal prep",
+    "addToGroceryFailed": "Error al agregar ingredientes a la lista de compras",
+    "createMealsFailed": "Error al crear comidas en el calendario",
+    "templateNameRequired": "Por favor ingresa un nombre de plan antes de guardar como plantilla",
+    "templateSaveFailed": "Error al guardar plantilla"
+  }
+}
